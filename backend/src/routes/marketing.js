@@ -1,7 +1,7 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { pool } = require('../db');
-const { getGoogleAdsData } = require('../lib/google-ads');
+const { getGoogleSpendData, getGoogleCampaignData } = require('../lib/google-ads');
 
 const router = express.Router();
 
@@ -80,12 +80,13 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       LIMIT 10
     `;
 
-    const [mainFb, tt, sara, online, googleAds] = await Promise.all([
+    const [mainFb, tt, sara, online, googleData, googleCampaigns] = await Promise.all([
       pool.query(query, ['fb_group', ACCOUNTS.MAIN_FB_ID]),
       pool.query(query, ['tiktok', ACCOUNTS.TT_ID]),
       pool.query(query, ['sara', ACCOUNTS.SARA_ID]),
       pool.query(query, ['online', ACCOUNTS.ONLINE_ID]),
-      getGoogleAdsData(ACCOUNTS.ONLINE_ID), // Fetch Google Ads data
+      getGoogleSpendData(), // Fetch Google spend data from database (no filter)
+      getGoogleCampaignData(), // Fetch Google campaign data from database
     ]);
 
     // Campaign queries - handle potential missing campaign_name column gracefully
@@ -136,8 +137,14 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       };
     }
 
-    function formatGoogleChannel(googleData) {
-      return googleData;
+    function formatGoogleChannel(result) {
+      const row = result.rows[0] || {};
+      return {
+        today: toPeriodStats(row, 'today'),
+        yesterday: toPeriodStats(row, 'yesterday'),
+        d7: toPeriodStats(row, '7d'),
+        d30: toPeriodStats(row, '30d'),
+      };
     }
 
     function formatCampaigns(result) {
@@ -155,7 +162,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       tiktok: formatChannel(tt),
       sara: formatChannel(sara),
       online: formatChannel(online),
-      google: formatGoogleChannel(googleAds),
+      google: formatGoogleChannel(googleData),
     };
 
     const campaigns = {
@@ -163,6 +170,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       tiktok: formatCampaigns(ttCampaigns),
       sara: formatCampaigns(saraCampaigns),
       online: formatCampaigns(onlineCampaigns),
+      google: formatCampaigns(googleCampaigns),
     };
 
     // Streamlit "Ebright Group Expenses" total = FB (Group) + TikTok

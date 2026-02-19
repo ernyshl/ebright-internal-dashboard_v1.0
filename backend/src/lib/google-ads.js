@@ -1,124 +1,98 @@
 /**
- * Google Ads API helper module
- * Fetches spend and conversion data from Google Ads API
+ * Google Spend helper module
+ * Fetches spend and conversion data from google_spend database table
  */
 
-const { env } = require('../env');
+const { pool } = require('../db');
 
-// Check if Google Ads credentials are configured
-const isConfigured = () => {
-  return !!(
-    env.GOOGLE_DEVELOPER_TOKEN &&
-    env.GOOGLE_CLIENT_ID &&
-    env.GOOGLE_CLIENT_SECRET &&
-    env.GOOGLE_REFRESH_TOKEN &&
-    env.GOOGLE_LOGIN_CUSTOMER_ID &&
-    env.GOOGLE_ADS_ID
-  );
-};
-
-// Placeholder function to fetch Google Ads data
-// When using the googleapis library to connect to Google Ads API v17
-async function getGoogleAdsData(customerId, dateRange = '30d') {
-  // If credentials not configured, return empty data
-  if (!isConfigured()) {
-    console.warn('Google Ads credentials not configured');
-    return {
-      today: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      yesterday: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      d7: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      d30: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-    };
-  }
-
+// Query google_spend table for metrics across different time periods
+async function getGoogleSpendData(accountId = null) {
   try {
-    // Import googleapis for Google Ads API v17
-    const { google } = require('googleapis');
+    const query = `
+      SELECT
+        'google'::text as channel_key,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE) as spend_today,
+        SUM(leads) FILTER (WHERE data_date::date = CURRENT_DATE) as leads_today,
+        SUM(conversions) FILTER (WHERE data_date::date = CURRENT_DATE) as convs_today,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE AND leads > 0) as lead_spend_today,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE AND conversions > 0) as conv_spend_today,
 
-    // Create OAuth2 client
-    const oauth2Client = new google.auth.OAuth2(
-      env.GOOGLE_CLIENT_ID,
-      env.GOOGLE_CLIENT_SECRET,
-      'http://localhost:4000/auth/google/callback'
-    );
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE - 1) as spend_yesterday,
+        SUM(leads) FILTER (WHERE data_date::date = CURRENT_DATE - 1) as leads_yesterday,
+        SUM(conversions) FILTER (WHERE data_date::date = CURRENT_DATE - 1) as convs_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE - 1 AND leads > 0) as lead_spend_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE - 1 AND conversions > 0) as conv_spend_yesterday,
 
-    // Set credentials with refresh token
-    oauth2Client.setCredentials({
-      refresh_token: env.GOOGLE_REFRESH_TOKEN,
-    });
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days') as spend_7d,
+        SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days') as leads_7d,
+        SUM(conversions) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days') as convs_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days' AND leads > 0) as lead_spend_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days' AND conversions > 0) as conv_spend_7d,
 
-    // Create Ads service instance
-    // Note: Google Ads API v17 requires using the REST API or gRPC client
-    // For production, use: npm install google-ads-api
-    // This is a placeholder that returns formatted data structure
-    
-    console.info('Google Ads API integration ready. Customer ID:', env.GOOGLE_LOGIN_CUSTOMER_ID);
-    
-    // Return sample data structure until full integration is complete
-    return {
-      today: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      yesterday: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      d7: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      d30: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-    };
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as spend_30d,
+        SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as leads_30d,
+        SUM(conversions) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as convs_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d
+      FROM google_spend
+      ${accountId ? 'WHERE account_id = $1' : ''}
+    `;
+
+    const result = await pool.query(query, accountId ? [accountId] : []);
+    return result;
   } catch (error) {
-    console.error('Error initializing Google Ads API:', error);
-    // Return zeros on error instead of crashing
-    return {
-      today: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      yesterday: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      d7: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-      d30: { spend: 0, leads: 0, convs: 0, leadSpend: 0, convSpend: 0, cpl: 0, cpc: 0 },
-    };
+    console.error('Error fetching Google spend data from database:', error.message);
+    // Return empty result object on error
+    return { rows: [{}] };
   }
 }
 
-// Format period data for consistency with other channels
-function processPeriodData(data) {
-  if (!data || data.length === 0) {
-    return {
-      spend: 0,
-      leads: 0,
-      convs: 0,
-      leadSpend: 0,
-      convSpend: 0,
-      cpl: 0,
-      cpc: 0,
-    };
+// Query campaign data from google_spend table
+async function getGoogleCampaignData(accountId = null) {
+  try {
+    const query = `
+      SELECT
+        campaign_name,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE) as spend_today,
+        SUM(leads) FILTER (WHERE data_date::date = CURRENT_DATE) as leads_today,
+        SUM(conversions) FILTER (WHERE data_date::date = CURRENT_DATE) as convs_today,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE AND leads > 0) as lead_spend_today,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE AND conversions > 0) as conv_spend_today,
+
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE - 1) as spend_yesterday,
+        SUM(leads) FILTER (WHERE data_date::date = CURRENT_DATE - 1) as leads_yesterday,
+        SUM(conversions) FILTER (WHERE data_date::date = CURRENT_DATE - 1) as convs_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE - 1 AND leads > 0) as lead_spend_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = CURRENT_DATE - 1 AND conversions > 0) as conv_spend_yesterday,
+
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days') as spend_7d,
+        SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days') as leads_7d,
+        SUM(conversions) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days') as convs_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days' AND leads > 0) as lead_spend_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '7 days' AND conversions > 0) as conv_spend_7d,
+
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as spend_30d,
+        SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as leads_30d,
+        SUM(conversions) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as convs_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d
+      FROM google_spend
+      ${accountId ? 'WHERE account_id = $1' : ''}
+      GROUP BY campaign_name
+      ORDER BY spend_30d DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query, accountId ? [accountId] : []);
+    return result;
+  } catch (error) {
+    console.error('Error fetching Google campaign data from database:', error.message);
+    // Return empty result object on error
+    return { rows: [] };
   }
-
-  // Sum up metrics across the period
-  let totalSpend = 0;
-  let totalConversions = 0;
-  let totalAllConversions = 0;
-
-  data.forEach(row => {
-    totalSpend += row.spend || 0;
-    totalConversions += row.conversions || 0;
-    totalAllConversions += row.all_conversions || 0;
-  });
-
-  const spend = totalSpend;
-  const convs = Math.round(totalConversions);
-  const allConvs = Math.round(totalAllConversions);
-
-  // Use all_conversions for leads if available
-  const leads = allConvs > 0 ? allConvs : convs;
-  const leadSpend = spend;
-  const convSpend = spend;
-
-  return {
-    spend: Math.round(spend * 100) / 100,
-    leads,
-    convs,
-    leadSpend: Math.round(leadSpend * 100) / 100,
-    convSpend: Math.round(convSpend * 100) / 100,
-    cpl: leads > 0 ? Math.round((leadSpend / leads) * 100) / 100 : 0,
-    cpc: convs > 0 ? Math.round((convSpend / convs) * 100) / 100 : 0,
-  };
 }
 
 module.exports = {
-  isConfigured,
-  getGoogleAdsData,
+  getGoogleSpendData,
+  getGoogleCampaignData,
 };
