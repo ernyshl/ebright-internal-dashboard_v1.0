@@ -3502,3 +3502,377 @@
     padding: 20px;
   }
 }
+
+/* ===== PERMISSIONS PAGE ===== */
+.permissionsSection {
+  margin-bottom: 32px;
+}
+
+.permissionsSectionHeader {
+  margin-bottom: 20px;
+}
+
+.permissionsSectionHeader h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.permissionsSectionHeader p {
+  font-size: 14px;
+  color: var(--textSecondary);
+  margin: 0;
+}
+
+.permissionsUsersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.permissionUserCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+  position: relative;
+}
+
+.permissionUserCard:hover {
+  border-color: var(--brand);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.permissionUserCard.selected {
+  border-color: var(--brand);
+  background: var(--brandLight);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.15);
+}
+
+.permissionUserAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--brandGradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.permissionUserInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.permissionUserName {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.permissionUserEmail {
+  font-size: 13px;
+  color: var(--textSecondary);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selectedIndicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Permissions Card */
+.permissionsCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.permissionsCardHeader {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.permissionsUserSummary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.permissionUserAvatarLarge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--brandGradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.permissionsUserName {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.permissionsUserEmail {
+  font-size: 14px;
+  color: var(--textSecondary);
+  margin-bottom: 8px;
+}
+
+/* Permissions Table */
+.permissionsTableWrapper {
+  overflow-x: auto;
+}
+
+.permissionsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.permissionsTable th {
+  text-align: left;
+  padding: 16px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.permissionsTable td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--borderLight);
+  vertical-align: middle;
+}
+
+.permissionsTable tr:last-child td {
+  border-bottom: none;
+}
+
+.permissionsTable tr:hover td {
+  background: var(--bg);
+}
+
+.permissionDashboard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.permissionDashboardIcon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border-radius: var(--radius-md);
+}
+
+.permissionDashboardName {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.permissionDashboardDesc {
+  font-size: 12px;
+  color: var(--textSecondary);
+  margin-top: 2px;
+}
+
+.permissionStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.permissionStatus.allowed {
+  background: var(--successLight);
+  color: var(--success);
+}
+
+.permissionStatus.denied {
+  background: #fef2f2;
+  color: var(--brand);
+}
+
+.permissionSource {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.permissionSource.custom {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.permissionSource.role {
+  background: var(--bg);
+  color: var(--textSecondary);
+}
+
+.permissionActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Permission Legend */
+.permissionLegend {
+  padding: 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.permissionLegend h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+.legendGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--textSecondary);
+}
+
+.legendNote {
+  font-size: 13px;
+  color: var(--textSecondary);
+  padding: 12px 16px;
+  background: var(--panel);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+/* Badge Colors */
+.badgeExecutive {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  color: white;
+}
+
+.badgeMarketing {
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  color: white;
+}
+
+.badgeAcademy {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: white;
+}
+
+.badgeFinance {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  color: white;
+}
+
+.badgeSales {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: white;
+}
+
+.badgeActive {
+  background: var(--successLight);
+  color: var(--success);
+}
+
+.badgeInactive {
+  background: #fef2f2;
+  color: var(--brand);
+}
+
+/* Responsive Permissions */
+@media (max-width: 768px) {
+  .permissionsUsersGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .permissionUserCard {
+    padding: 14px;
+  }
+  
+  .permissionsTable th,
+  .permissionsTable td {
+    padding: 12px;
+  }
+  
+  .permissionDashboard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .permissionActions {
+    flex-direction: column;
+  }
+  
+  .permissionActions .btn {
+    width: 100%;
+  }
+  
+  .legendGrid {
+    grid-template-columns: 1fr;
+  }
+}
