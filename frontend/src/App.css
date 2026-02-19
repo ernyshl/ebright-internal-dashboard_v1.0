@@ -3044,10 +3044,16 @@
   }
 }
 
-/* ===== DESKTOP SIDEBAR ===== */
+/* ===== DESKTOP SIDEBAR (Auto-hide on hover) ===== */
 @media (min-width: 769px) {
   .sidebar {
-    transform: translateX(0) !important;
+    transform: translateX(-100%);
+  }
+  
+  /* Show sidebar when hovering over trigger area */
+  .sidebarTrigger:hover ~ .sidebar,
+  .sidebar:hover {
+    transform: translateX(0);
   }
   
   .mobileMenuBtn {
@@ -3058,7 +3064,9 @@
     display: none !important;
   }
   
-  .content {
+  /* Push content when sidebar is visible */
+  .sidebarTrigger:hover ~ .content,
+  .sidebar:hover ~ .content {
     margin-left: 280px;
   }
 }
