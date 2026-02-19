@@ -10,6 +10,14 @@ const EnvSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('8h'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  
+  // Google Ads API Configuration
+  GOOGLE_DEVELOPER_TOKEN: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REFRESH_TOKEN: z.string().optional(),
+  GOOGLE_LOGIN_CUSTOMER_ID: z.string().optional(),
+  GOOGLE_ADS_ID: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);

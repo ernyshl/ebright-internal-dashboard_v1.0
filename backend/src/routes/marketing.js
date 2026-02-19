@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { pool } = require('../db');
+const { getGoogleAdsData } = require('../lib/google-ads');
 
 const router = express.Router();
 
@@ -79,11 +80,12 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       LIMIT 10
     `;
 
-    const [mainFb, tt, sara, online] = await Promise.all([
+    const [mainFb, tt, sara, online, googleAds] = await Promise.all([
       pool.query(query, ['fb_group', ACCOUNTS.MAIN_FB_ID]),
       pool.query(query, ['tiktok', ACCOUNTS.TT_ID]),
       pool.query(query, ['sara', ACCOUNTS.SARA_ID]),
       pool.query(query, ['online', ACCOUNTS.ONLINE_ID]),
+      getGoogleAdsData(ACCOUNTS.ONLINE_ID), // Fetch Google Ads data
     ]);
 
     // Campaign queries - handle potential missing campaign_name column gracefully
@@ -134,6 +136,10 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       };
     }
 
+    function formatGoogleChannel(googleData) {
+      return googleData;
+    }
+
     function formatCampaigns(result) {
       return result.rows.map(row => ({
         name: row.campaign_name,
@@ -149,6 +155,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       tiktok: formatChannel(tt),
       sara: formatChannel(sara),
       online: formatChannel(online),
+      google: formatGoogleChannel(googleAds),
     };
 
     const campaigns = {
