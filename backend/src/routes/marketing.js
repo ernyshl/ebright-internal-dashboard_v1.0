@@ -196,17 +196,19 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       google: formatGoogleCampaigns(googleCampaigns),
     };
 
-    // Streamlit "Ebright Group Expenses" total = FB (Group) + TikTok
-    function sumPeriods(a, b) {
+    // Streamlit "Main Marketing" total = FB (Group) + TikTok + Google
+    function sumPeriods(...items) {
       const out = {};
       for (const k of ['today', 'yesterday', 'd7', 'd30']) {
-        const A = a[k];
-        const B = b[k];
-        const spend = (A?.spend || 0) + (B?.spend || 0);
-        const leads = (A?.leads || 0) + (B?.leads || 0);
-        const convs = (A?.convs || 0) + (B?.convs || 0);
-        const leadSpend = (A?.leadSpend || 0) + (B?.leadSpend || 0);
-        const convSpend = (A?.convSpend || 0) + (B?.convSpend || 0);
+        let spend = 0, leads = 0, convs = 0, leadSpend = 0, convSpend = 0;
+        for (const item of items) {
+          const period = item[k];
+          spend += period?.spend || 0;
+          leads += period?.leads || 0;
+          convs += period?.convs || 0;
+          leadSpend += period?.leadSpend || 0;
+          convSpend += period?.convSpend || 0;
+        }
         out[k] = {
           spend,
           leads,
@@ -221,7 +223,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
     }
 
     const groups = {
-      ebright_group_expenses: sumPeriods(channels.fb_group, channels.tiktok),
+      main_marketing: sumPeriods(channels.fb_group, channels.tiktok, channels.google),
     };
 
     return res.json({ channels, groups, campaigns });

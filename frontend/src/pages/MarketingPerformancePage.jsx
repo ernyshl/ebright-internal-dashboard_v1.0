@@ -40,11 +40,12 @@ export function MarketingPerformancePage() {
         <div className="stack">
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <MarketingTable
-              title="Ebright Group Expenses"
+              title="Main Marketing"
               rows={[
                 { label: 'FB (Group)', ...channels.fb_group },
                 { label: 'TikTok', ...channels.tiktok },
-                { label: 'TOTAL', ...groups?.ebright_group_expenses, isTotal: true },
+                { label: 'Google Ads', ...channels.google },
+                { label: 'TOTAL', ...groups?.main_marketing, isTotal: true },
               ]}
             />
           </div>
@@ -57,12 +58,6 @@ export function MarketingPerformancePage() {
               <MarketingTable title="Ebright Online By MOKHIR" rows={[{ label: 'Online', ...channels.online }]} />
             </div>
           </div>
-
-          {channels.google && (
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <MarketingTable title="Google Ads" rows={[{ label: 'Google', ...channels.google }]} />
-            </div>
-          )}
 
           {/* Campaign Performance Section */}
           <div className="stack">
