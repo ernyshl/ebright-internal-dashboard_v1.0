@@ -3044,6 +3044,25 @@
   }
 }
 
+/* ===== DESKTOP SIDEBAR ===== */
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0) !important;
+  }
+  
+  .mobileMenuBtn {
+    display: none !important;
+  }
+  
+  .mobileOverlay {
+    display: none !important;
+  }
+  
+  .content {
+    margin-left: 280px;
+  }
+}
+
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 768px) {
   .nav {
