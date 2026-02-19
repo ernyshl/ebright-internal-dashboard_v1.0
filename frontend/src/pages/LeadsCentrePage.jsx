@@ -160,9 +160,6 @@ export function LeadsCentrePage() {
               <option value="">All Regions</option>
               <option value="Region 2">Region 2 (Unspecified)</option>
               <option value="Region 3">Region 3 (Online)</option>
-              {data?.filters?.regions?.map(region => (
-                <option key={region} value={region}>{region}</option>
-              ))}
             </select>
           </div>
 

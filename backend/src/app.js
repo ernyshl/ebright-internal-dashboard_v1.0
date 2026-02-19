@@ -173,10 +173,9 @@ function createApp() {
       );
 
       // Get filter options
-      const [sourcesResult, regionsResult, branchesResult] = await Promise.all([
+      const [sourcesResult, branchesResult] = await Promise.all([
         pool.query('SELECT DISTINCT lead_source FROM master_leads_powerbi WHERE lead_source IS NOT NULL AND TRIM(lead_source) != \'\' ORDER BY lead_source'),
-        pool.query('SELECT DISTINCT region FROM master_leads_powerbi WHERE region IS NOT NULL AND TRIM(region) != \'\' AND region NOT ILIKE \'unknown\' ORDER BY region'),
-        pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'%Online%\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
+        pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
       ]);
 
       res.json({
@@ -186,7 +185,8 @@ function createApp() {
         totalPages: Math.ceil(total / Number(limit)),
         filters: {
           lead_sources: sourcesResult.rows.map(r => r.lead_source),
-          regions: regionsResult.rows.map(r => r.region),
+          // Only show Region 2 and Region 3 as per user request
+          regions: ['Region 2', 'Region 3'],
           branches: branchesResult.rows.map(r => r.clean_branch),
         },
       });
