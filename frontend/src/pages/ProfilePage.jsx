@@ -95,6 +95,47 @@ export function ProfilePage() {
     updateProfile.mutate(body);
   };
 
+  // Get initials for avatar
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  // Get role badge color
+  const getRoleBadgeClass = (role) => {
+    switch (role) {
+      case 'super_admin':
+      case 'ceo':
+        return 'badgeExecutive';
+      case 'marketing':
+        return 'badgeMarketing';
+      case 'academy':
+        return 'badgeAcademy';
+      case 'finance':
+        return 'badgeFinance';
+      case 'rm':
+      case 'od':
+      case 'hr':
+        return 'badgeSales';
+      default:
+        return 'badgeExecutive';
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    const labels = {
+      super_admin: 'Super Admin',
+      ceo: 'CEO',
+      rm: 'Regional Manager',
+      marketing: 'Marketing',
+      od: 'Operations Director',
+      hr: 'Human Resources',
+      academy: 'Academy',
+      finance: 'Finance',
+    };
+    return labels[role] || role;
+  };
+
   if (isLoading) {
     return (
       <div className="dashboardPage">
@@ -110,134 +151,175 @@ export function ProfilePage() {
     <div className="dashboardPage">
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
-        <h1 style={{ marginTop: 16 }}>Edit Profile</h1>
-        <p className="headerSubtitle">Update your personal information</p>
+        <h1 style={{ marginTop: 16 }}>👤 My Profile</h1>
+        <p className="headerSubtitle">Manage your account settings and preferences</p>
       </div>
 
       <div className="dashboardContent">
-        <div className="pageCard" style={{ maxWidth: '500px' }}>
-          <form onSubmit={handleUpdateProfile}>
-            {/* User Info */}
-            <div className="formSection">
+        {/* Profile Header Card */}
+        <div className="profileHeaderCard">
+          <div className="profileAvatarLarge">
+            {getInitials(formData.fullName || currentUser?.fullName)}
+          </div>
+          <div className="profileHeaderInfo">
+            <h2 className="profileName">{formData.fullName || currentUser?.fullName}</h2>
+            <p className="profileEmail">{currentUser?.email}</p>
+            <span className={`badge ${getRoleBadgeClass(currentUser?.role)}`}>
+              {getRoleLabel(currentUser?.role)}
+            </span>
+          </div>
+        </div>
+
+        <div className="profileGrid">
+          {/* Account Information Card */}
+          <div className="profileCard">
+            <div className="profileCardHeader">
+              <span className="profileCardIcon">📋</span>
               <h3>Account Information</h3>
-              <div className="formGroup">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={currentUser.email}
-                  disabled
-                  className="formInput"
-                  style={{ opacity: 0.6 }}
-                />
-                <small style={{ color: 'var(--muted)' }}>Email cannot be changed</small>
-              </div>
-
-              <div className="formGroup">
-                <label>Role</label>
-                <input
-                  type="text"
-                  value={currentUser.role}
-                  disabled
-                  className="formInput"
-                  style={{ opacity: 0.6, textTransform: 'capitalize' }}
-                />
-                <small style={{ color: 'var(--muted)' }}>Role assigned by administrator</small>
-              </div>
-
-              <div className="formGroup">
+            </div>
+            <form onSubmit={handleUpdateProfile}>
+              <div className="profileFormGroup">
                 <label>Full Name</label>
                 <input
                   type="text"
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="formInput"
+                  className="profileInput"
                   placeholder="Enter your full name"
                 />
               </div>
-            </div>
 
-            {/* Change Password */}
-            <div className="formSection" style={{ marginTop: '32px' }}>
+              <div className="profileFormGroup">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  value={currentUser?.email || ''}
+                  disabled
+                  className="profileInput profileInputDisabled"
+                />
+                <span className="profileInputHint">📧 Email cannot be changed</span>
+              </div>
+
+              <div className="profileFormGroup">
+                <label>Role</label>
+                <input
+                  type="text"
+                  value={getRoleLabel(currentUser?.role)}
+                  disabled
+                  className="profileInput profileInputDisabled"
+                />
+                <span className="profileInputHint">🔐 Role assigned by administrator</span>
+              </div>
+
+              {/* Messages */}
+              {error && (
+                <div className="profileAlert profileAlertError">
+                  <span>⚠️</span> {error}
+                </div>
+              )}
+
+              {message && (
+                <div className="profileAlert profileAlertSuccess">
+                  <span>✅</span> {message}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn btnPrimary profileSaveBtn"
+                disabled={updateProfile.isPending}
+              >
+                {updateProfile.isPending ? '💾 Saving...' : '💾 Save Changes'}
+              </button>
+            </form>
+          </div>
+
+          {/* Change Password Card */}
+          <div className="profileCard">
+            <div className="profileCardHeader">
+              <span className="profileCardIcon">🔒</span>
               <h3>Change Password</h3>
-              <p className="headerSubtitle" style={{ marginBottom: '16px' }}>
-                Leave blank if you don't want to change your password
+            </div>
+            <form onSubmit={handleUpdateProfile}>
+              <p className="profileCardDesc">
+                Leave password fields empty if you don't want to change your password.
               </p>
 
-              <div className="formGroup">
+              <div className="profileFormGroup">
                 <label>Current Password</label>
                 <input
                   type="password"
                   name="currentPassword"
                   value={formData.currentPassword}
                   onChange={handleChange}
-                  className="formInput"
-                  placeholder="Enter your current password"
+                  className="profileInput"
+                  placeholder="Enter current password"
                 />
               </div>
 
-              <div className="formGroup">
+              <div className="profileFormGroup">
                 <label>New Password</label>
                 <input
                   type="password"
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
-                  className="formInput"
-                  placeholder="Enter new password (min 8 chars)"
+                  className="profileInput"
+                  placeholder="Enter new password"
                 />
                 {formData.newPassword && (
-                  <small style={{ color: 'var(--muted)' }}>
-                    Must contain: uppercase, lowercase, number, special character
-                  </small>
+                  <span className="profileInputHint passwordHint">
+                    🔑 Must be 8+ chars with uppercase, lowercase, number & special char
+                  </span>
                 )}
               </div>
 
-              <div className="formGroup">
+              <div className="profileFormGroup">
                 <label>Confirm New Password</label>
                 <input
                   type="password"
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="formInput"
+                  className="profileInput"
                   placeholder="Confirm new password"
                 />
               </div>
-            </div>
 
-            {/* Messages */}
-            {error && (
-              <div className="errorState" style={{ marginTop: '16px' }}>
-                <p>{error}</p>
-              </div>
-            )}
+              {/* Messages */}
+              {error && (
+                <div className="profileAlert profileAlertError">
+                  <span>⚠️</span> {error}
+                </div>
+              )}
 
-            {message && (
-              <div style={{
-                marginTop: '16px',
-                padding: '12px',
-                background: 'var(--successLight)',
-                border: '1px solid var(--success)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--success)',
-                fontSize: '14px',
-              }}>
-                {message}
-              </div>
-            )}
+              {message && (
+                <div className="profileAlert profileAlertSuccess">
+                  <span>✅</span> {message}
+                </div>
+              )}
 
-            {/* Submit Button */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
               <button
                 type="submit"
-                className="btn btnPrimary"
+                className="btn btnSecondary profileSaveBtn"
                 disabled={updateProfile.isPending}
               >
-                {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
+                {updateProfile.isPending ? '💾 Updating...' : '🔑 Update Password'}
               </button>
-            </div>
-          </form>
+            </form>
+          </div>
+        </div>
+
+        {/* Security Tips */}
+        <div className="profileSecurityTips">
+          <h4>🛡️ Security Tips</h4>
+          <ul>
+            <li>Use a strong password with at least 8 characters</li>
+            <li>Include uppercase, lowercase, numbers, and special characters</li>
+            <li>Don't share your password with anyone</li>
+            <li>Change your password regularly for better security</li>
+          </ul>
         </div>
       </div>
     </div>
