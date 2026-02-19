@@ -109,6 +109,9 @@ export function Sidebar({ onNavigate }) {
             🚪
           </button>
         </div>
+        <div className="sidebarAutoHideNote">
+          <small>💡 Hover left edge to show</small>
+        </div>
       </div>
     </>
   );
