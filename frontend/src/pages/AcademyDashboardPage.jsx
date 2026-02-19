@@ -7,18 +7,20 @@ export function AcademyDashboardPage() {
       flexDirection: 'column', 
       height: '100vh',
       margin: -20,
+      background: 'var(--bg)',
     }}>
       {/* Compact Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '12px 20px',
+        padding: '12px 16px',
         background: 'var(--bg)',
         borderBottom: '1px solid var(--border)',
-        gap: 16,
+        gap: 12,
+        flexWrap: 'wrap',
       }}>
         <BackButton to="/" label="Back" />
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: '150px' }}>
           <div style={{ fontWeight: 600, fontSize: 16 }}>Academy Dashboard</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>GoHighLevel Integration</div>
         </div>
@@ -29,6 +31,7 @@ export function AcademyDashboardPage() {
         flex: 1,
         width: '100%',
         border: 'none',
+        minHeight: 0,
       }}>
         <iframe
           src="https://app.ebright.my/v2/location/uCIrspLXxSiM9hj1g1sd/dashboard"
