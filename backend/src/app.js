@@ -121,16 +121,12 @@ function createApp() {
         paramIndex++;
       }
 
-      // Region filter (with mapping logic)
+      // Region filter (using actual region field from database)
       if (region) {
         if (region === 'Region 2') {
-          conditions.push(`(
-            clean_branch IS NULL OR TRIM(clean_branch) = '' OR
-            clean_branch ILIKE 'Unspecified' OR
-            clean_branch ILIKE 'Unknown Branch'
-          )`);
+          conditions.push(`(region = 'Region 2' OR region IS NULL OR TRIM(region) = '')`);
         } else if (region === 'Region 3') {
-          conditions.push(`clean_branch ILIKE '%Online%'`);
+          conditions.push(`region = 'Region 3'`);
         } else {
           conditions.push(`region = $${paramIndex}`);
           params.push(region);
@@ -173,19 +169,19 @@ function createApp() {
       );
 
       // Get filter options
-      // Filter branches based on selected region
+      // Filter branches based on selected region using actual region field
       let branchWhere = "clean_branch IS NOT NULL AND TRIM(clean_branch) != '' AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch'";
-      if (region === 'Region 2') {
-        // Region 2: Show non-Online branches (physical branches)
-        branchWhere += " AND clean_branch NOT ILIKE '%Online%'";
-      } else if (region === 'Region 3') {
-        // Region 3: Show only Online branches
-        branchWhere += " AND clean_branch ILIKE '%Online%'";
+      if (region) {
+        // Filter branches by the selected region
+        branchWhere = `(region = $1 OR (region IS NULL OR TRIM(region) = '') AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch')`;
       }
       
-      const [sourcesResult, branchesResult] = await Promise.all([
+      const [sourcesResult, regionsResult, branchesResult] = await Promise.all([
         pool.query('SELECT DISTINCT lead_source FROM master_leads_powerbi WHERE lead_source IS NOT NULL AND TRIM(lead_source) != \'\' ORDER BY lead_source'),
-        pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE ${branchWhere} ORDER BY clean_branch`),
+        pool.query('SELECT DISTINCT region FROM master_leads_powerbi WHERE region IS NOT NULL AND TRIM(region) != \'\' ORDER BY region'),
+        region 
+          ? pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE region = $1 AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`, [region])
+          : pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
       ]);
 
       res.json({
@@ -195,8 +191,7 @@ function createApp() {
         totalPages: Math.ceil(total / Number(limit)),
         filters: {
           lead_sources: sourcesResult.rows.map(r => r.lead_source),
-          // Only show Region 2 and Region 3 as per user request
-          regions: ['Region 2', 'Region 3'],
+          regions: regionsResult.rows.map(r => r.region),
           branches: branchesResult.rows.map(r => r.clean_branch),
         },
       });
