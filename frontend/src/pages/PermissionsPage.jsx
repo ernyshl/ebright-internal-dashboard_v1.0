@@ -69,6 +69,22 @@ export function PermissionsPage() {
     return labels[role] || role;
   };
 
+  // Get dashboard icon
+  const getDashboardIcon = (id) => {
+    const icons = {
+      dashboard: '📊',
+      marketing: '📈',
+      leads: '🎯',
+      finance: '💰',
+      users: '👥',
+      permissions: '🔐',
+      profile: '👤',
+      department: '🏢',
+      looker: '📉',
+    };
+    return icons[id] || '📋';
+  };
+
   if (isLoading) {
     return (
       <div className="dashboardPage">
@@ -96,174 +112,169 @@ export function PermissionsPage() {
       </div>
 
       <div className="dashboardContent">
-        {/* User Selection */}
-        <div className="permissionsSection">
-          <div className="permissionsSectionHeader">
-            <h2>👥 Select User</h2>
-            <p>Click on a user to manage their dashboard permissions</p>
-          </div>
-          
-          <div className="permissionsUsersGrid">
-            {users.map((user) => (
-              <button
-                key={user.id}
-                className={`permissionUserCard ${selectedUser?.id === user.id ? 'selected' : ''}`}
-                onClick={() => setSelectedUser(user)}
-              >
-                <div className="permissionUserAvatar">
-                  {getInitials(user.fullName)}
-                </div>
-                <div className="permissionUserInfo">
-                  <div className="permissionUserName">{user.fullName || 'Unknown'}</div>
-                  <div className="permissionUserEmail">{user.email}</div>
-                  <span className={`badge ${getRoleBadgeClass(user.role)}`}>
-                    {getRoleLabel(user.role)}
-                  </span>
-                </div>
-                {selectedUser?.id === user.id && (
-                  <div className="selectedIndicator">✓</div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Permissions for Selected User */}
+        {/* Profile Header Card */}
         {selectedUser && (
-          <div className="permissionsSection">
-            <div className="permissionsSectionHeader">
-              <h2>📋 Dashboard Access</h2>
-              <p>Managing permissions for <strong>{selectedUser.fullName}</strong></p>
+          <div className="permissionsHeaderCard">
+            <div className="permissionsHeaderLeft">
+              <div className="permissionsAvatarLarge">
+                {getInitials(selectedUser.fullName)}
+              </div>
+              <div className="permissionsHeaderInfo">
+                <h2 className="permissionsName">{selectedUser.fullName}</h2>
+                <p className="permissionsEmail">{selectedUser.email}</p>
+                <span className={`badge ${getRoleBadgeClass(selectedUser.role)}`}>
+                  {getRoleLabel(selectedUser.role)}
+                </span>
+              </div>
             </div>
-            
-            <div className="permissionsCard">
-              <div className="permissionsCardHeader">
-                <div className="permissionsUserSummary">
-                  <div className="permissionUserAvatarLarge">
-                    {getInitials(selectedUser.fullName)}
-                  </div>
-                  <div>
-                    <div className="permissionsUserName">{selectedUser.fullName}</div>
-                    <div className="permissionsUserEmail">{selectedUser.email}</div>
-                    <span className={`badge ${getRoleBadgeClass(selectedUser.role)}`}>
-                      {getRoleLabel(selectedUser.role)}
-                    </span>
-                  </div>
-                </div>
+            <div className="permissionsHeaderStats">
+              <div className="permissionsStat">
+                <span className="permissionsStatValue">
+                  {Object.values(selectedUser.permissions || {}).filter(p => p?.allowed).length}
+                </span>
+                <span className="permissionsStatLabel">Allowed</span>
               </div>
-              
-              <div className="permissionsTableWrapper">
-                <table className="permissionsTable">
-                  <thead>
-                    <tr>
-                      <th>Dashboard</th>
-                      <th>Access Status</th>
-                      <th>Source</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboards.map((dashboard) => {
-                      const perm = selectedUser.permissions[dashboard.id];
-                      const isCustom = perm?.custom;
-                      const isAllowed = perm?.allowed;
-
-                      return (
-                        <tr key={dashboard.id}>
-                          <td>
-                            <div className="permissionDashboard">
-                              <span className="permissionDashboardIcon">{dashboard.icon}</span>
-                              <div>
-                                <div className="permissionDashboardName">{dashboard.name}</div>
-                                <div className="permissionDashboardDesc">{dashboard.description}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`permissionStatus ${isAllowed ? 'allowed' : 'denied'}`}>
-                              {isAllowed ? '✓ Allowed' : '✗ Denied'}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`permissionSource ${isCustom ? 'custom' : 'role'}`}>
-                              {isCustom ? '🎨 Custom' : '👤 Role Default'}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="permissionActions">
-                              {isAllowed ? (
-                                <button
-                                  className="btn btnSmall btnDanger"
-                                  onClick={() => updatePermission.mutate({ 
-                                    userId: selectedUser.id, 
-                                    dashboard: dashboard.id, 
-                                    allowed: false 
-                                  })}
-                                  disabled={updatePermission.isPending}
-                                >
-                                  🚫 Deny
-                                </button>
-                              ) : (
-                                <button
-                                  className="btn btnSmall btnSuccess"
-                                  onClick={() => updatePermission.mutate({ 
-                                    userId: selectedUser.id, 
-                                    dashboard: dashboard.id, 
-                                    allowed: true 
-                                  })}
-                                  disabled={updatePermission.isPending}
-                                >
-                                  ✅ Allow
-                                </button>
-                              )}
-                              {isCustom && (
-                                <button
-                                  className="btn btnSmall btnSecondary"
-                                  onClick={() => resetPermission.mutate({ 
-                                    userId: selectedUser.id, 
-                                    dashboard: dashboard.id 
-                                  })}
-                                  disabled={resetPermission.isPending}
-                                >
-                                  🔄 Reset
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="permissionsStat">
+                <span className="permissionsStatValue denied">
+                  {Object.values(selectedUser.permissions || {}).filter(p => !p?.allowed).length}
+                </span>
+                <span className="permissionsStatLabel">Denied</span>
               </div>
-              
-              <div className="permissionLegend">
-                <h4>📖 Legend</h4>
-                <div className="legendGrid">
-                  <div className="legendItem">
-                    <span className="badge badgeActive">✓ Allowed</span>
-                    <span>User can access this dashboard</span>
-                  </div>
-                  <div className="legendItem">
-                    <span className="badge badgeInactive">✗ Denied</span>
-                    <span>User cannot access this dashboard</span>
-                  </div>
-                  <div className="legendItem">
-                    <span className="permissionSource custom">🎨 Custom</span>
-                    <span>Permission manually set by admin</span>
-                  </div>
-                  <div className="legendItem">
-                    <span className="permissionSource role">👤 Role Default</span>
-                    <span>Permission inherited from role</span>
-                  </div>
-                </div>
-                <div className="legendNote">
-                  <strong>💡 Tip:</strong> Click "Reset" to remove custom permissions and revert to role defaults.
-                </div>
+              <div className="permissionsStat">
+                <span className="permissionsStatValue custom">
+                  {Object.values(selectedUser.permissions || {}).filter(p => p?.custom).length}
+                </span>
+                <span className="permissionsStatLabel">Custom</span>
               </div>
             </div>
           </div>
         )}
+
+        <div className="permissionsGrid">
+          {/* User Selection Card */}
+          <div className="permissionsUserCard">
+            <div className="profileCardHeader">
+              <span className="profileCardIcon">👥</span>
+              <h3>Select User</h3>
+            </div>
+            <p className="profileCardDesc">
+              Click on a user to manage their dashboard permissions
+            </p>
+            <div className="permissionsUserList">
+              {users.map((user) => (
+                <button
+                  key={user.id}
+                  className={`permissionsUserItem ${selectedUser?.id === user.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedUser(user)}
+                >
+                  <div className="permissionsUserAvatar">
+                    {getInitials(user.fullName)}
+                  </div>
+                  <div className="permissionsUserDetails">
+                    <div className="permissionsUserName">{user.fullName || 'Unknown'}</div>
+                    <div className="permissionsUserEmail">{user.email}</div>
+                  </div>
+                  <span className={`badge badgeSmall ${getRoleBadgeClass(user.role)}`}>
+                    {getRoleLabel(user.role)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Permissions Card */}
+          {selectedUser && (
+            <div className="permissionsDetailCard">
+              <div className="profileCardHeader">
+                <span className="profileCardIcon">📋</span>
+                <h3>Dashboard Access</h3>
+              </div>
+              <p className="profileCardDesc">
+                Manage dashboard permissions for <strong>{selectedUser.fullName}</strong>
+              </p>
+              
+              <div className="permissionsList">
+                {dashboards.map((dashboard) => {
+                  const perm = selectedUser.permissions[dashboard.id];
+                  const isCustom = perm?.custom;
+                  const isAllowed = perm?.allowed;
+
+                  return (
+                    <div key={dashboard.id} className="permissionsListItem">
+                      <div className="permissionsListLeft">
+                        <div className="permissionsListIcon">
+                          {getDashboardIcon(dashboard.id)}
+                        </div>
+                        <div className="permissionsListInfo">
+                          <div className="permissionsListName">{dashboard.name}</div>
+                          <div className="permissionsListDesc">{dashboard.description}</div>
+                        </div>
+                      </div>
+                      <div className="permissionsListRight">
+                        <span className={`permissionsBadge ${isAllowed ? 'allowed' : 'denied'}`}>
+                          {isAllowed ? '✓ Allowed' : '✗ Denied'}
+                        </span>
+                        <span className={`permissionsSource ${isCustom ? 'custom' : 'role'}`}>
+                          {isCustom ? '🎨 Custom' : '👤 Role'}
+                        </span>
+                        <div className="permissionsActions">
+                          {isAllowed ? (
+                            <button
+                              className="btn btnSmall btnDanger"
+                              onClick={() => updatePermission.mutate({ 
+                                userId: selectedUser.id, 
+                                dashboard: dashboard.id, 
+                                allowed: false 
+                              })}
+                              disabled={updatePermission.isPending}
+                            >
+                              Deny
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btnSmall btnSuccess"
+                              onClick={() => updatePermission.mutate({ 
+                                userId: selectedUser.id, 
+                                dashboard: dashboard.id, 
+                                allowed: true 
+                              })}
+                              disabled={updatePermission.isPending}
+                            >
+                              Allow
+                            </button>
+                          )}
+                          {isCustom && (
+                            <button
+                              className="btn btnSmall btnSecondary"
+                              onClick={() => resetPermission.mutate({ 
+                                userId: selectedUser.id, 
+                                dashboard: dashboard.id 
+                              })}
+                              disabled={resetPermission.isPending}
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Security Tips */}
+        <div className="permissionsSecurityTips">
+          <h4>🛡️ Admin Security Tips</h4>
+          <ul>
+            <li>Only grant permissions that users need for their job responsibilities</li>
+            <li>Regularly review and clean up unnecessary custom permissions</li>
+            <li>Use role defaults whenever possible for easier management</li>
+            <li>Reset custom permissions when they no longer apply</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

@@ -3876,3 +3876,345 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== PERMISSIONS PAGE V2 ===== */
+.permissionsHeaderCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.permissionsHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.permissionsAvatarLarge {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--brandGradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 24px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+}
+
+.permissionsHeaderInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.permissionsName {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
+.permissionsEmail {
+  font-size: 14px;
+  color: var(--textSecondary);
+  margin: 0 0 10px;
+}
+
+.permissionsHeaderStats {
+  display: flex;
+  gap: 24px;
+}
+
+.permissionsStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+}
+
+.permissionsStatValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.permissionsStatValue.denied {
+  color: var(--brand);
+}
+
+.permissionsStatValue.custom {
+  color: #7c3aed;
+}
+
+.permissionsStatLabel {
+  font-size: 12px;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+.permissionsGrid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+}
+
+.permissionsUserCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  height: fit-content;
+}
+
+.permissionsUserList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 500px;
+  overflow-y: auto;
+  margin-top: 16px;
+}
+
+.permissionsUserItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+}
+
+.permissionsUserItem:hover {
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.permissionsUserItem.selected {
+  border-color: var(--brand);
+  background: var(--brandLight);
+}
+
+.permissionsUserItem .permissionsUserAvatar {
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+}
+
+.permissionsUserItem .permissionsUserDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.permissionsUserItem .permissionsUserName {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.permissionsUserItem .permissionsUserEmail {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+
+.badgeSmall {
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+.permissionsDetailCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+}
+
+.permissionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.permissionsListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition);
+}
+
+.permissionsListItem:hover {
+  background: var(--borderLight);
+}
+
+.permissionsListLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.permissionsListIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border-radius: var(--radius-md);
+  font-size: 24px;
+}
+
+.permissionsListInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.permissionsListName {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.permissionsListDesc {
+  font-size: 13px;
+  color: var(--textSecondary);
+  margin-top: 2px;
+}
+
+.permissionsListRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.permissionsBadge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.permissionsBadge.allowed {
+  background: var(--successLight);
+  color: var(--success);
+}
+
+.permissionsBadge.denied {
+  background: var(--brandLight);
+  color: var(--brand);
+}
+
+.permissionsSource {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.permissionsSource.custom {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.permissionsSource.role {
+  background: var(--panel);
+  color: var(--textSecondary);
+  border: 1px solid var(--border);
+}
+
+.permissionsActions {
+  display: flex;
+  gap: 8px;
+}
+
+.permissionsSecurityTips {
+  margin-top: 24px;
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.permissionsSecurityTips h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+.permissionsSecurityTips ul {
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+
+.permissionsSecurityTips li {
+  font-size: 14px;
+  color: var(--textSecondary);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.permissionsSecurityTips li:last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive Permissions V2 */
+@media (max-width: 1024px) {
+  .permissionsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .permissionsHeaderCard {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .permissionsHeaderLeft {
+    flex-direction: column;
+  }
+  
+  .permissionsHeaderStats {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .permissionsListItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .permissionsListRight {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .permissionsActions {
+    width: 100%;
+  }
+  
+  .permissionsActions .btn {
+    flex: 1;
+  }
+}
