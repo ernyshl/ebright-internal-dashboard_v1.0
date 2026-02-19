@@ -11,6 +11,8 @@ const ROLE_LABELS = {
   marketing: 'Marketing',
   od: 'OD',
   hr: 'HR',
+  academy: 'Academy',
+  finance: 'Finance',
 };
 
 export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
@@ -41,6 +43,10 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
         return 'badgeExecutive';
       case 'marketing':
         return 'badgeMarketing';
+      case 'academy':
+        return 'badgeAcademy';
+      case 'finance':
+        return 'badgeFinance';
       case 'rm':
       case 'od':
       case 'hr':

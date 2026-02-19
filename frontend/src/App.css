@@ -743,6 +743,16 @@
   color: #059669;
 }
 
+.badgeAcademy {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #b45309;
+}
+
+.badgeFinance {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+}
+
 .badgeActive {
   background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
   color: #059669;

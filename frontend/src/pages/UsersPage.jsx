@@ -12,6 +12,8 @@ const ROLES = [
   { value: 'marketing', label: 'Marketing' },
   { value: 'od', label: 'OD' },
   { value: 'hr', label: 'HR' },
+  { value: 'academy', label: 'Academy' },
+  { value: 'finance', label: 'Finance' },
 ];
 
 const ROLE_BADGE = {
@@ -21,6 +23,8 @@ const ROLE_BADGE = {
   od: 'badgeSales',
   rm: 'badgeSales',
   hr: 'badgeSales',
+  academy: 'badgeAcademy',
+  finance: 'badgeFinance',
 };
 
 const AVATAR_COLORS = ['avatarBrand', 'avatarBlue', 'avatarGreen', 'avatarPurple'];

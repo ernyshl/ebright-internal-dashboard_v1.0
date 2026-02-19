@@ -23,6 +23,8 @@ const ROLE_DEFAULTS = {
   marketing: ['marketing', 'academy'],
   od: ['operations', 'academy'],
   hr: ['department'],
+  academy: ['academy'],
+  finance: ['finance'],
 };
 
 // GET /api/permissions — get current user's permissions
