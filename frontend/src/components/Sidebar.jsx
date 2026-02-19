@@ -13,7 +13,7 @@ const ROLE_LABELS = {
   hr: 'HR',
 };
 
-export function Sidebar({ onNavigate }) {
+export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   const user = getUser();
   const navigate = useNavigate();
   const { permissions } = usePermissions();
@@ -109,9 +109,14 @@ export function Sidebar({ onNavigate }) {
             🚪
           </button>
         </div>
-        <div className="sidebarAutoHideNote">
-          <small>💡 Hover left edge to show</small>
-        </div>
+        <button 
+          className="autoHideToggle"
+          onClick={onToggleAutoHide}
+          title={autoHide ? 'Click to freeze sidebar' : 'Click to enable auto-hide'}
+        >
+          <span className="toggleIcon">{autoHide ? '✓' : '🔒'}</span>
+          <span className="toggleText">Auto Hide: {autoHide ? 'ON' : 'OFF'}</span>
+        </button>
       </div>
     </>
   );

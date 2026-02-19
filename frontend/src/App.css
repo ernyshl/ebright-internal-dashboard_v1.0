@@ -84,6 +84,14 @@
   transform: translateX(0);
 }
 
+.sidebar.sidebarFrozen {
+  transform: translateX(0) !important;
+}
+
+.sidebar.sidebarFrozen:hover {
+  transform: translateX(0);
+}
+
 /* Hover trigger area on left edge */
 .sidebarTrigger {
   position: fixed;
@@ -3038,14 +3046,38 @@
   z-index: 1999;
 }
 
-/* ===== SIDEBAR AUTO-HIDE NOTE ===== */
-.sidebarAutoHideNote {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  text-align: center;
-  padding: 8px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+/* ===== SIDEBAR AUTO-HIDE TOGGLE ===== */
+.autoHideToggle {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.autoHideToggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.toggleIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.toggleText {
+  flex: 1;
+  text-align: left;
 }
 
 @media (max-width: 768px) {

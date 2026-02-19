@@ -8,6 +8,7 @@ import { clearToken } from '../lib/auth';
 export function AppLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [autoHide, setAutoHide] = useState(true);
 
   const me = useQuery({
     queryKey: ['me'],
@@ -31,7 +32,14 @@ export function AppLayout() {
   }
 
   function closeSidebar() {
-    setSidebarOpen(false);
+    if (autoHide) {
+      setSidebarOpen(false);
+    }
+  }
+
+  function toggleAutoHide() {
+    setAutoHide(!autoHide);
+    setSidebarOpen(true); // Always open sidebar when toggling auto-hide
   }
 
   return (
@@ -43,14 +51,21 @@ export function AppLayout() {
       />
       
       {/* Sidebar Trigger (hover to show sidebar on desktop) */}
-      <div className="sidebarTrigger" onMouseEnter={() => setSidebarOpen(true)} />
+      <div 
+        className="sidebarTrigger" 
+        onMouseEnter={() => autoHide && setSidebarOpen(true)} 
+      />
       
       {/* Sidebar */}
       <div 
-        className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''}`}
-        onMouseLeave={() => setSidebarOpen(false)}
+        className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''} ${!autoHide ? 'sidebarFrozen' : ''}`}
+        onMouseLeave={() => autoHide && setSidebarOpen(false)}
       >
-        <Sidebar onNavigate={closeSidebar} />
+        <Sidebar 
+          onNavigate={closeSidebar} 
+          autoHide={autoHide}
+          onToggleAutoHide={toggleAutoHide}
+        />
       </div>
       
       {/* Mobile Menu Button */}
