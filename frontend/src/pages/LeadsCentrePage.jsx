@@ -42,7 +42,12 @@ export function LeadsCentrePage() {
   });
 
   const handleFilterChange = (key, value) => {
-    setFilters(f => ({ ...f, [key]: value }));
+    setFilters(f => ({ 
+      ...f, 
+      [key]: value,
+      // Clear branch when region changes to load correct branches
+      ...(key === 'region' ? { branch: '' } : {})
+    }));
     setPage(1);
   };
 

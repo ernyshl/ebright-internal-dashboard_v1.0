@@ -173,9 +173,17 @@ function createApp() {
       );
 
       // Get filter options
+      // Filter branches based on selected region
+      let branchWhere = "clean_branch IS NOT NULL AND TRIM(clean_branch) != '' AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch'";
+      if (region === 'Region 2') {
+        branchWhere += ` AND (clean_branch IS NULL OR TRIM(clean_branch) = '' OR clean_branch NOT ILIKE '%Online%')`;
+      } else if (region === 'Region 3') {
+        branchWhere += ` AND clean_branch ILIKE '%Online%'`;
+      }
+      
       const [sourcesResult, branchesResult] = await Promise.all([
         pool.query('SELECT DISTINCT lead_source FROM master_leads_powerbi WHERE lead_source IS NOT NULL AND TRIM(lead_source) != \'\' ORDER BY lead_source'),
-        pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
+        pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE ${branchWhere} ORDER BY clean_branch`),
       ]);
 
       res.json({
