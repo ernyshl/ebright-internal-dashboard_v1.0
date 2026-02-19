@@ -5,19 +5,21 @@ function fmtRM(n) {
 
 function fmtNum(n) {
   const x = Number(n || 0);
-  return x.toLocaleString();
+  return Math.round(x).toLocaleString();
 }
 
-function cell(d) {
+function cell(d, isGoogleChannel = false) {
   if (!d) return <span className="muted">—</span>;
   const hasConversions = d.convs && d.convs > 0;
+  const metricLabel = isGoogleChannel ? 'Conv' : 'Leads';
+  
   return (
     <div style={{ lineHeight: 1.6 }}>
       <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtRM(d.spend)}</div>
       <div className="muted" style={{ fontSize: 11.5 }}>
-        {fmtNum(d.leads)} Leads · <span style={{ color: 'var(--brand)' }}>RM {Number(d.cpl || 0).toFixed(2)}</span> CPL
+        {fmtNum(d.leads || d.convs || 0)} {metricLabel} · <span style={{ color: 'var(--brand)' }}>RM {Number(d.cpl || 0).toFixed(2)}</span> CPL
       </div>
-      {hasConversions && (
+      {hasConversions && !isGoogleChannel && (
         <div className="muted" style={{ fontSize: 11.5 }}>
           {fmtNum(d.convs)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || 0).toFixed(2)}</span> CPC
         </div>
@@ -60,10 +62,10 @@ export function MarketingTable({ title, rows }) {
                 } : undefined}
               >
                 <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{r.label}</td>
-                <td>{cell(r.today)}</td>
-                <td>{cell(r.yesterday)}</td>
-                <td>{cell(r.d7)}</td>
-                <td>{cell(r.d30)}</td>
+                <td>{cell(r.today, r.isGoogle)}</td>
+                <td>{cell(r.yesterday, r.isGoogle)}</td>
+                <td>{cell(r.d7, r.isGoogle)}</td>
+                <td>{cell(r.d30, r.isGoogle)}</td>
               </tr>
             ))}
           </tbody>

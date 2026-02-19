@@ -44,7 +44,7 @@ export function MarketingPerformancePage() {
               rows={[
                 { label: 'FB (Group)', ...channels.fb_group },
                 { label: 'TikTok', ...channels.tiktok },
-                { label: 'Google Ads', ...channels.google },
+                { label: 'Google Ads', ...channels.google, isGoogle: true },
                 { label: 'TOTAL', ...groups?.main_marketing, isTotal: true },
               ]}
             />
@@ -103,7 +103,7 @@ export function MarketingPerformancePage() {
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <MarketingTable
                   title="Top Google Ads Campaigns"
-                  rows={campaigns.google.map(c => ({ label: c.name, ...c }))}
+                  rows={campaigns.google.map(c => ({ label: c.name, ...c, isGoogle: true }))}
                 />
               </div>
             )}
