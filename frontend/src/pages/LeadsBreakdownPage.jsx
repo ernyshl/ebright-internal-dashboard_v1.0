@@ -196,11 +196,14 @@ export function LeadsBreakdownPage() {
     refetchInterval: 180_000,
   });
 
-  // Calculate totals from branches data (more accurate than summing lead sources)
+  // Use grandTotal from backend for accurate summary
+  const grandTotal = q.data?.grandTotal || {};
+  const totalLeads = parseInt(grandTotal.count_30_days) || 0;
+  const todayTotal = parseInt(grandTotal.count_today) || 0;
+  const yesterdayTotal = parseInt(grandTotal.count_yesterday) || 0;
+  
+  // Calculate from branches for display table
   const branches = q.data?.branches || [];
-  const totalLeads = branches.reduce((sum, b) => sum + (parseInt(b.count_30_days) || 0), 0);
-  const todayTotal = branches.reduce((sum, b) => sum + (parseInt(b.count_today) || 0), 0);
-  const yesterdayTotal = branches.reduce((sum, b) => sum + (parseInt(b.count_yesterday) || 0), 0);
   const regionCount = q.data?.regions?.length || 0;
   const branchCount = branches.length;
 

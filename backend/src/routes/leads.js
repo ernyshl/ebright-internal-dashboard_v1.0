@@ -23,7 +23,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       ORDER BY lead_source;
     `;
 
-    // B) Regions table - simplified to just 2 regions
+    // B) Regions table - include ALL regions (Region 2, Region 3, and any others)
     const queryRegion = `
       SELECT
         region,
@@ -32,7 +32,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
         COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
-      WHERE region IN ('Region 2', 'Region 3')
+      WHERE region IS NOT NULL AND TRIM(region) != ''
       GROUP BY region
       ORDER BY region;
     `;
@@ -77,16 +77,28 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       ORDER BY count_30_days DESC;
     `;
 
-    const [resTotal, resRegion, resBranch] = await Promise.all([
+    // D) Grand total - count ALL leads in the database
+    const queryGrandTotal = `
+      SELECT
+        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE) AS count_today,
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
+        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+      FROM master_leads_powerbi;
+    `;
+
+    const [resTotal, resRegion, resBranch, resGrandTotal] = await Promise.all([
       pool.query(queryTotal),
       pool.query(queryRegion),
       pool.query(queryBranch),
+      pool.query(queryGrandTotal),
     ]);
 
     return res.json({
       total: resTotal.rows,
       regions: resRegion.rows,
       branches: resBranch.rows,
+      grandTotal: resGrandTotal.rows[0],
     });
   } catch (err) {
     return next(err);
