@@ -42,6 +42,9 @@ export function AppLayout() {
         onClick={closeSidebar}
       />
       
+      {/* Sidebar Trigger (hover to show sidebar on desktop) */}
+      <div className="sidebarTrigger" />
+      
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''}`}>
         <Sidebar onNavigate={closeSidebar} />
