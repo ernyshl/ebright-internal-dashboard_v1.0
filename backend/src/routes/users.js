@@ -86,16 +86,7 @@ const UpdateUserSchema = z.object({
   email: z.string().email().optional(),
   fullName: z.string().min(1, 'Name cannot be empty').optional(),
   role: z.enum(VALID_ROLES).optional(),
-  password: z.string().optional(),
-}).refine((data) => {
-  // If password is provided, it must be at least 6 characters
-  if (data.password && data.password.length < 6) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'Password must be at least 6 characters',
-  path: ['password'],
+  password: z.string().min(8).regex(passwordRegex).optional(),
 });
 
 router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {

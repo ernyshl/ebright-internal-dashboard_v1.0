@@ -51,6 +51,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
         WHERE LOWER(TRIM(clean_branch)) LIKE '%online%'
+        GROUP BY 1, 2, 3
         
         UNION ALL
         
