@@ -38,7 +38,8 @@ export function LeadsCentrePage() {
       return result;
     },
     retry: 1,
-    staleTime: 30000,
+    staleTime: 0, // Always fetch fresh data when filters change
+    refetchOnWindowFocus: true,
   });
 
   const handleFilterChange = (key, value) => {

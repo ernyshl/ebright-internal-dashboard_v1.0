@@ -176,9 +176,11 @@ function createApp() {
       // Filter branches based on selected region
       let branchWhere = "clean_branch IS NOT NULL AND TRIM(clean_branch) != '' AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch'";
       if (region === 'Region 2') {
-        branchWhere += ` AND (clean_branch IS NULL OR TRIM(clean_branch) = '' OR clean_branch NOT ILIKE '%Online%')`;
+        // Region 2: Show non-Online branches (physical branches)
+        branchWhere += " AND clean_branch NOT ILIKE '%Online%'";
       } else if (region === 'Region 3') {
-        branchWhere += ` AND clean_branch ILIKE '%Online%'`;
+        // Region 3: Show only Online branches
+        branchWhere += " AND clean_branch ILIKE '%Online%'";
       }
       
       const [sourcesResult, branchesResult] = await Promise.all([
