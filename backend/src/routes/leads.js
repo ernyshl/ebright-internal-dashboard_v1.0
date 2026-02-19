@@ -55,7 +55,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         
         UNION ALL
         
-        -- Regular branches - combined by branch name only (not region)
+        -- Regular branches - get ALL branches from database
         SELECT
           'All Regions' as region,
           'All Sources' as lead_source,
@@ -66,13 +66,12 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
         WHERE 
-          clean_branch IN (
-            'Ampang', 'Bandar Baru Bangi', 'Bandar Seri Putra', 'Bandar Tun Hussein Onn',
-            'Cyberjaya', 'Denai Alam', 'Danau Kota', 'Eco Grandeur', 'Kota Damansara', 'Klang',
-            'Kajang', 'Kota Warisan', 'Putrajaya', 'Bandar Rimbayu',
-            'Setia Alam', 'Shah Alam', 'Sri Petaling', 'Subang Taipan', 'Taman Seri Gombak'
-          )
+          clean_branch IS NOT NULL 
+          AND TRIM(clean_branch) != ''
           AND LOWER(TRIM(clean_branch)) NOT LIKE '%online%'
+          AND LOWER(TRIM(clean_branch)) NOT LIKE 'unspecified'
+          AND LOWER(TRIM(clean_branch)) NOT LIKE 'unknown branch'
+          AND LOWER(TRIM(clean_branch)) NOT LIKE '%test%'
         GROUP BY TRIM(clean_branch)
       ) combined
       ORDER BY count_30_days DESC;

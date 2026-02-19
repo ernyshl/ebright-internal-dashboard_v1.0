@@ -196,21 +196,13 @@ export function LeadsBreakdownPage() {
     refetchInterval: 180_000,
   });
 
-  // Calculate totals for summary - ensure numbers are parsed
-  const totalLeads = q.data?.total?.reduce((sum, s) => {
-    const val = typeof s.count_30_days === 'string' ? parseInt(s.count_30_days, 10) : (s.count_30_days || 0);
-    return sum + val;
-  }, 0) || 0;
-  const todayTotal = q.data?.total?.reduce((sum, s) => {
-    const val = typeof s.count_today === 'string' ? parseInt(s.count_today, 10) : (s.count_today || 0);
-    return sum + val;
-  }, 0) || 0;
-  const yesterdayTotal = q.data?.total?.reduce((sum, s) => {
-    const val = typeof s.count_yesterday === 'string' ? parseInt(s.count_yesterday, 10) : (s.count_yesterday || 0);
-    return sum + val;
-  }, 0) || 0;
+  // Calculate totals from branches data (more accurate than summing lead sources)
+  const branches = q.data?.branches || [];
+  const totalLeads = branches.reduce((sum, b) => sum + (parseInt(b.count_30_days) || 0), 0);
+  const todayTotal = branches.reduce((sum, b) => sum + (parseInt(b.count_today) || 0), 0);
+  const yesterdayTotal = branches.reduce((sum, b) => sum + (parseInt(b.count_yesterday) || 0), 0);
   const regionCount = q.data?.regions?.length || 0;
-  const branchCount = q.data?.branches?.length || 0;
+  const branchCount = branches.length;
 
   const leadSources = [
     { id: 'website', name: 'Website', icon: '🌐' },
