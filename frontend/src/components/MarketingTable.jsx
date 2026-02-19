@@ -10,7 +10,6 @@ function fmtNum(n) {
 
 function cell(d, isGoogleChannel = false) {
   if (!d) return <span className="muted">—</span>;
-  const hasConversions = d.convs && d.convs > 0;
   const metricLabel = isGoogleChannel ? 'Conv' : 'Leads';
   
   return (
@@ -19,7 +18,7 @@ function cell(d, isGoogleChannel = false) {
       <div className="muted" style={{ fontSize: 11.5 }}>
         {fmtNum(d.leads || d.convs || 0)} {metricLabel} · <span style={{ color: 'var(--brand)' }}>RM {Number(d.cpl || 0).toFixed(2)}</span> CPL
       </div>
-      {hasConversions && !isGoogleChannel && (
+      {!isGoogleChannel && d.convs > 0 && (
         <div className="muted" style={{ fontSize: 11.5 }}>
           {fmtNum(d.convs)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || 0).toFixed(2)}</span> CPC
         </div>
