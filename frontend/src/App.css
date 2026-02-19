@@ -2613,3 +2613,561 @@
     padding: 10px 12px;
   }
 }
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 768px) {
+  /* Layout */
+  .appShell {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .content {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  /* Sidebar Mobile */
+  .sidebar {
+    width: 280px;
+    transform: translateX(-100%);
+    z-index: 2000;
+  }
+  
+  .sidebar.sidebarVisible {
+    transform: translateX(0);
+  }
+  
+  .sidebarTrigger {
+    display: none;
+  }
+  
+  /* Mobile Menu Button */
+  .mobileMenuBtn {
+    display: flex !important;
+  }
+  
+  /* Page Headers */
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .pageHeaderTitle {
+    font-size: 24px;
+  }
+  
+  .pageHeaderSub {
+    font-size: 13px;
+  }
+  
+  /* Dashboard Home */
+  .dashboardHomePage {
+    padding: 12px;
+  }
+  
+  .dashboardHomeHeader {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .dashboardHomeHeader h1 {
+    font-size: 22px;
+  }
+  
+  .dashboardHomeGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .dashboardHomeCard {
+    padding: 16px;
+  }
+  
+  .dashboardHomeCardHeader {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .dashboardHomeCardIcon {
+    font-size: 28px;
+  }
+  
+  .dashboardHomeCardHeader h2 {
+    font-size: 18px;
+  }
+  
+  .dashboardHomeCardLinks {
+    gap: 8px;
+  }
+  
+  .dashboardHomeLink {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  
+  /* Cards */
+  .card {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  /* Grid layouts */
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .grid4 {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Tables */
+  .tableWrap {
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  
+  .table {
+    min-width: 600px;
+    font-size: 13px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 10px 12px;
+  }
+  
+  /* Stat Cards */
+  .statCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .statCardIcon {
+    font-size: 32px;
+  }
+  
+  .statCardValue {
+    font-size: 28px;
+  }
+  
+  .statCardTitle {
+    font-size: 14px;
+  }
+  
+  /* Login Page */
+  .loginPage {
+    padding: 20px;
+    min-height: 100vh;
+  }
+  
+  .loginCard {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px;
+  }
+  
+  .loginHeader {
+    margin-bottom: 24px;
+  }
+  
+  .loginHeader h1 {
+    font-size: 24px;
+  }
+  
+  .loginHeader p {
+    font-size: 14px;
+  }
+  
+  .formGroup {
+    margin-bottom: 16px;
+  }
+  
+  .formGroup label {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  
+  .formInput {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+  
+  .btnLarge {
+    padding: 14px 24px;
+    font-size: 15px;
+  }
+  
+  /* Loading */
+  .loadingCard {
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+  
+  /* Error text */
+  .errorText {
+    padding: 16px;
+    font-size: 14px;
+  }
+  
+  /* Muted text */
+  .muted {
+    font-size: 12px;
+  }
+  
+  .muted.small {
+    font-size: 11px;
+  }
+  
+  /* Source Cards */
+  .sourceCard {
+    padding: 16px;
+  }
+  
+  .sourceCardHeader {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  
+  .sourceCardIcon {
+    font-size: 24px;
+  }
+  
+  .sourceCardName {
+    font-size: 16px;
+  }
+  
+  .sourceCardTotalValue {
+    font-size: 32px;
+  }
+  
+  .sourceCardStats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  
+  .sourceStat {
+    text-align: center;
+  }
+  
+  .sourceStatValue {
+    font-size: 16px;
+  }
+  
+  .sourceStatLabel {
+    font-size: 10px;
+  }
+  
+  /* Region Cards */
+  .regionCard {
+    padding: 16px;
+  }
+  
+  .regionCardHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  
+  .regionCardName {
+    font-size: 16px;
+  }
+  
+  .regionCardTotal {
+    font-size: 20px;
+  }
+  
+  /* Branch Table */
+  .branchTableWrap {
+    margin: 0 -16px;
+  }
+  
+  .branchTable {
+    font-size: 12px;
+  }
+  
+  .branchTable th {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+  
+  .branchTable td {
+    padding: 8px 10px;
+  }
+  
+  /* Marketing Table */
+  .marketingTableWrap {
+    margin: 0 -16px;
+  }
+  
+  .marketingTable {
+    font-size: 12px;
+  }
+  
+  .marketingTable th {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+  
+  .marketingTable td {
+    padding: 8px 10px;
+  }
+  
+  /* Json Table */
+  .jsonTableWrap {
+    margin: 0 -16px;
+  }
+  
+  .jsonTable {
+    font-size: 11px;
+  }
+  
+  .jsonTable th,
+  .jsonTable td {
+    padding: 8px 10px;
+  }
+  
+  /* Back Button */
+  .backBtn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  /* Page content padding */
+  .stack > * {
+    margin-bottom: 16px;
+  }
+}
+
+/* ===== TABLET RESPONSIVE ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .content {
+    padding: 20px;
+  }
+  
+  .dashboardHomeGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .grid2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .grid3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .grid4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .pageHeader {
+    padding: 20px;
+  }
+  
+  .pageHeaderTitle {
+    font-size: 28px;
+  }
+}
+
+/* ===== HIDE SIDEBAR TRIGGER ON MOBILE ===== */
+@media (max-width: 768px) {
+  .sidebarTrigger {
+    display: none;
+  }
+}
+
+/* ===== MOBILE MENU BUTTON ===== */
+.mobileMenuBtn {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  z-index: 1500;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: transform var(--transition);
+}
+
+.mobileMenuBtn:hover {
+  transform: scale(1.1);
+}
+
+.mobileMenuBtn:active {
+  transform: scale(0.95);
+}
+
+/* ===== MOBILE OVERLAY ===== */
+.mobileOverlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1999;
+}
+
+@media (max-width: 768px) {
+  .mobileOverlay.active {
+    display: block;
+  }
+}
+
+/* ===== MOBILE NAVIGATION ===== */
+@media (max-width: 768px) {
+  .nav {
+    padding: 16px;
+    gap: 6px;
+  }
+  
+  .navLink {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  
+  .navIcon {
+    font-size: 22px;
+    width: 28px;
+  }
+  
+  .sidebarHeader {
+    padding: 20px 16px;
+  }
+  
+  .brandMark {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .brandTitle {
+    font-size: 16px;
+  }
+  
+  .sidebarFooter {
+    padding: 16px;
+  }
+  
+  .sidebarUser {
+    gap: 10px;
+  }
+  
+  .sidebarUserInfo {
+    flex: 1;
+  }
+  
+  .sidebarUserName {
+    font-size: 14px;
+  }
+  
+  .sidebarUserRole {
+    font-size: 11px;
+  }
+}
+
+/* ===== LANDSCAPE MOBILE ===== */
+@media (max-width: 768px) and (orientation: landscape) {
+  .content {
+    padding: 12px;
+  }
+  
+  .dashboardHomeGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .grid2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .sourceCardStats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ===== SMALL MOBILE ===== */
+@media (max-width: 480px) {
+  .content {
+    padding: 10px;
+  }
+  
+  .pageHeader {
+    padding: 12px;
+  }
+  
+  .pageHeaderTitle {
+    font-size: 20px;
+  }
+  
+  .pageHeaderSub {
+    font-size: 12px;
+  }
+  
+  .dashboardHomeHeader h1 {
+    font-size: 20px;
+  }
+  
+  .dashboardHomeCard {
+    padding: 14px;
+  }
+  
+  .card {
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  
+  .sourceCardStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .sourceCardTotalValue {
+    font-size: 28px;
+  }
+  
+  .statCardValue {
+    font-size: 24px;
+  }
+  
+  .btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .loginCard {
+    padding: 20px;
+  }
+  
+  .loginHeader h1 {
+    font-size: 22px;
+  }
+}

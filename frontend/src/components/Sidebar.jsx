@@ -13,7 +13,7 @@ const ROLE_LABELS = {
   hr: 'HR',
 };
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }) {
   const user = getUser();
   const navigate = useNavigate();
   const { permissions } = usePermissions();
@@ -21,6 +21,12 @@ export function Sidebar() {
   const handleLogout = () => {
     clearToken();
     navigate('/login');
+  };
+
+  const handleNavClick = () => {
+    if (onNavigate) {
+      onNavigate();
+    }
   };
 
   const getInitials = (name) => {
@@ -79,7 +85,13 @@ export function Sidebar() {
 
       <nav className="nav">
         {visibleNavItems.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.to === '/'} className={linkClass}>
+          <NavLink 
+            key={item.to} 
+            to={item.to} 
+            end={item.to === '/'} 
+            className={linkClass}
+            onClick={handleNavClick}
+          >
             <span className="navIcon">{item.icon}</span>
             {item.label}
           </NavLink>

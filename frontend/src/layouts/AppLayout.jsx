@@ -1,11 +1,13 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { apiFetch } from '../lib/api';
 import { clearToken } from '../lib/auth';
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const me = useQuery({
     queryKey: ['me'],
@@ -24,13 +26,43 @@ export function AppLayout() {
     navigate('/login', { replace: true });
   }
 
+  function toggleSidebar() {
+    setSidebarOpen(!sidebarOpen);
+  }
+
+  function closeSidebar() {
+    setSidebarOpen(false);
+  }
+
   return (
     <div className="appShell">
-      <div className="sidebarTrigger" />
-      <Sidebar />
+      {/* Mobile Overlay */}
+      <div 
+        className={`mobileOverlay ${sidebarOpen ? 'active' : ''}`} 
+        onClick={closeSidebar}
+      />
+      
+      {/* Sidebar */}
+      <div className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''}`}>
+        <Sidebar onNavigate={closeSidebar} />
+      </div>
+      
+      {/* Mobile Menu Button */}
+      <button className="mobileMenuBtn" onClick={toggleSidebar} aria-label="Toggle menu">
+        ☰
+      </button>
+      
       <div className="content">
         <header className="topbar">
           <div className="topbarLeft">
+            <button 
+              className="mobileMenuBtn" 
+              onClick={toggleSidebar}
+              style={{ display: 'none', position: 'relative', bottom: 'auto', right: 'auto' }}
+              aria-label="Toggle menu"
+            >
+              ☰
+            </button>
             <div className="pageTitle">Ebright Internal Dashboard</div>
             <div className="muted small">
               {me.isLoading
