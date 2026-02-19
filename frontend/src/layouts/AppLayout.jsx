@@ -43,12 +43,25 @@ export function AppLayout() {
       />
       
       {/* Sidebar Trigger (hover to show sidebar on desktop) */}
-      <div className="sidebarTrigger" />
+      <div className="sidebarTrigger" onMouseEnter={() => setSidebarOpen(true)} />
       
       {/* Sidebar */}
-      <div className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''}`}>
+      <div 
+        className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''}`}
+        onMouseLeave={() => setSidebarOpen(false)}
+      >
         <Sidebar onNavigate={closeSidebar} />
       </div>
+      
+      {/* Sticky Sidebar Toggle Button */}
+      <button 
+        className="sidebarToggleBtn"
+        onClick={toggleSidebar}
+        title="Toggle sidebar"
+        aria-label="Toggle sidebar"
+      >
+        {sidebarOpen ? '◀' : '▶'}
+      </button>
       
       {/* Mobile Menu Button */}
       <button className="mobileMenuBtn" onClick={toggleSidebar} aria-label="Toggle menu">

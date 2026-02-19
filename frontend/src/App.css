@@ -3038,6 +3038,38 @@
   z-index: 1999;
 }
 
+/* ===== SIDEBAR TOGGLE BUTTON ===== */
+.sidebarToggleBtn {
+  display: none;
+  position: fixed;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  z-index: 1500;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  transition: all var(--transition);
+}
+
+.sidebarToggleBtn:hover {
+  background: var(--brandDark);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.sidebarToggleBtn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
 @media (max-width: 768px) {
   .mobileOverlay.active {
     display: block;
@@ -3050,10 +3082,8 @@
     transform: translateX(-100%);
   }
   
-  /* Show sidebar when hovering over trigger area */
-  .sidebarTrigger:hover ~ .sidebar,
-  .sidebar:hover {
-    transform: translateX(0);
+  .sidebarToggleBtn {
+    display: flex !important;
   }
   
   .mobileMenuBtn {
@@ -3063,16 +3093,14 @@
   .mobileOverlay {
     display: none !important;
   }
-  
-  /* Push content when sidebar is visible */
-  .sidebarTrigger:hover ~ .content,
-  .sidebar:hover ~ .content {
-    margin-left: 280px;
-  }
 }
 
 /* ===== MOBILE NAVIGATION ===== */
 @media (max-width: 768px) {
+  .sidebarToggleBtn {
+    display: none !important;
+  }
+  
   .nav {
     padding: 16px;
     gap: 6px;
