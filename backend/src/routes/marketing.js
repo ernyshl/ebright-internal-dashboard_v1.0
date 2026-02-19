@@ -127,6 +127,19 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       };
     }
 
+    function toPeriodStatsGoogle(row, prefix) {
+      const spend = Number(row[`spend_${prefix}`] ?? 0);
+      const leads = Number(row[`leads_${prefix}`] ?? 0);
+      const leadSpend = Number(row[`lead_spend_${prefix}`] ?? 0);
+      const cpl = leads > 0 ? leadSpend / leads : 0;
+
+      return {
+        spend,
+        leads,
+        cpl,
+      };
+    }
+
     function formatChannel(result) {
       const row = result.rows[0] || {};
       return {
@@ -140,10 +153,10 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
     function formatGoogleChannel(result) {
       const row = result.rows[0] || {};
       return {
-        today: toPeriodStats(row, 'today'),
-        yesterday: toPeriodStats(row, 'yesterday'),
-        d7: toPeriodStats(row, '7d'),
-        d30: toPeriodStats(row, '30d'),
+        today: toPeriodStatsGoogle(row, 'today'),
+        yesterday: toPeriodStatsGoogle(row, 'yesterday'),
+        d7: toPeriodStatsGoogle(row, '7d'),
+        d30: toPeriodStatsGoogle(row, '30d'),
       };
     }
 
@@ -154,6 +167,16 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         yesterday: toPeriodStats(row, 'yesterday'),
         d7: toPeriodStats(row, '7d'),
         d30: toPeriodStats(row, '30d'),
+      }));
+    }
+
+    function formatGoogleCampaigns(result) {
+      return result.rows.map(row => ({
+        name: row.campaign_name,
+        today: toPeriodStatsGoogle(row, 'today'),
+        yesterday: toPeriodStatsGoogle(row, 'yesterday'),
+        d7: toPeriodStatsGoogle(row, '7d'),
+        d30: toPeriodStatsGoogle(row, '30d'),
       }));
     }
 
@@ -170,7 +193,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       tiktok: formatCampaigns(ttCampaigns),
       sara: formatCampaigns(saraCampaigns),
       online: formatCampaigns(onlineCampaigns),
-      google: formatCampaigns(googleCampaigns),
+      google: formatGoogleCampaigns(googleCampaigns),
     };
 
     // Streamlit "Ebright Group Expenses" total = FB (Group) + TikTok
