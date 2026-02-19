@@ -58,6 +58,12 @@ export function MarketingPerformancePage() {
             </div>
           </div>
 
+          {channels.google && (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <MarketingTable title="Google Ads" rows={[{ label: 'Google', ...channels.google }]} />
+            </div>
+          )}
+
           {/* Campaign Performance Section */}
           <div className="stack">
             <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>Top Campaign Performance</h3>
@@ -94,6 +100,15 @@ export function MarketingPerformancePage() {
                 <MarketingTable
                   title="Top Online Campaigns"
                   rows={campaigns.online.map(c => ({ label: c.name, ...c }))}
+                />
+              </div>
+            )}
+
+            {campaigns?.google?.length > 0 && (
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <MarketingTable
+                  title="Top Google Ads Campaigns"
+                  rows={campaigns.google.map(c => ({ label: c.name, ...c }))}
                 />
               </div>
             )}

@@ -10,15 +10,18 @@ function fmtNum(n) {
 
 function cell(d) {
   if (!d) return <span className="muted">—</span>;
+  const hasConversions = d.convs && d.convs > 0;
   return (
     <div style={{ lineHeight: 1.6 }}>
       <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtRM(d.spend)}</div>
       <div className="muted" style={{ fontSize: 11.5 }}>
         {fmtNum(d.leads)} Leads · <span style={{ color: 'var(--brand)' }}>RM {Number(d.cpl || 0).toFixed(2)}</span> CPL
       </div>
-      <div className="muted" style={{ fontSize: 11.5 }}>
-        {fmtNum(d.convs)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || 0).toFixed(2)}</span> CPC
-      </div>
+      {hasConversions && (
+        <div className="muted" style={{ fontSize: 11.5 }}>
+          {fmtNum(d.convs)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || 0).toFixed(2)}</span> CPC
+        </div>
+      )}
     </div>
   );
 }
