@@ -7,7 +7,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 // Valid roles
-const VALID_ROLES = ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr'];
+const VALID_ROLES = ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr', 'academy', 'finance'];
 
 // Strong password validation regex
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;

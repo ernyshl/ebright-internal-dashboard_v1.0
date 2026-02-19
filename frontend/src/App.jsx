@@ -7,6 +7,7 @@ import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { MarketingPerformancePage } from './pages/MarketingPerformancePage';
 import { LeadsBreakdownPage } from './pages/LeadsBreakdownPage';
 import { UsersPage } from './pages/UsersPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { LookerDashboardPage } from './pages/LookerDashboardPage';
 import { FinanceDashboardPage } from './pages/FinanceDashboardPage';
 import { DepartmentDashboardPage } from './pages/DepartmentDashboardPage';
@@ -23,6 +24,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/marketing-performance" element={<MarketingPerformancePage />} />
           <Route path="/branch-distribution" element={<LeadsBreakdownPage />} />
           <Route path="/users" element={<UsersPage />} />

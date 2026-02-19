@@ -105,12 +105,18 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
       </nav>
 
       <div className="sidebarFooter">
-        <div className="sidebarUser">
-          <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
-          <div className="sidebarUserInfo">
-            <div className="sidebarUserName">{user?.fullName || 'User'}</div>
-            <span className={`badge ${getRoleBadgeClass(user?.role)}`}>{getRoleLabel(user?.role)}</span>
-          </div>
+        <div className="sidebarUserWrapper">
+          <button
+            className="sidebarUserButton"
+            onClick={() => navigate('/profile')}
+            title="Edit profile"
+          >
+            <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
+            <div className="sidebarUserInfo">
+              <div className="sidebarUserName">{user?.fullName || 'User'}</div>
+              <span className={`badge ${getRoleBadgeClass(user?.role)}`}>{getRoleLabel(user?.role)}</span>
+            </div>
+          </button>
           <button className="sidebarLogout" onClick={handleLogout} title="Logout">
             🚪
           </button>

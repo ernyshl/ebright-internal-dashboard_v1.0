@@ -40,7 +40,9 @@ const VALID_ROLES = [
   'rm',
   'marketing',
   'od',
-  'hr'
+  'hr',
+  'academy',
+  'finance'
 ];
 
 const LoginSchema = z.object({
@@ -106,6 +108,106 @@ router.post('/login', async (req, res, next) => {
 
 router.get('/me', requireAuth, async (req, res) => {
   return res.json({ user: req.user });
+});
+
+// GET /api/auth/profile — get current user's profile
+router.get('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, email, full_name, role FROM users WHERE id = $1',
+      [req.user.sub]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    return res.json({
+      user: {
+        id: rows[0].id,
+        email: rows[0].email,
+        fullName: rows[0].full_name,
+        role: rows[0].role,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+const UpdateProfileSchema = z.object({
+  fullName: z.string().min(1, 'Name is required'),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().optional(),
+});
+
+// PUT /api/auth/profile — update current user's profile
+router.put('/profile', requireAuth, async (req, res, next) => {
+  try {
+    const { fullName, currentPassword, newPassword } = UpdateProfileSchema.parse(req.body);
+
+    // Get current user
+    const { rows: userRows } = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [req.user.sub]
+    );
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // If changing password, verify current password
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password required' });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, userRows[0].password_hash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      // Validate new password strength
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({
+          error: 'Password must contain: uppercase, lowercase, number, and special character'
+        });
+      }
+    }
+
+    // Update user
+    if (newPassword) {
+      const hash = await bcrypt.hash(newPassword, 12);
+      await pool.query(
+        'UPDATE users SET full_name = $1, password_hash = $2, updated_at = now() WHERE id = $3',
+        [fullName, hash, req.user.sub]
+      );
+    } else {
+      await pool.query(
+        'UPDATE users SET full_name = $1, updated_at = now() WHERE id = $2',
+        [fullName, req.user.sub]
+      );
+    }
+
+    // Get updated user
+    const { rows: updatedRows } = await pool.query(
+      'SELECT id, email, full_name, role FROM users WHERE id = $1',
+      [req.user.sub]
+    );
+
+    return res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: updatedRows[0].id,
+        email: updatedRows[0].email,
+        fullName: updatedRows[0].full_name,
+        role: updatedRows[0].role,
+      },
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: err.errors });
+    }
+    return next(err);
+  }
 });
 
 module.exports = { authRouter: router };
