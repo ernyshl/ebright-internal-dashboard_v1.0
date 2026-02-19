@@ -60,6 +60,7 @@
   height: 100vh;
   width: 100%;
   max-width: 1800px;
+  transition: margin-left 0.3s ease;
 }
 
 /* ===== SIDEBAR ===== */
@@ -3090,6 +3091,16 @@
 @media (min-width: 769px) {
   .sidebar {
     transform: translateX(-100%);
+  }
+  
+  /* When sidebar is frozen, shift content to the right */
+  .sidebar.sidebarFrozen ~ .content {
+    margin-left: 280px;
+  }
+  
+  /* When sidebar is not frozen, content is full width */
+  .sidebar:not(.sidebarFrozen) ~ .content {
+    margin-left: 0;
   }
   
   .mobileMenuBtn {
