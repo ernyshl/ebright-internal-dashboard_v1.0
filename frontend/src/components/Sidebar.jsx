@@ -74,7 +74,7 @@ export function Sidebar({ onNavigate }) {
     : navItems.filter(item => !item.dashboard || canAccess(item.dashboard, permissions));
 
   return (
-    <aside className="sidebar">
+    <>
       <div className="sidebarHeader">
         <img src="/OD LOGO.png" alt="OD Logo" style={{ width: 48, height: 48, objectFit: 'contain' }} />
         <div>
@@ -110,7 +110,7 @@ export function Sidebar({ onNavigate }) {
           </button>
         </div>
       </div>
-    </aside>
+    </>
   );
 }
 
