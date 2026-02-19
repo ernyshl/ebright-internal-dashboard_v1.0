@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import App from './App.jsx';
+import { setQueryClient } from './lib/auth';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,6 +14,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Set the query client for auth module to use on logout
+setQueryClient(queryClient);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
