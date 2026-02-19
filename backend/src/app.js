@@ -8,6 +8,7 @@ const { marketingRouter } = require('./routes/marketing');
 const { leadsRouter } = require('./routes/leads');
 const { usersRouter } = require('./routes/users');
 const { permissionsRouter } = require('./routes/permissions');
+const { academyRouter } = require('./routes/academy');
 const { pool } = require('./db');
 
 // Rate limiting store (in-memory for single instance, use Redis for production)
@@ -66,6 +67,7 @@ function createApp() {
   app.use('/api/leads', leadsRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/permissions', permissionsRouter);
+  app.use('/api/academy', academyRouter);
 
   // Leads Centre endpoint - with filtering, search, pagination
   app.get('/api/leads-centre', async (req, res) => {

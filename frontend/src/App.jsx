@@ -13,6 +13,7 @@ import { DepartmentDashboardPage } from './pages/DepartmentDashboardPage';
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { LeadsCentrePage } from './pages/LeadsCentrePage';
 import { PermissionsPage } from './pages/PermissionsPage';
+import { AcademyDashboardPage } from './pages/AcademyDashboardPage';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/finance" element={<FinanceDashboardPage />} />
           <Route path="/department" element={<DepartmentDashboardPage />} />
           <Route path="/leads-centre" element={<LeadsCentrePage />} />
+          <Route path="/academy-dashboard" element={<AcademyDashboardPage />} />
         </Route>
       </Route>
 

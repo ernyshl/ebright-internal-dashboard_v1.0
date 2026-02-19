@@ -24,6 +24,15 @@ export function DashboardHomePage() {
 
   const departmentData = [
     {
+      id: 'academy',
+      name: 'Academy',
+      icon: '🎓',
+      color: '#8b5cf6',
+      links: [
+        { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' }
+      ]
+    },
+    {
       id: 'finance',
       name: 'Finance',
       icon: '💰',

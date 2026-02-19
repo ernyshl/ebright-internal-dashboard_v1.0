@@ -7,6 +7,7 @@ const router = express.Router();
 
 // Available dashboards
 const DASHBOARDS = [
+  { id: 'academy', name: 'Academy', icon: '🎓' },
   { id: 'marketing', name: 'Marketing', icon: '📈' },
   { id: 'finance', name: 'Finance', icon: '💰' },
   { id: 'operations', name: 'Operations', icon: '⚙️' },
@@ -16,11 +17,11 @@ const DASHBOARDS = [
 
 // Role-based default permissions
 const ROLE_DEFAULTS = {
-  super_admin: ['marketing', 'finance', 'operations', 'department'],
-  ceo: ['marketing', 'finance', 'operations', 'department'],
-  rm: ['operations'],
-  marketing: ['marketing'],
-  od: ['operations'],
+  super_admin: ['academy', 'marketing', 'finance', 'operations', 'department'],
+  ceo: ['academy', 'marketing', 'finance', 'operations', 'department'],
+  rm: ['operations', 'academy'],
+  marketing: ['marketing', 'academy'],
+  od: ['operations', 'academy'],
   hr: ['department'],
 };
 
