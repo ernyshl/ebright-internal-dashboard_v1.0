@@ -261,17 +261,24 @@ export function LeadsBreakdownPage() {
               subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`}
             />
             <StatCard 
+              title="Yesterday's Leads" 
+              value={yesterdayTotal} 
+              icon="📆" 
+              color="#f59e0b"
+              subtitle={`${todayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% change today`}
+            />
+            <StatCard 
               title="Active Regions" 
               value={regionCount} 
               icon="🗺️" 
-              color="#f59e0b"
+              color="#6366f1"
               subtitle="With lead activity"
             />
             <StatCard 
               title="Active Branches" 
               value={branchCount} 
               icon="🏢" 
-              color="#6366f1"
+              color="#ec4899"
               subtitle="With lead activity"
             />
           </div>
