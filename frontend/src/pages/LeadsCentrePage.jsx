@@ -275,9 +275,8 @@ export function LeadsCentrePage() {
                       </td>
                       <td>
                         <span className="regionBadge">
-                          {lead.region || lead.clean_branch?.includes('Online') ? 'Region 3' : 
-                           lead.clean_branch ? 'Region 2' : 
-                           lead.region || '-'}
+                          {lead.region || (lead.clean_branch?.includes('Online') ? 'Region 3' : 
+                           lead.clean_branch ? 'Region 2' : '-')}
                         </span>
                       </td>
                       <td>
