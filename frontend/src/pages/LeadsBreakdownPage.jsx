@@ -144,7 +144,7 @@ function BranchTable({ branches }) {
   const normalizedBranches = branches.map(normalizeBranch);
   
   // Filter out inactive branches
-  const inactiveBranches = ['Taman Melawati', 'Kajang Perdana'];
+  const inactiveBranches = ['Taman Melawati', 'Kajang Perdana', 'Bandar Sri Damansara', 'Kepong'];
   const filteredBranches = normalizedBranches.filter(
     (branch) => !inactiveBranches.includes(branch.clean_branch)
   );
