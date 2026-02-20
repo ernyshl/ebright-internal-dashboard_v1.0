@@ -2278,7 +2278,7 @@
 .summaryStats {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 28px;
   justify-items: center;
 }
@@ -2286,14 +2286,14 @@
 .leadsBreakdownPage .statCard {
   background: var(--panel);
   border-radius: var(--radius-lg);
-  padding: 12px 16px;
+  padding: 14px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
-  min-width: 140px;
+  min-width: 160px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -2354,21 +2354,21 @@
 /* Lead Sources Grid */
 .sourcesGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
   justify-items: center;
 }
 
 .sourceCard {
   background: var(--panel);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 18px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-align: center;
   width: 100%;
-  max-width: 280px;
+  max-width: 300px;
 }
 
 .sourceCard:hover {
@@ -2386,39 +2386,39 @@
 }
 
 .sourceCardIcon {
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .sourceCardName {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
 }
 
 .sourceCardTotal {
   text-align: center;
-  padding: 10px;
+  padding: 12px;
   background: var(--bg);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 }
 
 .sourceCardTotalValue {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text);
   display: block;
 }
 
 .sourceCardTotalLabel {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--textSecondary);
 }
 
 .sourceCardStats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
@@ -2430,7 +2430,7 @@
 }
 
 .sourceStatValue {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
   display: block;
@@ -2446,9 +2446,9 @@
 
 .sourceCardTrend {
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 6px;
+  padding: 8px;
   border-radius: var(--radius-sm);
 }
 
@@ -2465,38 +2465,38 @@
 /* Regions Grid */
 .regionsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
   justify-items: center;
 }
 
 .regionCard {
   background: var(--panel);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 20px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
   width: 100%;
-  max-width: 320px;
+  max-width: 380px;
 }
 
 .regionCardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
   border-bottom: 2px solid var(--region-color);
 }
 
 .regionCardName {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
 }
 
 .regionCardTotal {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--region-color);
 }
@@ -2548,7 +2548,7 @@
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
   margin: 0 auto;
-  max-width: 1000px;
+  max-width: 1100px;
 }
 
 .branchTable {
@@ -2558,9 +2558,9 @@
 
 .branchTable th {
   background: var(--bg);
-  padding: 10px 12px;
+  padding: 12px 14px;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--textSecondary);
   text-transform: uppercase;
@@ -2569,9 +2569,9 @@
 }
 
 .branchTable td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--borderLight);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text);
   text-align: center;
 }
