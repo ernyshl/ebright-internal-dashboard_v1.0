@@ -2394,14 +2394,12 @@
   margin: 0 0 24px;
 }
 
-/* Lead Sources Grid */
-.sourcesGrid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
-  max-width: 1200px;
-  margin: 0 auto 36px;
+/* Campaign Grid */
+.campaignGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
 }
 
 .sourceCard {

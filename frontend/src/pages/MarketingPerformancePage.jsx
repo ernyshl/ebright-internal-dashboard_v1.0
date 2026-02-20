@@ -20,37 +20,84 @@ function CampaignPieChart({ data, title }) {
 
   if (chartData.length === 0) return null;
 
+  // Calculate total for percentages
+  const totalSpend = chartData.reduce((sum, item) => sum + item.value, 0);
+
   return (
-    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <h4 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--textSecondary)' }}>{title}</h4>
-      <div style={{ width: '100%', height: 240 }}>
+    <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '420px' }}>
+      <h4 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{title}</h4>
+      <div style={{ width: '100%', height: 280, position: 'relative' }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
+              innerRadius={70}
+              outerRadius={95}
+              paddingAngle={4}
               dataKey="value"
+              stroke="none"
             >
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip 
-              formatter={(value) => `RM ${Number(value).toLocaleString()}`}
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-            />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36}
-              iconType="circle"
-              wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+              formatter={(value) => [`RM ${Number(value).toLocaleString()}`, 'Spend']}
+              contentStyle={{ 
+                borderRadius: '12px', 
+                border: 'none', 
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                padding: '10px 14px',
+                fontSize: '13px'
+              }}
             />
           </PieChart>
         </ResponsiveContainer>
+        {/* Center Text */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center',
+          pointerEvents: 'none'
+        }}>
+          <div style={{ fontSize: '12px', color: 'var(--textSecondary)', fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>RM {Math.round(totalSpend).toLocaleString()}</div>
+        </div>
+      </div>
+      
+      {/* Custom Legend */}
+      <div style={{ 
+        width: '100%', 
+        marginTop: '20px', 
+        display: 'grid', 
+        gridTemplateColumns: '1fr', 
+        gap: '8px',
+        maxHeight: '120px',
+        overflowY: 'auto',
+        paddingRight: '4px'
+      }}>
+        {chartData.slice(0, 5).map((entry, index) => (
+          <div key={entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: COLORS[index % COLORS.length], flexShrink: 0 }} />
+              <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500, color: 'var(--textSecondary)' }}>
+                {entry.name}
+              </div>
+            </div>
+            <div style={{ fontWeight: 700, color: 'var(--text)', marginLeft: '12px' }}>
+              {((entry.value / totalSpend) * 100).toFixed(1)}%
+            </div>
+          </div>
+        ))}
+        {chartData.length > 5 && (
+          <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>
+            + {chartData.length - 5} more campaigns
+          </div>
+        )}
       </div>
     </div>
   );
@@ -116,7 +163,7 @@ export function MarketingPerformancePage() {
           <div className="stack">
             <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>Top Campaign Performance (30 Days Spend)</h3>
             
-            <div className="grid2">
+            <div className="campaignGrid">
               <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" />
               <CampaignPieChart data={campaigns?.tiktok} title="TikTok Campaigns" />
               <CampaignPieChart data={campaigns?.sara} title="Sara Recruitment Campaigns" />
