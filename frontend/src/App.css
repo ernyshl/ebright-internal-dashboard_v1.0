@@ -1003,10 +1003,11 @@
 }
 
 .dashboardHomeGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 24px;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -1016,6 +1017,9 @@
   border: 1px solid var(--border);
   overflow: hidden;
   transition: transform var(--transition), box-shadow var(--transition);
+  width: 100%;
+  max-width: 340px;
+  flex: 0 1 340px;
 }
 
 .dashboardHomeCard:hover {
