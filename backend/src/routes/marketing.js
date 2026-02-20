@@ -19,14 +19,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       ONLINE_ID: 'act_1235601843302851',
     };
 
-    let dateFilter = '';
-    let params = [];
-    
-    if (month && year) {
-      dateFilter = `AND EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4`;
-      params = [parseInt(month), parseInt(year)];
-    }
-
+    // Base query for standard time windows (Today, Yesterday, 7d, 30d)
     const query = `
       SELECT
         $1::text as channel_key,
@@ -54,14 +47,12 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d,
         
-        -- Monthly stats for charts
-        SUM(spend) as spend_monthly,
-        SUM(leads) as leads_monthly,
-        SUM(conversions) as convs_monthly,
-        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly,
-        SUM(spend) FILTER (WHERE conversions > 0) as conv_spend_monthly
+        -- Monthly stats for charts (filtered by query params)
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as spend_monthly,
+        SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as leads_monthly,
+        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as convs_monthly
       FROM meta_spend
-      WHERE account_id = $2 ${dateFilter}
+      WHERE account_id = $2
     `;
 
     const campaignQuery = `
@@ -91,26 +82,27 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d,
         
-        -- Monthly stats for charts
-        SUM(spend) as spend_monthly,
-        SUM(leads) as leads_monthly,
-        SUM(conversions) as convs_monthly,
-        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly,
-        SUM(spend) FILTER (WHERE conversions > 0) as conv_spend_monthly
+        -- Monthly stats for charts (filtered by query params)
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as spend_monthly,
+        SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as leads_monthly,
+        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as convs_monthly
       FROM meta_spend
-      WHERE account_id = $1 ${dateFilter}
+      WHERE account_id = $1
       GROUP BY campaign_name
-      ORDER BY spend_monthly DESC
+      ORDER BY spend_monthly DESC NULLS LAST
       LIMIT 10
     `;
 
+    const m = parseInt(month) || (new Date().getMonth() + 1);
+    const y = parseInt(year) || new Date().getFullYear();
+
     const [mainFb, tt, sara, online, googleData, googleCampaigns] = await Promise.all([
-      pool.query(query, ['fb_group', ACCOUNTS.MAIN_FB_ID, ...params]),
-      pool.query(query, ['tiktok', ACCOUNTS.TT_ID, ...params]),
-      pool.query(query, ['sara', ACCOUNTS.SARA_ID, ...params]),
-      pool.query(query, ['online', ACCOUNTS.ONLINE_ID, ...params]),
-      getGoogleSpendData(null, month, year), // Fetch Google spend data from database
-      getGoogleCampaignData(null, month, year), // Fetch Google campaign data from database
+      pool.query(query, ['fb_group', ACCOUNTS.MAIN_FB_ID, m, y]),
+      pool.query(query, ['tiktok', ACCOUNTS.TT_ID, m, y]),
+      pool.query(query, ['sara', ACCOUNTS.SARA_ID, m, y]),
+      pool.query(query, ['online', ACCOUNTS.ONLINE_ID, m, y]),
+      getGoogleSpendData(null, m, y),
+      getGoogleCampaignData(null, m, y),
     ]);
 
     // Campaign queries - handle potential missing campaign_name column gracefully

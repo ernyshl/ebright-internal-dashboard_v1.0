@@ -8,14 +8,6 @@ const { pool } = require('../db');
 // Query google_spend table for metrics across different time periods
 async function getGoogleSpendData(accountId = null, month = null, year = null) {
   try {
-    let dateFilter = '';
-    let params = [];
-    
-    if (month && year) {
-      dateFilter = `AND EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}`;
-      params = [parseInt(month), parseInt(year)];
-    }
-
     const query = `
       SELECT
         'google'::text as channel_key,
@@ -36,13 +28,13 @@ async function getGoogleSpendData(accountId = null, month = null, year = null) {
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
         
         -- Monthly stats for charts
-        SUM(spend) as spend_monthly,
-        SUM(leads) as leads_monthly,
-        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}) as spend_monthly,
+        SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}) as leads_monthly
       FROM google_spend
-      WHERE 1=1 ${accountId ? 'AND account_id = $1' : ''} ${dateFilter}
+      WHERE 1=1 ${accountId ? 'AND account_id = $1' : ''}
     `;
 
+    const params = month && year ? [parseInt(month), parseInt(year)] : [new Date().getMonth() + 1, new Date().getFullYear()];
     const result = await pool.query(query, accountId ? [accountId, ...params] : params);
     return result;
   } catch (error) {
@@ -55,14 +47,6 @@ async function getGoogleSpendData(accountId = null, month = null, year = null) {
 // Query campaign data from google_spend table
 async function getGoogleCampaignData(accountId = null, month = null, year = null) {
   try {
-    let dateFilter = '';
-    let params = [];
-    
-    if (month && year) {
-      dateFilter = `AND EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}`;
-      params = [parseInt(month), parseInt(year)];
-    }
-
     const query = `
       SELECT
         campaign_name,
@@ -83,17 +67,17 @@ async function getGoogleCampaignData(accountId = null, month = null, year = null
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
         
         -- Monthly stats for charts
-        SUM(spend) as spend_monthly,
-        SUM(leads) as leads_monthly,
-        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}) as spend_monthly,
+        SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}) as leads_monthly
       FROM google_spend
       WHERE campaign_name IS NOT NULL
-      ${accountId ? 'AND account_id = $1' : ''} ${dateFilter}
+      ${accountId ? 'AND account_id = $1' : ''}
       GROUP BY campaign_name
-      ORDER BY spend_monthly DESC
+      ORDER BY spend_monthly DESC NULLS LAST
       LIMIT 10
     `;
 
+    const params = month && year ? [parseInt(month), parseInt(year)] : [new Date().getMonth() + 1, new Date().getFullYear()];
     const result = await pool.query(query, accountId ? [accountId, ...params] : params);
     return result;
   } catch (error) {

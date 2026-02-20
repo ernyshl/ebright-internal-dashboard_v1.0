@@ -108,16 +108,13 @@ export function MarketingPerformancePage() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
-  const [isMonthly, setIsMonthly] = useState(false);
 
   const q = useQuery({
-    queryKey: ['marketing', 'performance', month, year, isMonthly],
+    queryKey: ['marketing', 'performance', month, year],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (isMonthly) {
-        params.append('month', month);
-        params.append('year', year);
-      }
+      params.append('month', month);
+      params.append('year', year);
       return apiFetch(`/api/marketing/performance?${params.toString()}`);
     },
     refetchInterval: 180_000,
@@ -155,36 +152,23 @@ export function MarketingPerformancePage() {
         
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>
           <div className="card" style={{ padding: '8px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <label style={{ fontSize: 13, fontWeight: 600 }}>
-              <input 
-                type="checkbox" 
-                checked={isMonthly} 
-                onChange={(e) => setIsMonthly(e.target.checked)}
-                style={{ marginRight: 8 }}
-              />
-              Monthly Filter
-            </label>
-            
-            {isMonthly && (
-              <>
-                <select 
-                  value={month} 
-                  onChange={(e) => setMonth(parseInt(e.target.value))}
-                  className="input"
-                  style={{ padding: '4px 8px', fontSize: 13 }}
-                >
-                  {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-                <select 
-                  value={year} 
-                  onChange={(e) => setYear(parseInt(e.target.value))}
-                  className="input"
-                  style={{ padding: '4px 8px', fontSize: 13 }}
-                >
-                  {years.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </>
-            )}
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--textSecondary)' }}>Chart Filter:</span>
+            <select 
+              value={month} 
+              onChange={(e) => setMonth(parseInt(e.target.value))}
+              className="input"
+              style={{ padding: '4px 8px', fontSize: 13 }}
+            >
+              {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <select 
+              value={year} 
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="input"
+              style={{ padding: '4px 8px', fontSize: 13 }}
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
 
           <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
@@ -228,15 +212,15 @@ export function MarketingPerformancePage() {
           {/* Campaign Performance Section */}
           <div className="stack">
             <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>
-              Top Campaign Performance {isMonthly ? `(${months.find(m => m.value === month).label} ${year})` : '(30 Days Spend)'}
+              Top Campaign Performance ({months.find(m => m.value === month).label} {year})
             </h3>
             
             <div className="campaignGrid">
-              <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
-              <CampaignPieChart data={campaigns?.tiktok} title="TikTok Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
-              <CampaignPieChart data={campaigns?.sara} title="Sara Recruitment Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
-              <CampaignPieChart data={campaigns?.online} title="Online Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
-              <CampaignPieChart data={campaigns?.google} title="Google Ads Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
+              <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" period="monthly" />
+              <CampaignPieChart data={campaigns?.tiktok} title="TikTok Campaigns" period="monthly" />
+              <CampaignPieChart data={campaigns?.sara} title="Sara Recruitment Campaigns" period="monthly" />
+              <CampaignPieChart data={campaigns?.online} title="Online Campaigns" period="monthly" />
+              <CampaignPieChart data={campaigns?.google} title="Google Ads Campaigns" period="monthly" />
             </div>
           </div>
         </div>
