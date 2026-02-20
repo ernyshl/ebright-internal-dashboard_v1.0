@@ -143,8 +143,14 @@ function BranchTable({ branches }) {
 
   const normalizedBranches = branches.map(normalizeBranch);
   
+  // Filter out inactive branches
+  const inactiveBranches = ['Taman Melawati', 'Kajang Perdana'];
+  const filteredBranches = normalizedBranches.filter(
+    (branch) => !inactiveBranches.includes(branch.clean_branch)
+  );
+  
   // Sort by total (30d) descending
-  const sorted = [...normalizedBranches].sort((a, b) => b.count_30_days - a.count_30_days);
+  const sorted = [...filteredBranches].sort((a, b) => b.count_30_days - a.count_30_days);
 
   return (
     <div className="branchTableWrap">
