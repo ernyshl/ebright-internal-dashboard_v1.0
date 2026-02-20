@@ -144,7 +144,7 @@ function BranchTable({ branches }) {
   const normalizedBranches = branches.map(normalizeBranch);
   
   // Filter out inactive branches
-  const inactiveBranches = ['Taman Melawati', 'Kajang Perdana', 'Bandar Sri Damansara', 'Kepong'];
+  const inactiveBranches = ['Taman Melawati', 'Kajang Perdana', 'Bandar Sri Damansara', 'Kepong', 'Bandra East', 'Andheri West'];
   const filteredBranches = normalizedBranches.filter(
     (branch) => !inactiveBranches.includes(branch.clean_branch)
   );
@@ -205,7 +205,11 @@ export function LeadsBreakdownPage() {
   // Calculate from branches for display table
   const branches = q.data?.branches || [];
   const regionCount = q.data?.regions?.length || 0;
-  const branchCount = branches.length;
+  
+  // Filter out inactive branches for the count as well
+  const inactiveBranches = ['Taman Melawati', 'Kajang Perdana', 'Bandar Sri Damansara', 'Kepong', 'Bandra East', 'Andheri West'];
+  const activeBranches = branches.filter(b => !inactiveBranches.includes(b.clean_branch));
+  const branchCount = activeBranches.length;
 
   const leadSources = [
     { id: 'website', name: 'Website', icon: '🌐' },
