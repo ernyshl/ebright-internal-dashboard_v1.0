@@ -1541,179 +1541,6 @@
 
 /* ===== EMPTY STATE ===== */
 .emptyState {
-  text-align: center;
-  padding: 80px 40px;
-  color: var(--muted);
-}
-
-.emptyStateIcon {
-  font-size: 56px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.emptyState h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--textSecondary);
-  margin: 0 0 8px;
-}
-
-.emptyState p {
-  font-size: 14px;
-  margin: 0;
-}
-
-.emptyIcon {
-  font-size: 56px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-/* ===== RESPONSIVE DASHBOARD ===== */
-@media (max-width: 1024px) {
-  .dashboardHeader {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .filterRow {
-    gap: 16px;
-  }
-  
-  .filterActions {
-    margin-left: 0;
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
-
-@media (max-width: 768px) {
-  .filterRow {
-    flex-direction: column;
-  }
-  
-  .filterGroup {
-    width: 100%;
-  }
-  
-  .searchGroup {
-    min-width: 100%;
-  }
-  
-  .filterActions {
-    flex-direction: column;
-  }
-  
-  .leadsTable {
-    font-size: 13px;
-  }
-  
-  .leadsTable th,
-  .leadsTable td {
-    padding: 10px 12px;
-  }
-  
-  .pagination {
-    flex-wrap: wrap;
-  }
-}
-.filterBar {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-sm);
-}
-
-.filterRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-}
-
-.filterGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 140px;
-}
-
-.filterGroup label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--textSecondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.filterInput,
-.filterSelect {
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  color: var(--text);
-  background: var(--panel);
-  transition: all var(--transition);
-  min-height: 40px;
-}
-
-.filterInput:focus,
-.filterSelect:focus {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-}
-
-.filterInput::placeholder {
-  color: var(--muted);
-}
-
-/* Search Input */
-.searchGroup {
-  flex: 1;
-  min-width: 220px;
-}
-
-.searchInputWrapper {
-  position: relative;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.searchInput {
-  padding-left: 40px;
-  width: 100%;
-}
-
-/* Date inputs */
-.dateGroup {
-  min-width: 140px;
-}
-
-.dateGroup input[type="date"] {
-  padding: 10px 12px;
-}
-
-/* Clear filters button */
-.clearFiltersBtn {
-  align-self: flex-end;
-  min-height: 40px;
-}
-
-/* ===== EMPTY STATE ===== */
-.emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2722,31 +2549,70 @@
 /* Responsive */
 @media (max-width: 1024px) {
   .summaryStats {
-    grid-template-columns: repeat(2, 1fr);
+    flex-wrap: wrap;
+  }
+  .summaryStats .statCard {
+    flex: 1 1 calc(33.33% - 12px);
   }
 }
 
 @media (max-width: 768px) {
   .leadsBreakdownPage {
-    padding: 16px;
+    padding: 12px;
   }
   
+  .leadsBreakdownPage .pageHeader {
+    padding-top: 40px; /* Space for back button */
+  }
+
+  .leadsBreakdownPage .pageHeader .backButtonContainer {
+    left: 12px;
+    top: 0;
+  }
+
+  .leadsBreakdownPage .pageHeader .refreshButtonContainer {
+    right: 12px;
+    top: 0;
+  }
+
   .summaryStats {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  
+
+  .summaryStats .statCard {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 120px;
+    padding: 10px;
+  }
+
   .sourcesGrid,
-  .regionsGrid {
-    grid-template-columns: 1fr;
+  .regionsGrid,
+  .campaignGrid {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .sourceCard,
+  .regionCard,
+  .campaignGrid > .card {
+    flex: 1 1 100%;
+    max-width: 100%;
   }
   
+  .branchTableWrap {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
   .branchTable {
-    font-size: 13px;
+    font-size: 12px;
+    min-width: 600px; /* Ensure table is scrollable on mobile */
   }
   
   .branchTable th,
   .branchTable td {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 }
 
@@ -2761,9 +2627,21 @@
   .content {
     width: 100%;
     max-width: 100%;
-    padding: 12px;
+    padding: 0;
     height: auto;
     min-height: 100vh;
+  }
+
+  .main {
+    padding: 12px;
+  }
+
+  .topbar {
+    padding: 8px 12px;
+  }
+
+  .topbarLeft .pageTitle {
+    font-size: 13px;
   }
   
   /* Sidebar Mobile */
@@ -2790,16 +2668,16 @@
   .pageHeader {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
+    gap: 8px;
+    padding: 12px;
   }
   
   .pageHeaderTitle {
-    font-size: 24px;
+    font-size: 20px;
   }
   
   .pageHeaderSub {
-    font-size: 13px;
+    font-size: 12px;
   }
   
   /* Dashboard Home */
@@ -2813,34 +2691,39 @@
   }
   
   .dashboardHomeHeader h1 {
-    font-size: 22px;
+    font-size: 20px;
   }
   
   .dashboardHomeGrid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
+    width: 100%;
   }
   
   .dashboardHomeCard {
-    padding: 16px;
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
   }
   
   .dashboardHomeCardHeader {
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    padding: 16px;
   }
   
   .dashboardHomeCardIcon {
-    font-size: 28px;
+    font-size: 24px;
   }
   
   .dashboardHomeCardHeader h2 {
-    font-size: 18px;
+    font-size: 16px;
   }
   
   .dashboardHomeCardLinks {
+    padding: 16px;
     gap: 8px;
   }
   
@@ -2851,246 +2734,78 @@
   
   /* Cards */
   .card {
-    padding: 16px;
-    margin-bottom: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
   }
   
   /* Grid layouts */
-  .grid2 {
-    grid-template-columns: 1fr;
-  }
-  
-  .grid3 {
-    grid-template-columns: 1fr;
-  }
-  
-  .grid4 {
-    grid-template-columns: 1fr;
+  .grid2, .grid3, .grid4 {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   
   /* Tables */
   .tableWrap {
     overflow-x: auto;
-    margin: 0 -16px;
-    padding: 0 16px;
+    margin: 0 -12px;
+    padding: 0 12px;
+    width: calc(100% + 24px);
   }
   
   .table {
     min-width: 600px;
-    font-size: 13px;
+    font-size: 12px;
   }
   
   .table th,
   .table td {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
   
   /* Stat Cards */
   .statCard {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
   }
   
   .statCardIcon {
-    font-size: 32px;
+    font-size: 24px;
   }
   
   .statCardValue {
-    font-size: 28px;
+    font-size: 22px;
   }
   
   .statCardTitle {
-    font-size: 14px;
+    font-size: 12px;
+  }
+
+  /* Filter Bar Mobile */
+  .filterBar {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filterRow {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .filterGroup {
+    width: 100%;
+  }
+
+  .searchInputWrapper {
+    width: 100%;
   }
   
   /* Login Page */
   .loginPage {
-    padding: 20px;
+    padding: 16px;
     min-height: 100vh;
-  }
-  
-  .loginCard {
-    width: 100%;
-    max-width: 100%;
-    padding: 24px;
-  }
-  
-  .loginHeader {
-    margin-bottom: 24px;
-  }
-  
-  .loginHeader h1 {
-    font-size: 24px;
-  }
-  
-  .loginHeader p {
-    font-size: 14px;
-  }
-  
-  .formGroup {
-    margin-bottom: 16px;
-  }
-  
-  .formGroup label {
-    font-size: 13px;
-    margin-bottom: 6px;
-  }
-  
-  .formInput {
-    padding: 12px 14px;
-    font-size: 14px;
-  }
-  
-  .btn {
-    padding: 12px 20px;
-    font-size: 14px;
-  }
-  
-  .btnLarge {
-    padding: 14px 24px;
-    font-size: 15px;
-  }
-  
-  /* Loading */
-  .loadingCard {
-    padding: 40px 20px;
-    font-size: 14px;
-  }
-  
-  /* Error text */
-  .errorText {
-    padding: 16px;
-    font-size: 14px;
-  }
-  
-  /* Muted text */
-  .muted {
-    font-size: 12px;
-  }
-  
-  .muted.small {
-    font-size: 11px;
-  }
-  
-  /* Source Cards */
-  .sourceCard {
-    padding: 16px;
-  }
-  
-  .sourceCardHeader {
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  
-  .sourceCardIcon {
-    font-size: 24px;
-  }
-  
-  .sourceCardName {
-    font-size: 16px;
-  }
-  
-  .sourceCardTotalValue {
-    font-size: 32px;
-  }
-  
-  .sourceCardStats {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  
-  .sourceStat {
-    text-align: center;
-  }
-  
-  .sourceStatValue {
-    font-size: 16px;
-  }
-  
-  .sourceStatLabel {
-    font-size: 10px;
-  }
-  
-  /* Region Cards */
-  .regionCard {
-    padding: 16px;
-  }
-  
-  .regionCardHeader {
-    flex-direction: row;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  
-  .regionCardName {
-    font-size: 16px;
-  }
-  
-  .regionCardTotal {
-    font-size: 20px;
-  }
-  
-  /* Branch Table */
-  .branchTableWrap {
-    margin: 0 -16px;
-  }
-  
-  .branchTable {
-    font-size: 12px;
-  }
-  
-  .branchTable th {
-    font-size: 11px;
-    padding: 8px 10px;
-  }
-  
-  .branchTable td {
-    padding: 8px 10px;
-  }
-  
-  /* Marketing Table */
-  .marketingTableWrap {
-    margin: 0 -16px;
-  }
-  
-  .marketingTable {
-    font-size: 12px;
-  }
-  
-  .marketingTable th {
-    font-size: 11px;
-    padding: 8px 10px;
-  }
-  
-  .marketingTable td {
-    padding: 8px 10px;
-  }
-  
-  /* Json Table */
-  .jsonTableWrap {
-    margin: 0 -16px;
-  }
-  
-  .jsonTable {
-    font-size: 11px;
-  }
-  
-  .jsonTable th,
-  .jsonTable td {
-    padding: 8px 10px;
-  }
-  
-  /* Back Button */
-  .backBtn {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-  
-  /* Page content padding */
-  .stack > * {
-    margin-bottom: 16px;
   }
 }
 
@@ -3856,6 +3571,7 @@
 .permissionSource.role {
   background: var(--bg);
   color: var(--textSecondary);
+  border: 1px solid var(--border);
 }
 
 .permissionActions {
