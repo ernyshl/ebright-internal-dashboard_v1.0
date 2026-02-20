@@ -1,19 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { useState } from 'react';
 import { apiFetch } from '../lib/api';
 import { MarketingTable } from '../components/MarketingTable';
 import { BackButton } from '../components/BackButton';
 
 const COLORS = ['#dc2626', '#f97316', '#0284c7', '#059669', '#8b5cf6', '#ec4899', '#f59e0b', '#64748b', '#1e293b', '#94a3b8'];
 
-function CampaignPieChart({ data, title }) {
+function CampaignPieChart({ data, title, period = 'd30' }) {
   if (!data || data.length === 0) return null;
 
-  // Use 30d spend for the chart
+  // Use selected period for the chart
   const chartData = data
     .map(c => ({
       name: c.name || 'Unknown',
-      value: Number(c.d30?.spend || 0)
+      value: Number(c[period]?.spend || 0)
     }))
     .filter(c => c.value > 0)
     .sort((a, b) => b.value - a.value);
@@ -104,15 +105,44 @@ function CampaignPieChart({ data, title }) {
 }
 
 export function MarketingPerformancePage() {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [isMonthly, setIsMonthly] = useState(false);
+
   const q = useQuery({
-    queryKey: ['marketing', 'performance'],
-    queryFn: () => apiFetch('/api/marketing/performance'),
+    queryKey: ['marketing', 'performance', month, year, isMonthly],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (isMonthly) {
+        params.append('month', month);
+        params.append('year', year);
+      }
+      return apiFetch(`/api/marketing/performance?${params.toString()}`);
+    },
     refetchInterval: 180_000,
   });
 
   const channels = q.data?.channels;
   const groups = q.data?.groups;
   const campaigns = q.data?.campaigns;
+
+  const months = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' },
+  ];
+
+  const years = [2024, 2025, 2026];
 
   return (
     <div className="stack">
@@ -122,9 +152,45 @@ export function MarketingPerformancePage() {
           <div className="pageHeaderTitle">Marketing Performance</div>
           <div className="pageHeaderSub">Spend, leads, conversions, CPL & CPC · Auto-refresh every 3 min</div>
         </div>
-        <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
-          {q.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
-        </button>
+        
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>
+          <div className="card" style={{ padding: '8px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              <input 
+                type="checkbox" 
+                checked={isMonthly} 
+                onChange={(e) => setIsMonthly(e.target.checked)}
+                style={{ marginRight: 8 }}
+              />
+              Monthly Filter
+            </label>
+            
+            {isMonthly && (
+              <>
+                <select 
+                  value={month} 
+                  onChange={(e) => setMonth(parseInt(e.target.value))}
+                  className="input"
+                  style={{ padding: '4px 8px', fontSize: 13 }}
+                >
+                  {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+                <select 
+                  value={year} 
+                  onChange={(e) => setYear(parseInt(e.target.value))}
+                  className="input"
+                  style={{ padding: '4px 8px', fontSize: 13 }}
+                >
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </>
+            )}
+          </div>
+
+          <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
+            {q.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
+          </button>
+        </div>
       </div>
 
       {q.isLoading ? (
@@ -161,14 +227,16 @@ export function MarketingPerformancePage() {
 
           {/* Campaign Performance Section */}
           <div className="stack">
-            <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>Top Campaign Performance (30 Days Spend)</h3>
+            <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>
+              Top Campaign Performance {isMonthly ? `(${months.find(m => m.value === month).label} ${year})` : '(30 Days Spend)'}
+            </h3>
             
             <div className="campaignGrid">
-              <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" />
-              <CampaignPieChart data={campaigns?.tiktok} title="TikTok Campaigns" />
-              <CampaignPieChart data={campaigns?.sara} title="Sara Recruitment Campaigns" />
-              <CampaignPieChart data={campaigns?.online} title="Online Campaigns" />
-              <CampaignPieChart data={campaigns?.google} title="Google Ads Campaigns" />
+              <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
+              <CampaignPieChart data={campaigns?.tiktok} title="TikTok Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
+              <CampaignPieChart data={campaigns?.sara} title="Sara Recruitment Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
+              <CampaignPieChart data={campaigns?.online} title="Online Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
+              <CampaignPieChart data={campaigns?.google} title="Google Ads Campaigns" period={isMonthly ? 'monthly' : 'd30'} />
             </div>
           </div>
         </div>

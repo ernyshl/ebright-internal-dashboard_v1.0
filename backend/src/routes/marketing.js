@@ -7,8 +7,10 @@ const router = express.Router();
 
 // Mirrors the Streamlit logic from `app.py` (meta_spend table) and returns
 // per-channel stats for today / yesterday / 7d / 30d.
-router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (_req, res, next) => {
+router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res, next) => {
   try {
+    const { month, year } = req.query;
+    
     // Account IDs from your Streamlit config
     const ACCOUNTS = {
       MAIN_FB_ID: 'act_1303223119861639',
@@ -16,6 +18,14 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       SARA_ID: 'act_2740903809519822',
       ONLINE_ID: 'act_1235601843302851',
     };
+
+    let dateFilter = '';
+    let params = [];
+    
+    if (month && year) {
+      dateFilter = `AND EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4`;
+      params = [parseInt(month), parseInt(year)];
+    }
 
     const query = `
       SELECT
@@ -42,9 +52,16 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as leads_30d,
         SUM(conversions) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as convs_30d,
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
-        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d,
+        
+        -- Monthly stats for charts
+        SUM(spend) as spend_monthly,
+        SUM(leads) as leads_monthly,
+        SUM(conversions) as convs_monthly,
+        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly,
+        SUM(spend) FILTER (WHERE conversions > 0) as conv_spend_monthly
       FROM meta_spend
-      WHERE account_id = $2
+      WHERE account_id = $2 ${dateFilter}
     `;
 
     const campaignQuery = `
@@ -72,21 +89,28 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as leads_30d,
         SUM(conversions) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as convs_30d,
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
-        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d,
+        
+        -- Monthly stats for charts
+        SUM(spend) as spend_monthly,
+        SUM(leads) as leads_monthly,
+        SUM(conversions) as convs_monthly,
+        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly,
+        SUM(spend) FILTER (WHERE conversions > 0) as conv_spend_monthly
       FROM meta_spend
-      WHERE account_id = $1
+      WHERE account_id = $1 ${dateFilter}
       GROUP BY campaign_name
-      ORDER BY spend_30d DESC
+      ORDER BY spend_monthly DESC
       LIMIT 10
     `;
 
     const [mainFb, tt, sara, online, googleData, googleCampaigns] = await Promise.all([
-      pool.query(query, ['fb_group', ACCOUNTS.MAIN_FB_ID]),
-      pool.query(query, ['tiktok', ACCOUNTS.TT_ID]),
-      pool.query(query, ['sara', ACCOUNTS.SARA_ID]),
-      pool.query(query, ['online', ACCOUNTS.ONLINE_ID]),
-      getGoogleSpendData(), // Fetch Google spend data from database (no filter)
-      getGoogleCampaignData(), // Fetch Google campaign data from database
+      pool.query(query, ['fb_group', ACCOUNTS.MAIN_FB_ID, ...params]),
+      pool.query(query, ['tiktok', ACCOUNTS.TT_ID, ...params]),
+      pool.query(query, ['sara', ACCOUNTS.SARA_ID, ...params]),
+      pool.query(query, ['online', ACCOUNTS.ONLINE_ID, ...params]),
+      getGoogleSpendData(null, month, year), // Fetch Google spend data from database
+      getGoogleCampaignData(null, month, year), // Fetch Google campaign data from database
     ]);
 
     // Campaign queries - handle potential missing campaign_name column gracefully
@@ -147,6 +171,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         yesterday: toPeriodStats(row, 'yesterday'),
         d7: toPeriodStats(row, '7d'),
         d30: toPeriodStats(row, '30d'),
+        monthly: toPeriodStats(row, 'monthly'),
       };
     }
 
@@ -157,6 +182,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         yesterday: toPeriodStatsGoogle(row, 'yesterday'),
         d7: toPeriodStatsGoogle(row, '7d'),
         d30: toPeriodStatsGoogle(row, '30d'),
+        monthly: toPeriodStatsGoogle(row, 'monthly'),
       };
     }
 
@@ -167,6 +193,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         yesterday: toPeriodStats(row, 'yesterday'),
         d7: toPeriodStats(row, '7d'),
         d30: toPeriodStats(row, '30d'),
+        monthly: toPeriodStats(row, 'monthly'),
       }));
     }
 
@@ -177,6 +204,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         yesterday: toPeriodStatsGoogle(row, 'yesterday'),
         d7: toPeriodStatsGoogle(row, '7d'),
         d30: toPeriodStatsGoogle(row, '30d'),
+        monthly: toPeriodStatsGoogle(row, 'monthly'),
       }));
     }
 

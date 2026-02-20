@@ -6,8 +6,16 @@
 const { pool } = require('../db');
 
 // Query google_spend table for metrics across different time periods
-async function getGoogleSpendData(accountId = null) {
+async function getGoogleSpendData(accountId = null, month = null, year = null) {
   try {
+    let dateFilter = '';
+    let params = [];
+    
+    if (month && year) {
+      dateFilter = `AND EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}`;
+      params = [parseInt(month), parseInt(year)];
+    }
+
     const query = `
       SELECT
         'google'::text as channel_key,
@@ -25,12 +33,17 @@ async function getGoogleSpendData(accountId = null) {
 
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as spend_30d,
         SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as leads_30d,
-        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
+        
+        -- Monthly stats for charts
+        SUM(spend) as spend_monthly,
+        SUM(leads) as leads_monthly,
+        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly
       FROM google_spend
-      ${accountId ? 'WHERE account_id = $1' : ''}
+      WHERE 1=1 ${accountId ? 'AND account_id = $1' : ''} ${dateFilter}
     `;
 
-    const result = await pool.query(query, accountId ? [accountId] : []);
+    const result = await pool.query(query, accountId ? [accountId, ...params] : params);
     return result;
   } catch (error) {
     console.error('Error fetching Google spend data from database:', error.message);
@@ -40,8 +53,16 @@ async function getGoogleSpendData(accountId = null) {
 }
 
 // Query campaign data from google_spend table
-async function getGoogleCampaignData(accountId = null) {
+async function getGoogleCampaignData(accountId = null, month = null, year = null) {
   try {
+    let dateFilter = '';
+    let params = [];
+    
+    if (month && year) {
+      dateFilter = `AND EXTRACT(MONTH FROM data_date) = $${accountId ? '2' : '1'} AND EXTRACT(YEAR FROM data_date) = $${accountId ? '3' : '2'}`;
+      params = [parseInt(month), parseInt(year)];
+    }
+
     const query = `
       SELECT
         campaign_name,
@@ -59,16 +80,21 @@ async function getGoogleCampaignData(accountId = null) {
 
         SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as spend_30d,
         SUM(leads) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days') as leads_30d,
-        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d
+        SUM(spend) FILTER (WHERE data_date::date >= CURRENT_DATE - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
+        
+        -- Monthly stats for charts
+        SUM(spend) as spend_monthly,
+        SUM(leads) as leads_monthly,
+        SUM(spend) FILTER (WHERE leads > 0) as lead_spend_monthly
       FROM google_spend
       WHERE campaign_name IS NOT NULL
-      ${accountId ? 'AND account_id = $1' : ''}
+      ${accountId ? 'AND account_id = $1' : ''} ${dateFilter}
       GROUP BY campaign_name
-      ORDER BY spend_30d DESC
+      ORDER BY spend_monthly DESC
       LIMIT 10
     `;
 
-    const result = await pool.query(query, accountId ? [accountId] : []);
+    const result = await pool.query(query, accountId ? [accountId, ...params] : params);
     return result;
   } catch (error) {
     console.error('Error fetching Google campaign data from database:', error.message);
