@@ -2409,6 +2409,23 @@
   margin: 0 auto 24px;
 }
 
+/* Campaign Grid */
+.campaignGrid {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+.campaignGrid > .card {
+  flex: 1 1 0;
+  min-width: 280px;
+  max-width: 340px;
+}
+
 .sourceCard {
   background: var(--panel);
   border-radius: var(--radius-lg);
