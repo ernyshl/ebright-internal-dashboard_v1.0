@@ -113,10 +113,10 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
 
     try {
       [fbCampaigns, ttCampaigns, saraCampaigns, onlineCampaigns] = await Promise.all([
-        pool.query(campaignQuery, [ACCOUNTS.MAIN_FB_ID]),
-        pool.query(campaignQuery, [ACCOUNTS.TT_ID]),
-        pool.query(campaignQuery, [ACCOUNTS.SARA_ID]),
-        pool.query(campaignQuery, [ACCOUNTS.ONLINE_ID]),
+        pool.query(campaignQuery, [ACCOUNTS.MAIN_FB_ID, m, y]),
+        pool.query(campaignQuery, [ACCOUNTS.TT_ID, m, y]),
+        pool.query(campaignQuery, [ACCOUNTS.SARA_ID, m, y]),
+        pool.query(campaignQuery, [ACCOUNTS.ONLINE_ID, m, y]),
       ]);
     } catch (campaignErr) {
       // If campaign queries fail (e.g., campaign_name column doesn't exist), continue without campaigns
