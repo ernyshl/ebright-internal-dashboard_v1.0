@@ -295,7 +295,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
+  padding: 6px 24px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
@@ -313,18 +313,18 @@
 
 .pageTitle {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .topbarLeft .muted.small {
-  font-size: 11px;
+  font-size: 10px;
   margin-top: -2px;
 }
 
 .main {
-  padding: 24px;
+  padding: 12px 24px 24px;
   flex: 1;
   width: 100%;
   background: linear-gradient(180deg, var(--bg) 0%, #f1f5f9 100%);
@@ -2270,7 +2270,7 @@
 
 /* ===== LEADS BREAKDOWN PAGE ===== */
 .leadsBreakdownPage {
-  padding: 16px 32px 32px;
+  padding: 0 32px 32px;
   max-width: 1600px;
   margin: 0 auto;
   text-align: center;
@@ -2281,28 +2281,28 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
-  padding-top: 4px;
+  margin-bottom: 12px;
+  padding-top: 0;
 }
 
 .leadsBreakdownPage .pageHeader .backButtonContainer {
   position: absolute;
   right: 0;
-  top: 4px;
+  top: 0;
 }
 
 .leadsBreakdownPage .pageHeaderTitle {
   font-size: 28px;
   font-weight: 800;
   color: var(--text);
-  margin-bottom: 2px;
+  margin-bottom: 0;
   letter-spacing: -0.5px;
 }
 
 .leadsBreakdownPage .pageHeaderSub {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--textSecondary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .leadsBreakdownPage .refreshButtonContainer {
@@ -2310,8 +2310,8 @@
 }
 
 .leadsBreakdownPage .refreshButtonContainer .btnSmall {
-  padding: 4px 12px;
-  font-size: 12px;
+  padding: 2px 10px;
+  font-size: 11px;
 }
 
 /* Summary Stats */
@@ -2320,7 +2320,7 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
