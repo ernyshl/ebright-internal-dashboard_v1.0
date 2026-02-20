@@ -2249,29 +2249,43 @@
 
 /* ===== LEADS BREAKDOWN PAGE ===== */
 .leadsBreakdownPage {
-  padding: 32px;
+  padding: 16px 32px 32px;
   max-width: 1600px;
   margin: 0 auto;
   text-align: center;
 }
 
 .leadsBreakdownPage .pageHeader {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+  padding-top: 8px;
+}
+
+.leadsBreakdownPage .pageHeader .backButtonContainer {
+  position: absolute;
+  right: 0;
+  top: 8px;
 }
 
 .leadsBreakdownPage .pageHeaderTitle {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 36px;
+  font-weight: 800;
   color: var(--text);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
 }
 
 .leadsBreakdownPage .pageHeaderSub {
   font-size: 16px;
   color: var(--textSecondary);
+  margin-bottom: 12px;
+}
+
+.leadsBreakdownPage .refreshButtonContainer {
+  margin-top: 4px;
 }
 
 /* Summary Stats */

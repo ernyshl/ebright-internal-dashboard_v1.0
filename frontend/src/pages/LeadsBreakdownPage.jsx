@@ -223,14 +223,16 @@ export function LeadsBreakdownPage() {
   return (
     <div className="leadsBreakdownPage">
       <div className="pageHeader">
-        <BackButton to="/" label="Back to Home" />
-        <div style={{ marginTop: 16 }}>
-          <div className="pageHeaderTitle">📊 Branch Distribution</div>
-          <div className="pageHeaderSub">Lead counts by source, region & branch · Auto-refresh every 3 min</div>
+        <div className="backButtonContainer">
+          <BackButton to="/" label="Back to Home" />
         </div>
-        <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
-          {q.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
-        </button>
+        <div className="pageHeaderTitle">📊 Branch Distribution</div>
+        <div className="pageHeaderSub">Lead counts by source, region & branch · Auto-refresh every 3 min</div>
+        <div className="refreshButtonContainer">
+          <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
+            {q.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
+          </button>
+        </div>
       </div>
 
       {q.isLoading ? (
