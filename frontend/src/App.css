@@ -295,7 +295,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
+  padding: 10px 24px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
@@ -308,20 +308,41 @@
 .topbarLeft {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 .pageTitle {
   font-weight: 700;
-  font-size: 19px;
+  font-size: 16px;
   letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.topbarLeft .muted.small {
+  font-size: 11px;
+  margin-top: -2px;
 }
 
 .main {
-  padding: 32px;
+  padding: 24px;
   flex: 1;
   width: 100%;
   background: linear-gradient(180deg, var(--bg) 0%, #f1f5f9 100%);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+
+.topbar header + div {
+  gap: 8px !important;
+}
+
+.topbar .btnSmall {
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 /* ===== CARDS ===== */
