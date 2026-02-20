@@ -2260,32 +2260,37 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 24px;
-  padding-top: 8px;
+  margin-bottom: 16px;
+  padding-top: 4px;
 }
 
 .leadsBreakdownPage .pageHeader .backButtonContainer {
   position: absolute;
   right: 0;
-  top: 8px;
+  top: 4px;
 }
 
 .leadsBreakdownPage .pageHeaderTitle {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 800;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   letter-spacing: -0.5px;
 }
 
 .leadsBreakdownPage .pageHeaderSub {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--textSecondary);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .leadsBreakdownPage .refreshButtonContainer {
-  margin-top: 4px;
+  margin-top: 0;
+}
+
+.leadsBreakdownPage .refreshButtonContainer .btnSmall {
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 /* Summary Stats */
