@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { apiFetch } from '../lib/api';
 import { MarketingTable } from '../components/MarketingTable';
 import { BackButton } from '../components/BackButton';
@@ -8,21 +8,22 @@ import { BackButton } from '../components/BackButton';
 const COLORS = ['#dc2626', '#f97316', '#0284c7', '#059669', '#8b5cf6', '#ec4899', '#f59e0b', '#64748b', '#1e293b', '#94a3b8'];
 
 function CampaignPieChart({ data, title, period = 'd30' }) {
-  if (!data || data.length === 0) return null;
+  const chartData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    return data
+      .map(c => ({
+        name: c.name || 'Unknown',
+        value: Number(c?.[period]?.spend || 0)
+      }))
+      .filter(c => c.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [data, period]);
 
-  // Use selected period for the chart
-  const chartData = data
-    .map(c => ({
-      name: c.name || 'Unknown',
-      value: Number(c[period]?.spend || 0)
-    }))
-    .filter(c => c.value > 0)
-    .sort((a, b) => b.value - a.value);
+  const totalSpend = useMemo(() => {
+    return chartData.reduce((sum, item) => sum + item.value, 0);
+  }, [chartData]);
 
   if (chartData.length === 0) return null;
-
-  // Calculate total for percentages
-  const totalSpend = chartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '420px' }}>

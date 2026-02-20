@@ -17,10 +17,10 @@ export async function apiFetch(path, options = {}) {
 
   const contentType = res.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
-  const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null);
+  const data = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '');
 
   if (!res.ok) {
-    const err = new Error('Request failed');
+    const err = new Error(data?.error || 'Request failed');
     err.status = res.status;
     err.data = data;
     throw err;

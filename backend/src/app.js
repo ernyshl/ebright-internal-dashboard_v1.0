@@ -11,6 +11,8 @@ const { permissionsRouter } = require('./routes/permissions');
 const { academyRouter } = require('./routes/academy');
 const { pool } = require('./db');
 
+const { requireAuth, requireRole } = require('./middleware/auth');
+
 // Rate limiting store (in-memory for single instance, use Redis for production)
 const loginAttempts = new Map();
 const MAX_ATTEMPTS = 5;
@@ -70,20 +72,7 @@ function createApp() {
   app.use('/api/academy', academyRouter);
 
   // Leads Centre endpoint - with filtering, search, pagination
-  app.get('/api/leads-centre', async (req, res) => {
-    const header = req.headers.authorization || '';
-    const [type, token] = header.split(' ');
-
-    if (type !== 'Bearer' || !token) {
-      return res.status(401).json({ error: 'Missing Bearer token' });
-    }
-
-    try {
-      jwt.verify(token, env.JWT_SECRET);
-    } catch {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
+  app.get('/api/leads-centre', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res) => {
     try {
       const {
         search = '',

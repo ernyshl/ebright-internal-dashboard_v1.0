@@ -4,7 +4,7 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing']), async (_req, res, next) => {
+router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing']), async (_req, res) => {
   try {
     // A) Summary headers (total counts by lead_source)
     const queryTotal = `
@@ -14,10 +14,10 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           WHEN LOWER(TRIM(lead_source)) = '' THEN 'Unknown'
           ELSE TRIM(lead_source)
         END as lead_source,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE) AS count_today,
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
       GROUP BY 1
       ORDER BY lead_source;
@@ -27,10 +27,10 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
     const queryRegion = `
       SELECT
         region,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE) AS count_today,
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
       WHERE region IS NOT NULL AND TRIM(region) != ''
       GROUP BY region
@@ -45,10 +45,10 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           'Online' as region,
           'Online' as lead_source,
           'Online' as clean_branch,
-          COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE) AS count_today,
+          COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
           COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
-          COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
-          COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+          COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+          COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
         WHERE LOWER(TRIM(clean_branch)) LIKE '%online%'
         GROUP BY 1, 2, 3
@@ -60,10 +60,10 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           'All Regions' as region,
           'All Sources' as lead_source,
           TRIM(clean_branch) as clean_branch,
-          COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE) AS count_today,
+          COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
           COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
-          COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
-          COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+          COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+          COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
         WHERE 
           clean_branch IS NOT NULL 
@@ -80,10 +80,10 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
     // D) Grand total - count ALL leads in the database
     const queryGrandTotal = `
       SELECT
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE) AS count_today,
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE submitted_at >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi;
     `;
 
