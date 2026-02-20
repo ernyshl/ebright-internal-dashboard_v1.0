@@ -2276,18 +2276,18 @@
 /* Summary Stats */
 .summaryStats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
   margin-bottom: 36px;
 }
 
 .leadsBreakdownPage .statCard {
   background: var(--panel);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 14px 16px;
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -2299,30 +2299,26 @@
 }
 
 .leadsBreakdownPage .statCardIcon {
-  font-size: 32px;
+  font-size: 24px;
   line-height: 1;
 }
 
-.leadsBreakdownPage .statCardContent {
-  flex: 1;
-}
-
 .leadsBreakdownPage .statCardValue {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--stat-color);
   line-height: 1.2;
 }
 
 .leadsBreakdownPage .statCardTitle {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .leadsBreakdownPage .statCardSubtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--textSecondary);
   margin-top: 2px;
 }
