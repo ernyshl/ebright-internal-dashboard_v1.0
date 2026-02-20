@@ -1,7 +1,60 @@
 import { useQuery } from '@tanstack/react-query';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { apiFetch } from '../lib/api';
 import { MarketingTable } from '../components/MarketingTable';
 import { BackButton } from '../components/BackButton';
+
+const COLORS = ['#dc2626', '#f97316', '#0284c7', '#059669', '#8b5cf6', '#ec4899', '#f59e0b', '#64748b', '#1e293b', '#94a3b8'];
+
+function CampaignPieChart({ data, title }) {
+  if (!data || data.length === 0) return null;
+
+  // Use 30d spend for the chart
+  const chartData = data
+    .map(c => ({
+      name: c.name || 'Unknown',
+      value: Number(c.d30?.spend || 0)
+    }))
+    .filter(c => c.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <h4 style={{ margin: '0 0 16px 0', fontSize: 14, fontWeight: 700, color: 'var(--textSecondary)' }}>{title}</h4>
+      <div style={{ width: '100%', height: 240 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip 
+              formatter={(value) => `RM ${Number(value).toLocaleString()}`}
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+            />
+            <Legend 
+              verticalAlign="bottom" 
+              height={36}
+              iconType="circle"
+              wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
 export function MarketingPerformancePage() {
   const q = useQuery({
@@ -61,52 +114,15 @@ export function MarketingPerformancePage() {
 
           {/* Campaign Performance Section */}
           <div className="stack">
-            <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>Top Campaign Performance</h3>
+            <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>Top Campaign Performance (30 Days Spend)</h3>
             
-            {campaigns?.fb_group?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <MarketingTable
-                  title="Top FB Group Campaigns"
-                  rows={campaigns.fb_group.map(c => ({ label: c.name, ...c }))}
-                />
-              </div>
-            )}
-
-            {campaigns?.tiktok?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <MarketingTable
-                  title="Top TikTok Campaigns"
-                  rows={campaigns.tiktok.map(c => ({ label: c.name, ...c }))}
-                />
-              </div>
-            )}
-
-            {campaigns?.sara?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <MarketingTable
-                  title="Top Sara Recruitment Campaigns"
-                  rows={campaigns.sara.map(c => ({ label: c.name, ...c }))}
-                />
-              </div>
-            )}
-
-            {campaigns?.online?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <MarketingTable
-                  title="Top Online Campaigns"
-                  rows={campaigns.online.map(c => ({ label: c.name, ...c }))}
-                />
-              </div>
-            )}
-
-            {campaigns?.google?.length > 0 && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <MarketingTable
-                  title="Top Google Ads Campaigns"
-                  rows={campaigns.google.map(c => ({ label: c.name, ...c, isGoogle: true }))}
-                />
-              </div>
-            )}
+            <div className="grid2">
+              <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" />
+              <CampaignPieChart data={campaigns?.tiktok} title="TikTok Campaigns" />
+              <CampaignPieChart data={campaigns?.sara} title="Sara Recruitment Campaigns" />
+              <CampaignPieChart data={campaigns?.online} title="Online Campaigns" />
+              <CampaignPieChart data={campaigns?.google} title="Google Ads Campaigns" />
+            </div>
           </div>
         </div>
       ) : null}
