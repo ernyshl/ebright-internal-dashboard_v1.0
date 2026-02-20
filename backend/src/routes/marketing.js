@@ -197,18 +197,20 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
     };
 
     // Streamlit "Main Marketing" total = FB (Group) + TikTok + Google
-    function sumPeriods(...items) {
+    // NOTE: Google channel's "leads" field actually represents conversions
+    function sumPeriods(fbData, ttData, googleData) {
       const out = {};
       for (const k of ['today', 'yesterday', 'd7', 'd30']) {
-        let spend = 0, leads = 0, convs = 0, leadSpend = 0, convSpend = 0;
-        for (const item of items) {
-          const period = item[k];
-          spend += period?.spend || 0;
-          leads += period?.leads || 0;
-          convs += period?.convs || 0;
-          leadSpend += period?.leadSpend || 0;
-          convSpend += period?.convSpend || 0;
-        }
+        const fb = fbData[k];
+        const tt = ttData[k];
+        const gg = googleData[k];
+        
+        const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
+        const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
+        const convs = (fb?.convs || 0) + (gg?.leads || 0); // Google's "leads" are actually conversions
+        const leadSpend = (fb?.leadSpend || 0) + (tt?.leadSpend || 0);
+        const convSpend = (fb?.convSpend || 0) + (gg?.leadSpend || 0); // Google's "leadSpend" is conv spend
+        
         out[k] = {
           spend,
           leads,
