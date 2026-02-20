@@ -9,10 +9,10 @@ const COLORS = ['#dc2626', '#f97316', '#0284c7', '#059669', '#8b5cf6', '#ec4899'
 
 function CampaignPieChart({ data, title, period = 'd30' }) {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return [];
+    if (!data || !Array.isArray(data) || data.length === 0) return [];
     return data
       .map(c => ({
-        name: c.name || 'Unknown',
+        name: c?.name || 'Unknown',
         value: Number(c?.[period]?.spend || 0)
       }))
       .filter(c => c.value > 0)
@@ -20,10 +20,17 @@ function CampaignPieChart({ data, title, period = 'd30' }) {
   }, [data, period]);
 
   const totalSpend = useMemo(() => {
-    return chartData.reduce((sum, item) => sum + item.value, 0);
+    return chartData.reduce((sum, item) => sum + (item?.value || 0), 0);
   }, [chartData]);
 
-  if (chartData.length === 0) return null;
+  if (chartData.length === 0) {
+    return (
+      <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '420px' }}>
+        <h4 style={{ margin: '0 0 20px 0', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{title}</h4>
+        <div style={{ color: 'var(--textSecondary)', fontSize: '14px' }}>No campaign data available for this period</div>
+      </div>
+    );
+  }
 
   return (
     <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '420px' }}>
