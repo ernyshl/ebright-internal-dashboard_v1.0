@@ -2287,6 +2287,12 @@
 
 .leadsBreakdownPage .pageHeader .backButtonContainer {
   position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.leadsBreakdownPage .pageHeader .refreshButtonContainer {
+  position: absolute;
   right: 0;
   top: 0;
 }
@@ -2303,10 +2309,6 @@
   font-size: 13px;
   color: var(--textSecondary);
   margin-bottom: 4px;
-}
-
-.leadsBreakdownPage .refreshButtonContainer {
-  margin-top: 0;
 }
 
 .leadsBreakdownPage .refreshButtonContainer .btnSmall {
