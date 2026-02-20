@@ -33,8 +33,6 @@ function SourceCard({ source, counts, color }) {
   const days7 = typeof counts?.count_7_days === 'string' ? parseInt(counts.count_7_days, 10) : (counts?.count_7_days || 0);
   const days30 = typeof counts?.count_30_days === 'string' ? parseInt(counts.count_30_days, 10) : (counts?.count_30_days || 0);
   
-  // Total leads = 30 days count (not sum of all periods since they overlap)
-  const total = days30;
   const trend = today - yesterday;
   const trendPercent = yesterday ? ((trend / yesterday) * 100).toFixed(1) : 0;
   
@@ -45,14 +43,10 @@ function SourceCard({ source, counts, color }) {
         <span className="sourceCardName">{source.name}</span>
       </div>
       <div className="sourceCardTotal">
-        <span className="sourceCardTotalValue">{formatNumber(total)}</span>
-        <span className="sourceCardTotalLabel">Total Leads</span>
+        <span className="sourceCardTotalValue">{formatNumber(today)}</span>
+        <span className="sourceCardTotalLabel">Today's Leads</span>
       </div>
       <div className="sourceCardStats">
-        <div className="sourceStat">
-          <span className="sourceStatValue">{formatNumber(today)}</span>
-          <span className="sourceStatLabel">Today</span>
-        </div>
         <div className="sourceStat">
           <span className="sourceStatValue">{formatNumber(yesterday)}</span>
           <span className="sourceStatLabel">Yesterday</span>
