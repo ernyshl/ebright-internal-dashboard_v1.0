@@ -240,7 +240,6 @@ export function LeadsCentrePage() {
                     <th>Source</th>
                     <th>Region</th>
                     <th>Branch</th>
-                    <th>Status</th>
                     <th>Submitted</th>
                   </tr>
                 </thead>
@@ -284,11 +283,6 @@ export function LeadsCentrePage() {
                       <td>
                         <span className="branchText">
                           {lead.clean_branch || '-'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`statusBadge ${lead.status?.toLowerCase() || 'unknown'}`}>
-                          {lead.status || 'Pending'}
                         </span>
                       </td>
                       <td className="dateCol">
