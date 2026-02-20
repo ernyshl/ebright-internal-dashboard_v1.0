@@ -151,26 +151,6 @@ export function MarketingPerformancePage() {
         </div>
         
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>
-          <div className="card" style={{ padding: '8px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--textSecondary)' }}>Chart Filter:</span>
-            <select 
-              value={month} 
-              onChange={(e) => setMonth(parseInt(e.target.value))}
-              className="input"
-              style={{ padding: '4px 8px', fontSize: 13 }}
-            >
-              {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
-            <select 
-              value={year} 
-              onChange={(e) => setYear(parseInt(e.target.value))}
-              className="input"
-              style={{ padding: '4px 8px', fontSize: 13 }}
-            >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-
           <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
             {q.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
           </button>
@@ -211,9 +191,31 @@ export function MarketingPerformancePage() {
 
           {/* Campaign Performance Section */}
           <div className="stack">
-            <h3 style={{ margin: '24px 0 12px 0', fontSize: 18, fontWeight: 600 }}>
-              Top Campaign Performance ({months.find(m => m.value === month).label} {year})
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '24px 0 12px 0' }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+                Top Campaign Performance ({months.find(m => m.value === month).label} {year})
+              </h3>
+              
+              <div className="card" style={{ padding: '6px 12px', display: 'flex', gap: 10, alignItems: 'center', boxShadow: 'none', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--textSecondary)' }}>Chart Filter:</span>
+                <select 
+                  value={month} 
+                  onChange={(e) => setMonth(parseInt(e.target.value))}
+                  className="input"
+                  style={{ padding: '2px 6px', fontSize: 12, height: 'auto' }}
+                >
+                  {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+                <select 
+                  value={year} 
+                  onChange={(e) => setYear(parseInt(e.target.value))}
+                  className="input"
+                  style={{ padding: '2px 6px', fontSize: 12, height: 'auto' }}
+                >
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
             
             <div className="campaignGrid">
               <CampaignPieChart data={campaigns?.fb_group} title="FB Group Campaigns" period="monthly" />
