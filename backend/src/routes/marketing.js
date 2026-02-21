@@ -5,19 +5,21 @@ const { getGoogleSpendData, getGoogleCampaignData } = require('../lib/google-ads
 
 const router = express.Router();
 
+// Ad account IDs — move to env vars (e.g. META_MAIN_FB_ID) for easier config management
+const ACCOUNTS = {
+  MAIN_FB_ID: process.env.META_MAIN_FB_ID || 'act_1303223119861639',
+  TT_ID: process.env.META_TT_ID || '7158009688364204033',
+  SARA_ID: process.env.META_SARA_ID || 'act_2740903809519822',
+  ONLINE_ID: process.env.META_ONLINE_ID || 'act_1235601843302851',
+};
+
 // Mirrors the Streamlit logic from `app.py` (meta_spend table) and returns
 // per-channel stats for today / yesterday / 7d / 30d.
 router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res, next) => {
   try {
     const { month, year } = req.query;
-    
-    // Account IDs from your Streamlit config
-    const ACCOUNTS = {
-      MAIN_FB_ID: 'act_1303223119861639',
-      TT_ID: '7158009688364204033',
-      SARA_ID: 'act_2740903809519822',
-      ONLINE_ID: 'act_1235601843302851',
-    };
+
+
 
     // Base query for standard time windows (Today, Yesterday, 7d, 30d)
     const query = `
@@ -224,13 +226,13 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         const fb = fbData[k];
         const tt = ttData[k];
         const gg = googleData[k];
-        
+
         const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
         const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
         const convs = (fb?.convs || 0) + (gg?.leads || 0); // Google's "leads" are actually conversions
         const leadSpend = (fb?.leadSpend || 0) + (tt?.leadSpend || 0);
         const convSpend = (fb?.convSpend || 0) + (gg?.leadSpend || 0); // Google's "leadSpend" is conv spend
-        
+
         out[k] = {
           spend,
           leads,

@@ -10,26 +10,26 @@ const router = express.Router();
 
 // Rate limiting store (in-memory)
 const loginAttempts = new Map();
-const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 10;
+const WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 function checkRateLimit(email) {
   const now = Date.now();
   const record = loginAttempts.get(email) || { count: 0, resetTime: now + WINDOW_MS };
-  
+
   if (now > record.resetTime) {
     record.count = 0;
     record.resetTime = now + WINDOW_MS;
   }
-  
+
   record.count++;
   loginAttempts.set(email, record);
-  
+
   if (record.count > MAX_ATTEMPTS) {
     const waitTime = Math.ceil((record.resetTime - now) / 1000);
     return { blocked: true, waitTime };
   }
-  
+
   return { blocked: false, remaining: MAX_ATTEMPTS - record.count };
 }
 
@@ -57,9 +57,9 @@ router.post('/login', async (req, res, next) => {
     // Check rate limit
     const rateLimit = checkRateLimit(email);
     if (rateLimit.blocked) {
-      return res.status(429).json({ 
+      return res.status(429).json({
         error: 'Too many login attempts. Please try again later.',
-        waitTime: rateLimit.waitTime 
+        waitTime: rateLimit.waitTime
       });
     }
 

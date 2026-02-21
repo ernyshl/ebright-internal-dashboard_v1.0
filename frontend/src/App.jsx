@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
 import { RequireAuth } from './components/RequireAuth';
+import { RequirePermission } from './components/RequirePermission';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
@@ -25,15 +26,39 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/marketing-performance" element={<MarketingPerformancePage />} />
-          <Route path="/branch-distribution" element={<LeadsBreakdownPage />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/permissions" element={<PermissionsPage />} />
-          <Route path="/dashboard" element={<LookerDashboardPage />} />
-          <Route path="/finance" element={<FinanceDashboardPage />} />
-          <Route path="/department" element={<DepartmentDashboardPage />} />
-          <Route path="/leads-centre" element={<LeadsCentrePage />} />
-          <Route path="/academy-dashboard" element={<AcademyDashboardPage />} />
+          <Route path="/leads-centre" element={
+            <RequirePermission roles={['super_admin', 'ceo', 'marketing', 'od', 'rm']}>
+              <LeadsCentrePage />
+            </RequirePermission>
+          } />
+
+          {/* Dashboard-permission-protected routes */}
+          <Route path="/marketing-performance" element={
+            <RequirePermission dashboard="marketing"><MarketingPerformancePage /></RequirePermission>
+          } />
+          <Route path="/branch-distribution" element={
+            <RequirePermission dashboard="operations"><LeadsBreakdownPage /></RequirePermission>
+          } />
+          <Route path="/dashboard" element={
+            <RequirePermission dashboard="operations"><LookerDashboardPage /></RequirePermission>
+          } />
+          <Route path="/finance" element={
+            <RequirePermission dashboard="finance"><FinanceDashboardPage /></RequirePermission>
+          } />
+          <Route path="/department" element={
+            <RequirePermission dashboard="department"><DepartmentDashboardPage /></RequirePermission>
+          } />
+          <Route path="/academy-dashboard" element={
+            <RequirePermission dashboard="academy"><AcademyDashboardPage /></RequirePermission>
+          } />
+
+          {/* Super admin only */}
+          <Route path="/users" element={
+            <RequirePermission roles={['super_admin']}><UsersPage /></RequirePermission>
+          } />
+          <Route path="/permissions" element={
+            <RequirePermission roles={['super_admin']}><PermissionsPage /></RequirePermission>
+          } />
         </Route>
       </Route>
 
@@ -41,3 +66,4 @@ export default function App() {
     </Routes>
   );
 }
+

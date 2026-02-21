@@ -4,7 +4,7 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing']), async (_req, res) => {
+router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing']), async (_req, res, next) => {
   try {
     // A) Summary headers (total counts by lead_source)
     const queryTotal = `
