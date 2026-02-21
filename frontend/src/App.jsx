@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
 import './App.css';
 import { RequireAuth } from './components/RequireAuth';
 import { RequirePermission } from './components/RequirePermission';
@@ -18,6 +19,11 @@ import { PermissionsPage } from './pages/PermissionsPage';
 import { AcademyDashboardPage } from './pages/AcademyDashboardPage';
 
 export default function App() {
+  useEffect(() => {
+    const theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  }, []);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

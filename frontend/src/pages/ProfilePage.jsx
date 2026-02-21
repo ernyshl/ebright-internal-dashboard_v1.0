@@ -151,7 +151,7 @@ export function ProfilePage() {
     <div className="dashboardPage">
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
-        <h1 style={{ marginTop: 16 }}>👤 My Profile</h1>
+        <h1 className="pageHeaderTitle" style={{ marginTop: 16 }}>👤 My Profile</h1>
         <p className="headerSubtitle">Manage your account settings and preferences</p>
       </div>
 

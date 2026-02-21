@@ -40,6 +40,49 @@
 
   /* Transitions */
   --transition: 0.2s ease;
+
+  /* Glass Effects - Light Default */
+  --glassBg: rgba(255, 255, 255, 0.7);
+  --glassBorder: rgba(255, 255, 255, 0.5);
+  --glassShadow: rgba(0, 0, 0, 0.05);
+  --glassInsetText: rgba(255, 255, 255, 0.5);
+}
+
+/* ===== DARK MODE OVERRIDES ===== */
+[data-theme='dark'] {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --border: #334155;
+  --borderLight: #1e293b;
+
+  --text: #f1f5f9;
+  --textSecondary: #94a3b8;
+  --muted: #64748b;
+
+  --glassBg: rgba(15, 23, 42, 0.6);
+  --glassBorder: rgba(255, 255, 255, 0.08);
+  --glassShadow: rgba(0, 0, 0, 0.3);
+  --glassInsetText: rgba(15, 23, 42, 0.2);
+
+  /* Dimmed status lights for dark mode */
+  --brandLight: rgba(220, 38, 38, 0.1);
+  --successLight: rgba(5, 150, 105, 0.1);
+  --warningLight: rgba(217, 119, 6, 0.1);
+  --infoLight: rgba(2, 132, 199, 0.1);
+
+  /* Specific badge overrides for dark mode */
+  --badge-blue-bg: rgba(30, 64, 175, 0.2);
+  --badge-blue-text: #60a5fa;
+  --badge-pink-bg: rgba(157, 23, 77, 0.2);
+  --badge-pink-text: #f472b6;
+  --badge-amber-bg: rgba(146, 64, 14, 0.2);
+  --badge-amber-text: #fbbf24;
+  --badge-green-bg: rgba(22, 101, 52, 0.2);
+  --badge-green-text: #4ade80;
+  --badge-red-bg: rgba(153, 27, 27, 0.2);
+  --badge-red-text: #f87171;
+  --badge-indigo-bg: rgba(55, 48, 163, 0.2);
+  --badge-indigo-text: #818cf8;
 }
 
 /* ===== LAYOUT ===== */
@@ -99,14 +142,30 @@
 .content {
   display: flex;
   flex-direction: column;
-  background: transparent;
+  background: var(--bg);
   overflow-y: auto;
   height: 100vh;
   width: 100%;
-  transition: margin-left 0.3s ease;
+  transition: margin-left 0.3s ease, background 0.3s ease;
   z-index: 1;
   /* Stay above the background orbs */
   position: relative;
+}
+
+/* ===== TOPBAR ===== */
+.topbar {
+  background: var(--glassBg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--glassBorder);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s ease;
 }
 
 /* ===== SIDEBAR ===== */
@@ -371,10 +430,17 @@
 }
 
 .pageTitle {
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
   line-height: 1.1;
+  background: linear-gradient(to right, #ffffff 0%, #fca5a5 50%, #ffffff 100%);
+  background-size: 200% auto;
+  color: #ffffff;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientText 6s linear infinite;
 }
 
 .topbarLeft .muted.small {
@@ -406,13 +472,13 @@
 
 /* ===== CARDS ===== */
 .card {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--glassBg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glassBorder);
   border-radius: var(--radius-xl);
   padding: 24px;
-  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px -5px var(--glassShadow), inset 0 2px 4px var(--glassInsetText);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -764,7 +830,7 @@
 .authCard {
   width: 100%;
   max-width: 440px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--glassBg);
   /* Slight transparency */
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1887,16 +1953,18 @@
   color: var(--textSecondary);
 }
 
-.badgeSource.website {
+.badgeSource.website,
+.badgeSource.facebook {
   background: #dbeafe;
   border-color: #93c5fd;
   color: #1e40af;
 }
 
-.badgeSource.facebook {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e40af;
+[data-theme='dark'] .badgeSource.website,
+[data-theme='dark'] .badgeSource.facebook {
+  background: var(--badge-blue-bg);
+  border-color: transparent;
+  color: var(--badge-blue-text);
 }
 
 .badgeSource.instagram {
@@ -1905,10 +1973,22 @@
   color: #9d174d;
 }
 
+[data-theme='dark'] .badgeSource.instagram {
+  background: var(--badge-pink-bg);
+  border-color: transparent;
+  color: var(--badge-pink-text);
+}
+
 .badgeSource.google {
   background: #fef3c7;
   border-color: #fcd34d;
   color: #92400e;
+}
+
+[data-theme='dark'] .badgeSource.google {
+  background: var(--badge-amber-bg);
+  border-color: transparent;
+  color: var(--badge-amber-text);
 }
 
 .badgeSource.referral {
@@ -1973,6 +2053,11 @@
 .statusBadge.lost {
   background: #fef2f2;
   color: #991b1b;
+}
+
+[data-theme='dark'] .statusBadge.lost {
+  background: var(--badge-red-bg);
+  color: var(--badge-red-text);
 }
 
 .statusBadge.unknown {
@@ -2358,9 +2443,15 @@
 .leadsBreakdownPage .pageHeaderTitle {
   font-size: 28px;
   font-weight: 800;
-  color: var(--text);
-  margin-bottom: 0;
   letter-spacing: -0.5px;
+  margin-bottom: 0;
+  background: linear-gradient(to right, #1e293b 0%, #dc2626 50%, #1e293b 100%);
+  background-size: 200% auto;
+  color: #1e293b;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientText 6s linear infinite;
 }
 
 .leadsBreakdownPage .pageHeaderSub {
@@ -2905,6 +2996,13 @@
 
   .pageHeaderTitle {
     font-size: 20px;
+    background: linear-gradient(to right, #1e293b 0%, #dc2626 50%, #1e293b 100%);
+    background-size: 200% auto;
+    color: #1e293b;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientText 6s linear infinite;
   }
 
   .pageHeaderSub {
@@ -3070,7 +3168,14 @@
   }
 
   .pageHeaderTitle {
-    font-size: 28px;
+    font-size: 18px;
+    background: linear-gradient(to right, #1e293b 0%, #dc2626 50%, #1e293b 100%);
+    background-size: 200% auto;
+    color: #1e293b;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientText 6s linear infinite;
   }
 }
 

@@ -10,10 +10,10 @@ export function PermissionsPage() {
   const [selectedUser, setSelectedUser] = useState(null);
 
   const updatePermission = useMutation({
-    mutationFn: ({ userId, dashboard, allowed }) => 
-      apiFetch(`/api/permissions/${userId}`, { 
-        method: 'PUT', 
-        body: { dashboard, allowed } 
+    mutationFn: ({ userId, dashboard, allowed }) =>
+      apiFetch(`/api/permissions/${userId}`, {
+        method: 'PUT',
+        body: { dashboard, allowed }
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-permissions'] });
@@ -21,7 +21,7 @@ export function PermissionsPage() {
   });
 
   const resetPermission = useMutation({
-    mutationFn: ({ userId, dashboard }) => 
+    mutationFn: ({ userId, dashboard }) =>
       apiFetch(`/api/permissions/${userId}/${dashboard}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-permissions'] });
@@ -90,7 +90,7 @@ export function PermissionsPage() {
       <div className="dashboardPage">
         <div className="dashboardHeader">
           <BackButton to="/" label="Back to Home" />
-          <h1 style={{ marginTop: 16 }}>🔐 Permissions Management</h1>
+          <h1 className="pageHeaderTitle" style={{ marginTop: 16 }}>🔐 Permissions Management</h1>
           <p className="headerSubtitle">Control dashboard access for all users</p>
         </div>
         <div className="dashboardContent">
@@ -107,7 +107,7 @@ export function PermissionsPage() {
     <div className="dashboardPage">
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
-        <h1 style={{ marginTop: 16 }}>🔐 Permissions Management</h1>
+        <h1 className="pageHeaderTitle" style={{ marginTop: 16 }}>🔐 Permissions Management</h1>
         <p className="headerSubtitle">Control which dashboards each user can access</p>
       </div>
 
@@ -192,7 +192,7 @@ export function PermissionsPage() {
               <p className="profileCardDesc">
                 Manage dashboard permissions for <strong>{selectedUser.fullName}</strong>
               </p>
-              
+
               <div className="permissionsList">
                 {dashboards.map((dashboard) => {
                   const perm = selectedUser.permissions[dashboard.id];
@@ -221,10 +221,10 @@ export function PermissionsPage() {
                           {isAllowed ? (
                             <button
                               className="btn btnSmall btnDanger"
-                              onClick={() => updatePermission.mutate({ 
-                                userId: selectedUser.id, 
-                                dashboard: dashboard.id, 
-                                allowed: false 
+                              onClick={() => updatePermission.mutate({
+                                userId: selectedUser.id,
+                                dashboard: dashboard.id,
+                                allowed: false
                               })}
                               disabled={updatePermission.isPending}
                             >
@@ -233,10 +233,10 @@ export function PermissionsPage() {
                           ) : (
                             <button
                               className="btn btnSmall btnSuccess"
-                              onClick={() => updatePermission.mutate({ 
-                                userId: selectedUser.id, 
-                                dashboard: dashboard.id, 
-                                allowed: true 
+                              onClick={() => updatePermission.mutate({
+                                userId: selectedUser.id,
+                                dashboard: dashboard.id,
+                                allowed: true
                               })}
                               disabled={updatePermission.isPending}
                             >
@@ -246,9 +246,9 @@ export function PermissionsPage() {
                           {isCustom && (
                             <button
                               className="btn btnSmall btnSecondary"
-                              onClick={() => resetPermission.mutate({ 
-                                userId: selectedUser.id, 
-                                dashboard: dashboard.id 
+                              onClick={() => resetPermission.mutate({
+                                userId: selectedUser.id,
+                                dashboard: dashboard.id
                               })}
                               disabled={resetPermission.isPending}
                             >

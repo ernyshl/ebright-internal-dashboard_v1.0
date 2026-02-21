@@ -1,6 +1,6 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { apiFetch } from '../lib/api';
 import { clearToken } from '../lib/auth';
@@ -9,6 +9,16 @@ export function AppLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [autoHide, setAutoHide] = useState(true);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
 
   const me = useQuery({
     queryKey: ['me'],
@@ -45,39 +55,39 @@ export function AppLayout() {
   return (
     <div className="appShell">
       {/* Mobile Overlay */}
-      <div 
-        className={`mobileOverlay ${sidebarOpen ? 'active' : ''}`} 
+      <div
+        className={`mobileOverlay ${sidebarOpen ? 'active' : ''}`}
         onClick={closeSidebar}
       />
-      
+
       {/* Sidebar Trigger (hover to show sidebar on desktop) */}
-      <div 
-        className="sidebarTrigger" 
-        onMouseEnter={() => autoHide && setSidebarOpen(true)} 
+      <div
+        className="sidebarTrigger"
+        onMouseEnter={() => autoHide && setSidebarOpen(true)}
       />
-      
+
       {/* Sidebar */}
-      <div 
+      <div
         className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''} ${!autoHide ? 'sidebarFrozen' : ''}`}
         onMouseLeave={() => autoHide && setSidebarOpen(false)}
       >
-        <Sidebar 
-          onNavigate={closeSidebar} 
+        <Sidebar
+          onNavigate={closeSidebar}
           autoHide={autoHide}
           onToggleAutoHide={toggleAutoHide}
         />
       </div>
-      
+
       {/* Mobile Menu Button */}
       <button className="mobileMenuBtn" onClick={toggleSidebar} aria-label="Toggle menu">
         ☰
       </button>
-      
+
       <div className="content">
         <header className="topbar">
           <div className="topbarLeft">
-            <button 
-              className="mobileMenuBtn" 
+            <button
+              className="mobileMenuBtn"
               onClick={toggleSidebar}
               style={{ display: 'none', position: 'relative', bottom: 'auto', right: 'auto' }}
               aria-label="Toggle menu"
@@ -103,6 +113,14 @@ export function AppLayout() {
                 </div>
               </div>
             )}
+            <button
+              className="btn btnSmall"
+              onClick={toggleTheme}
+              style={{ padding: '4px 8px', fontSize: '16px', background: 'transparent', border: 'none', cursor: 'pointer' }}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
             <button className="btn btnSmall btnDanger" onClick={onLogout}>
               Log out
             </button>
@@ -117,8 +135,8 @@ export function AppLayout() {
           Ebright Sdn. Bhd. No: 202101030304 (1430604-A)<br />
           All Rights Reserved. Terms and Conditions
         </footer>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
 

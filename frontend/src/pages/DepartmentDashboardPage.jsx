@@ -5,7 +5,10 @@ export function DepartmentDashboardPage() {
     <div className="dashboardPage">
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
-        <h1 style={{ marginTop: 16 }}>Department Dashboard</h1>
+        <div style={{ marginTop: 16 }}>
+          <h1 className="pageHeaderTitle">Department Dashboard</h1>
+          <p className="headerSubtitle">Department level metrics</p>
+        </div>
       </div>
       <div className="dashboardContent">
         <iframe

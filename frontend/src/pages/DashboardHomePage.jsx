@@ -81,27 +81,27 @@ export function DashboardHomePage() {
   ];
 
   // Filter departments based on permissions - super admin sees everything
-  const filteredDepartments = isSuperAdmin 
+  const filteredDepartments = isSuperAdmin
     ? departmentData
     : departmentData
-        .map(dept => ({
-          ...dept,
-          // For marketing, also check if user has permission (don't show just because of gaReports)
-          gaReports: dept.gaReports && canAccess('marketing', permissions) ? dept.gaReports : undefined,
-          links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
-        }))
-        .filter(dept => {
-          // Keep department if it has links OR (is marketing AND has marketing permission)
-          const hasLinks = dept.links.length > 0;
-          const hasMarketingAccess = dept.id === 'marketing' && canAccess('marketing', permissions);
-          return hasLinks || hasMarketingAccess;
-        });
+      .map(dept => ({
+        ...dept,
+        // For marketing, also check if user has permission (don't show just because of gaReports)
+        gaReports: dept.gaReports && canAccess('marketing', permissions) ? dept.gaReports : undefined,
+        links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
+      }))
+      .filter(dept => {
+        // Keep department if it has links OR (is marketing AND has marketing permission)
+        const hasLinks = dept.links.length > 0;
+        const hasMarketingAccess = dept.id === 'marketing' && canAccess('marketing', permissions);
+        return hasLinks || hasMarketingAccess;
+      });
 
   if (isLoading) {
     return (
       <div className="dashboardHomePage">
         <div className="dashboardHomeHeader">
-          <h1>Welcome to Ebright Dashboard</h1>
+          <h1 className="pageHeaderTitle">Welcome to Ebright Dashboard</h1>
           <p>Loading...</p>
         </div>
       </div>
@@ -111,14 +111,14 @@ export function DashboardHomePage() {
   return (
     <div className="dashboardHomePage">
       <div className="dashboardHomeHeader">
-        <h1>Welcome to Ebright Dashboard</h1>
+        <h1 className="pageHeaderTitle">Welcome to Ebright Dashboard</h1>
         <p>{visibleDashboards.length} accessible dashboards</p>
       </div>
-      
+
       <div className="dashboardHomeGrid">
         {filteredDepartments.map((dept) => (
-          <div 
-            key={dept.id} 
+          <div
+            key={dept.id}
             className="dashboardHomeCard"
             style={{ '--card-color': dept.color }}
           >
@@ -126,7 +126,7 @@ export function DashboardHomePage() {
               <span className="dashboardHomeCardIcon">{dept.icon}</span>
               <h2>{dept.name}</h2>
             </div>
-            
+
             <div className="dashboardHomeCardLinks">
               {dept.gaReports ? (
                 <>

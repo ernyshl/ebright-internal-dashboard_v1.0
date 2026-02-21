@@ -2,9 +2,9 @@ import { BackButton } from '../components/BackButton';
 
 export function AcademyDashboardPage() {
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
       height: '100vh',
       margin: -20,
       background: 'var(--bg)',
@@ -21,13 +21,15 @@ export function AcademyDashboardPage() {
       }}>
         <BackButton to="/" label="Back" />
         <div style={{ flex: 1, minWidth: '150px' }}>
-          <div style={{ fontWeight: 600, fontSize: 16 }}>Academy Dashboard</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>GoHighLevel Integration</div>
+          <div style={{ marginTop: 16 }}>
+            <h1 className="pageHeaderTitle">Academy Dashboard</h1>
+            <p className="headerSubtitle">Academy metrics</p>
+          </div>
         </div>
       </div>
 
       {/* Full-Width Iframe */}
-      <div style={{ 
+      <div style={{
         flex: 1,
         width: '100%',
         border: 'none',

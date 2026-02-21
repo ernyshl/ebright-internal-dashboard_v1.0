@@ -43,8 +43,8 @@ export function LeadsCentrePage() {
   });
 
   const handleFilterChange = (key, value) => {
-    setFilters(f => ({ 
-      ...f, 
+    setFilters(f => ({
+      ...f,
       [key]: value,
       // Clear branch when region changes to load correct branches
       ...(key === 'region' ? { branch: '' } : {})
@@ -70,8 +70,8 @@ export function LeadsCentrePage() {
   if (isLoading && !data) {
     return (
       <div className="dashboardPage">
-        <div className="dashboardHeader">
-          <h1>Leads Centre</h1>
+        <div className="pageHeader" style={{ justifyContent: 'center', alignItems: 'center', height: '100%', borderBottom: 'none' }}>
+          <h1 className="pageHeaderTitle">Leads Centre</h1>
         </div>
         <div className="dashboardContent">
           <div className="loadingState">
@@ -87,7 +87,7 @@ export function LeadsCentrePage() {
     return (
       <div className="dashboardPage">
         <div className="dashboardHeader">
-          <h1>Leads Centre</h1>
+          <h1 className="pageHeaderTitle">Leads Centre</h1>
         </div>
         <div className="dashboardContent">
           <div className="errorState">
@@ -109,7 +109,7 @@ export function LeadsCentrePage() {
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
-          <h1>Leads Centre</h1>
+          <h1 className="pageHeaderTitle">Leads Centre</h1>
           <p className="headerSubtitle">
             {data?.total || 0} total leads
             {data?.page && data?.totalPages > 1 && (
@@ -275,8 +275,8 @@ export function LeadsCentrePage() {
                       </td>
                       <td>
                         <span className="regionBadge">
-                          {lead.region || (lead.clean_branch?.includes('Online') ? 'Region 3' : 
-                           lead.clean_branch ? 'Region 2' : '-')}
+                          {lead.region || (lead.clean_branch?.includes('Online') ? 'Region 3' :
+                            lead.clean_branch ? 'Region 2' : '-')}
                         </span>
                       </td>
                       <td>
