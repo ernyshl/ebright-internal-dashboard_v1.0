@@ -162,17 +162,19 @@
 
 /* ===== TOPBAR ===== */
 .topbar {
-  background: var(--glassBg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 10px 24px;
+  background: var(--glassBg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glassBorder);
+  box-shadow: 0 4px 20px -10px var(--glassShadow);
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-shrink: 0;
   transition: all 0.3s ease;
 }
 
@@ -412,24 +414,7 @@
 /* ===== CONTENT AREA ===== */
 /* .content styles moved to above */
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 24px;
-  background: rgba(255, 255, 255, 0.85);
-  /* Glassmorphism */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 4px 20px -10px rgba(0, 0, 0, 0.05);
-  /* Softer floating shadow */
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  flex-shrink: 0;
-  transition: background 0.3s ease;
-}
+
 
 .topbarLeft {
   display: flex;
@@ -439,16 +424,17 @@
 
 .pageTitle {
   font-weight: 800;
-  font-size: 19px;
+  font-size: 20px;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  background: linear-gradient(to right, #ffffff 0%, #fca5a5 50%, #ffffff 100%);
+  background: linear-gradient(to right, #ef4444 0%, #fbbf24 50%, #ef4444 100%);
   background-size: 200% auto;
-  color: #ffffff;
+  color: #ef4444;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: gradientText 6s linear infinite;
+  animation: gradientText 5s linear infinite;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
 }
 
 .topbarLeft .muted.small {
@@ -1117,9 +1103,9 @@
   font-weight: 800;
   letter-spacing: -0.03em;
   margin-bottom: 6px;
-  background: linear-gradient(to right, #1e293b 0%, #dc2626 50%, #1e293b 100%);
+  background: linear-gradient(to right, var(--text) 0%, #ef4444 50%, var(--text) 100%);
   background-size: 200% auto;
-  color: #1e293b;
+  color: var(--text);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
