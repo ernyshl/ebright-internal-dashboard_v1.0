@@ -4713,11 +4713,109 @@
 }
 
 [data-theme='dark'] .permissionsNote {
-  background: rgba(2, 132, 199, 0.15);
-  border-color: #38bdf8;
+  background: rgba(2, 132, 199, 0.15) !important;
+  border-color: #38bdf8 !important;
   color: #e0f2fe !important;
 }
 
 [data-theme='dark'] .permissionsNote strong {
-  color: #38bdf8;
+  color: #38bdf8 !important;
+}
+
+/* FORCE VISIBILITY - Highest priority */
+[data-theme='dark'] .permissionsNote,
+[data-theme='dark'] .permissionsNote * {
+  color: #e0f2fe !important;
+  background: rgba(2, 132, 199, 0.2) !important;
+  border-color: #38bdf8 !important;
+}
+
+[data-theme='dark'] .permissionsUserName,
+[data-theme='dark'] .permissionsUserName * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsUserEmail,
+[data-theme='dark'] .permissionsUserEmail * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsName,
+[data-theme='dark'] .permissionsName * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsEmail,
+[data-theme='dark'] .permissionsEmail * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsListName,
+[data-theme='dark'] .permissionsListName * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsListDesc,
+[data-theme='dark'] .permissionsListDesc * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .cardDescription,
+[data-theme='dark'] .cardDescription * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsSecurityTips,
+[data-theme='dark'] .permissionsSecurityTips * {
+  color: #f8fafc !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsStatValue,
+[data-theme='dark'] .permissionsStatValue * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsStatLabel,
+[data-theme='dark'] .permissionsStatLabel * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsBadge,
+[data-theme='dark'] .permissionsBadge * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .permissionsSource,
+[data-theme='dark'] .permissionsSource * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .pageHeaderTitle,
+[data-theme='dark'] .pageHeaderTitle * {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .headerSubtitle,
+[data-theme='dark'] .headerSubtitle * {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .cardTitle,
+[data-theme='dark'] .cardTitle * {
+  color: #ffffff !important;
+  text-shadow: none !important;
 }
