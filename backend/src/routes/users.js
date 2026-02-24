@@ -86,7 +86,7 @@ const UpdateUserSchema = z.object({
   email: z.string().email().optional(),
   fullName: z.string().min(1, 'Name cannot be empty').optional(),
   role: z.enum(VALID_ROLES).optional(),
-  password: z.string().min(8).regex(passwordRegex).optional(),
+  password: z.string().optional(),
 });
 
 router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
@@ -129,6 +129,12 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     }
 
     if (data.password) {
+      // Validate password strength only if provided
+      if (data.password.length < 8 || !passwordRegex.test(data.password)) {
+        return res.status(400).json({
+          error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character'
+        });
+      }
       const hash = await bcrypt.hash(data.password, 12);
       updates.push(`password_hash = $${paramIndex++}`);
       values.push(hash);

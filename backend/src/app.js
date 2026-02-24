@@ -13,6 +13,54 @@ const { academyRouter } = require('./routes/academy');
 const { pool } = require('./db');
 
 const { requireAuth, requireRole } = require('./middleware/auth');
+const jwt = require('jsonwebtoken');
+
+// Role-based rate limit configuration
+const roleRateLimits = {
+  super_admin: { windowMs: 15 * 60 * 1000, max: 1000 },
+  ceo: { windowMs: 15 * 60 * 1000, max: 500 },
+  executive: { windowMs: 15 * 60 * 1000, max: 300 },
+  marketing: { windowMs: 15 * 60 * 1000, max: 200 },
+  sales: { windowMs: 15 * 60 * 1000, max: 200 },
+  od: { windowMs: 15 * 60 * 1000, max: 200 },
+  finance: { windowMs: 15 * 60 * 1000, max: 200 },
+  hr: { windowMs: 15 * 60 * 1000, max: 200 },
+  // Default for unknown roles
+  default: { windowMs: 15 * 60 * 1000, max: 100 },
+};
+
+// Custom rate limiter that checks user role from JWT token
+function createRoleBasedRateLimiter() {
+  return (req, res, next) => {
+    let userRole = 'default';
+
+    // Try to extract role from JWT token
+    try {
+      const header = req.headers.authorization || '';
+      const [type, token] = header.split(' ');
+
+      if (type === 'Bearer' && token) {
+        const payload = jwt.verify(token, env.JWT_SECRET);
+        userRole = payload.role || 'default';
+      }
+    } catch {
+      // If token is invalid/expired, use default limits
+      userRole = 'default';
+    }
+
+    const config = roleRateLimits[userRole] || roleRateLimits.default;
+
+    const limiter = rateLimit({
+      windowMs: config.windowMs,
+      max: config.max,
+      message: { error: 'Too many requests, please try again later.' },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+
+    limiter(req, res, next);
+  };
+}
 
 function sanitizeSearchTerm(term) {
   // Escape LIKE wildcards to prevent SQL injection via search
@@ -47,7 +95,7 @@ function createApp() {
 
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // limit each IP to 5 login attempts per windowMs
+    max: 20, // limit each IP to 20 login attempts per windowMs
     message: { error: 'Too many login attempts, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -80,21 +128,23 @@ function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-  // Apply rate limiting to all routes
-  app.use('/api/', apiLimiter);
-
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
-  // Apply stricter rate limiting to auth routes
+  // Apply stricter rate limiting to auth routes (before auth)
   app.use('/api/auth', authLimiter, authRouter);
-  app.use('/api/marketing', marketingRouter);
-  app.use('/api/leads', leadsRouter);
-  app.use('/api/users', usersRouter);
-  app.use('/api/permissions', permissionsRouter);
-  app.use('/api/academy', academyRouter);
+
+  // Create role-based rate limiter function
+  const applyRoleBasedRateLimit = createRoleBasedRateLimiter();
+
+  // Apply role-based rate limiting to protected routes (after auth middleware)
+  app.use('/api/marketing', applyRoleBasedRateLimit, marketingRouter);
+  app.use('/api/leads', applyRoleBasedRateLimit, leadsRouter);
+  app.use('/api/users', applyRoleBasedRateLimit, usersRouter);
+  app.use('/api/permissions', applyRoleBasedRateLimit, permissionsRouter);
+  app.use('/api/academy', applyRoleBasedRateLimit, academyRouter);
 
   // Leads Centre endpoint - with filtering, search, pagination
-  app.get('/api/leads-centre', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res) => {
+  app.get('/api/leads-centre', applyRoleBasedRateLimit, requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res) => {
     try {
       const {
         search = '',

@@ -252,10 +252,15 @@ export function UsersPage() {
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder={editingUser ? 'New password (optional)' : 'Min 6 characters'}
+                placeholder={editingUser ? 'New password (optional)' : 'Min 8 chars with uppercase, lowercase, number & special char'}
                 required={!editingUser}
-                minLength={6}
+                minLength={editingUser ? 0 : 8}
               />
+              {editingUser && (
+                <div style={{ fontSize: '11px', color: '#666', marginTop: 4 }}>
+                  Leave blank to keep current password
+                </div>
+              )}
             </label>
             <label className="field">
               <div className="label">Role</div>

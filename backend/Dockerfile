@@ -4,8 +4,8 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for PostgreSQL client
-RUN apk add --no-cache postgresql-client
+# Install system dependencies for PostgreSQL client and curl (for healthcheck)
+RUN apk add --no-cache postgresql-client curl
 
 # Copy package files
 COPY package*.json ./
@@ -26,12 +26,6 @@ USER nodejs
 
 # Expose port
 EXPOSE 4000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4000/health', (res) => { \
-    process.exit(res.statusCode === 200 ? 0 : 1) \
-  }).on('error', () => process.exit(1))"
 
 # Start the application
 CMD ["npm", "start"]
