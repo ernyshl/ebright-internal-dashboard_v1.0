@@ -17,12 +17,12 @@ const DASHBOARDS = [
 
 // Role-based default permissions
 const ROLE_DEFAULTS = {
-  super_admin: ['academy', 'marketing', 'finance', 'operations', 'department'],
-  ceo: ['academy', 'marketing', 'finance', 'operations', 'department'],
+  super_admin: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr'],
+  ceo: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr'],
   rm: ['operations', 'academy'],
   marketing: ['marketing', 'academy'],
   od: ['operations', 'academy'],
-  hr: ['department'],
+  hr: ['department', 'hr'],
   academy: ['academy'],
   finance: ['finance'],
 };

@@ -50,6 +50,14 @@
   --orbOpacity: 0.4;
   --cardMixColor: rgba(255, 255, 255, 0.6);
   --cardMixBase: white;
+
+  /* Component Backgrounds */
+  --inputBg: rgba(255, 255, 255, 0.8);
+  --inputBgFocus: #ffffff;
+  --tableWrapBg: rgba(255, 255, 255, 0.6);
+  --tableHeaderBg: rgba(255, 255, 255, 0.85);
+  --tableRowHover: #ffffff;
+  --filterBarBg: rgba(255, 255, 255, 0.65);
 }
 
 /* ===== DARK MODE OVERRIDES ===== */
@@ -77,6 +85,14 @@
   --successLight: rgba(5, 150, 105, 0.1);
   --warningLight: rgba(217, 119, 6, 0.1);
   --infoLight: rgba(2, 132, 199, 0.1);
+
+  /* Component Background Overrides */
+  --inputBg: rgba(30, 41, 59, 0.5);
+  --inputBgFocus: rgba(30, 41, 59, 0.8);
+  --tableWrapBg: rgba(30, 41, 59, 0.4);
+  --tableHeaderBg: rgba(30, 41, 59, 0.8);
+  --tableRowHover: rgba(255, 255, 255, 0.03);
+  --filterBarBg: rgba(15, 23, 42, 0.5);
 
   /* Specific badge overrides for dark mode */
   --badge-blue-bg: rgba(30, 64, 175, 0.2);
@@ -899,7 +915,7 @@
   font-size: 15px;
   outline: none;
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--inputBg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   width: 100%;
@@ -911,7 +927,7 @@
 .input:focus {
   border-color: rgba(220, 38, 38, 0.4);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.02);
-  background: #ffffff;
+  background: var(--inputBgFocus);
 }
 
 /* Fix webkit autofill blue background */
@@ -919,7 +935,7 @@
 .input:-webkit-autofill:hover,
 .input:-webkit-autofill:focus,
 .input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-box-shadow: 0 0 0 30px var(--inputBg) inset !important;
   -webkit-text-fill-color: var(--text) !important;
   transition: background-color 5000s ease-in-out 0s;
 }
@@ -935,7 +951,7 @@
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-lg);
   box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.06), inset 0 2px 4px rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--tableWrapBg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -958,7 +974,7 @@
 .table thead th {
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--tableHeaderBg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 10;
@@ -978,7 +994,7 @@
 }
 
 .table tbody tr:hover {
-  background: #ffffff;
+  background: var(--tableRowHover);
   transform: scale(1.002) translateY(-1px);
   box-shadow: 0 8px 16px -4px rgba(220, 38, 38, 0.08), inset 4px 0 0 var(--brand);
   z-index: 2;
@@ -1437,7 +1453,7 @@
 
 /* ===== FILTER BAR ===== */
 .filterBar {
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--filterBarBg);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -1492,7 +1508,7 @@
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--inputBg);
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1500,7 +1516,7 @@
   outline: none;
   border-color: rgba(220, 38, 38, 0.5);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
-  background: #ffffff;
+  background: var(--inputBgFocus);
 }
 
 .filterSelect {
@@ -1508,7 +1524,7 @@
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--inputBg);
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
@@ -1521,7 +1537,7 @@
   outline: none;
   border-color: rgba(220, 38, 38, 0.5);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
-  background: #ffffff;
+  background: var(--inputBgFocus);
 }
 
 .filterActions {
@@ -1535,7 +1551,7 @@
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--inputBg);
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   min-width: 160px;
 }
@@ -1544,7 +1560,7 @@
   outline: none;
   border-color: rgba(220, 38, 38, 0.5);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
-  background: #ffffff;
+  background: var(--inputBgFocus);
 }
 
 .dateGroup {
@@ -1556,7 +1572,7 @@
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--inputBg);
   color: var(--text);
   font-family: inherit;
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -1566,7 +1582,7 @@
   outline: none;
   border-color: rgba(220, 38, 38, 0.5);
   box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
-  background: #ffffff;
+  background: var(--inputBgFocus);
 }
 
 .clearFiltersBtn {

@@ -75,8 +75,9 @@ export function DashboardHomePage() {
       name: 'HR',
       icon: '👥',
       color: '#ec4899',
-      comingSoon: true,
-      links: []
+      links: [
+        { label: 'HR Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' }
+      ]
     }
   ];
 

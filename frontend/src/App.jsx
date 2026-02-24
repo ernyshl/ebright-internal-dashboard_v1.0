@@ -17,6 +17,7 @@ import { DashboardHomePage } from './pages/DashboardHomePage';
 import { LeadsCentrePage } from './pages/LeadsCentrePage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { AcademyDashboardPage } from './pages/AcademyDashboardPage';
+import { HrRecruitmentFunnelPage } from './pages/HrRecruitmentFunnelPage';
 
 export default function App() {
   useEffect(() => {
@@ -56,6 +57,9 @@ export default function App() {
           } />
           <Route path="/academy-dashboard" element={
             <RequirePermission dashboard="academy"><AcademyDashboardPage /></RequirePermission>
+          } />
+          <Route path="/hr-recruitment-funnel" element={
+            <RequirePermission dashboard="hr"><HrRecruitmentFunnelPage /></RequirePermission>
           } />
 
           {/* Super admin only */}
