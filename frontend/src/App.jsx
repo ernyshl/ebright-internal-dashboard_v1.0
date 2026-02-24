@@ -5,7 +5,6 @@ import { RequireAuth } from './components/RequireAuth';
 import { RequirePermission } from './components/RequirePermission';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
-import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { MarketingPerformancePage } from './pages/MarketingPerformancePage';
 import { LeadsBreakdownPage } from './pages/LeadsBreakdownPage';
 import { UsersPage } from './pages/UsersPage';
