@@ -65,7 +65,7 @@ export function UsersPage() {
 
   // Permissions data for super admin
   const { users: allUsers, dashboards: apiDashboards } = useAllPermissions();
-  
+
   // Fallback dashboards in case API fails
   const dashboards = apiDashboards && apiDashboards.length > 0 ? apiDashboards : [
     { id: 'marketing', name: 'Marketing', icon: '📈' },
@@ -100,10 +100,10 @@ export function UsersPage() {
 
   // Permission mutations
   const updatePermission = useMutation({
-    mutationFn: ({ userId, dashboard, allowed }) => 
-      apiFetch(`/api/permissions/${userId}`, { 
-        method: 'PUT', 
-        body: { dashboard, allowed } 
+    mutationFn: ({ userId, dashboard, allowed }) =>
+      apiFetch(`/api/permissions/${userId}`, {
+        method: 'PUT',
+        body: { dashboard, allowed }
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-permissions'] });
@@ -117,7 +117,7 @@ export function UsersPage() {
   });
 
   const resetPermission = useMutation({
-    mutationFn: ({ userId, dashboard }) => 
+    mutationFn: ({ userId, dashboard }) =>
       apiFetch(`/api/permissions/${userId}/${dashboard}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-permissions'] });
@@ -142,7 +142,7 @@ export function UsersPage() {
         return userPerms.permissions;
       }
     }
-    
+
     // Fallback: return role-based defaults
     const selectedUser = userList.find(u => u.id === userId);
     const role = selectedUser?.role || 'marketing';
@@ -384,12 +384,21 @@ export function UsersPage() {
               <button className="modalClose" onClick={() => setShowPermissions(false)}>✕</button>
             </div>
             <div className="modalBody">
-              <div style={{ marginBottom: 20, padding: 15, background: '#f8fafc', borderRadius: 8 }}>
-                <strong>User:</strong> {selectedUserForPerms.full_name}<br />
-                <strong>Email:</strong> {selectedUserForPerms.email}<br />
-                <strong>Role:</strong> {getRoleLabel(selectedUserForPerms.role)}
+              <div className="permissionsModalUserInfo">
+                <div className="permissionsModalUserAvatar">
+                  {getInitials(selectedUserForPerms.full_name)}
+                </div>
+                <div className="permissionsModalUserDetails">
+                  <div className="permissionsModalUserName">{selectedUserForPerms.full_name}</div>
+                  <div className="permissionsModalUserEmail">{selectedUserForPerms.email}</div>
+                  <div className="permissionsModalUserRole">
+                    <span className={`badge badgeSmall ${ROLE_BADGE[selectedUserForPerms.role] || ''}`}>
+                      {getRoleLabel(selectedUserForPerms.role)}
+                    </span>
+                  </div>
+                </div>
               </div>
-              
+
               {/* Show table with fallback dashboards */}
               {dashboards.length === 0 ? (
                 <div className="loadingCard"><div className="loadingDots"><span /><span /><span /></div> Loading dashboards...</div>
@@ -424,34 +433,34 @@ export function UsersPage() {
                           <td className="muted" style={{ fontSize: 12 }}>{effectiveFrom}</td>
                           <td>
                             <div style={{ display: 'flex', gap: 6 }}>
-                              <button 
+                              <button
                                 className="btn btnSmall btnSuccess"
-                                onClick={() => updatePermission.mutate({ 
-                                  userId: selectedUserForPerms.id, 
-                                  dashboard: dashboard.id, 
-                                  allowed: true 
+                                onClick={() => updatePermission.mutate({
+                                  userId: selectedUserForPerms.id,
+                                  dashboard: dashboard.id,
+                                  allowed: true
                                 })}
                                 disabled={isAllowed}
                               >
                                 Allow
                               </button>
-                              <button 
+                              <button
                                 className="btn btnSmall btnDanger"
-                                onClick={() => updatePermission.mutate({ 
-                                  userId: selectedUserForPerms.id, 
-                                  dashboard: dashboard.id, 
-                                  allowed: false 
+                                onClick={() => updatePermission.mutate({
+                                  userId: selectedUserForPerms.id,
+                                  dashboard: dashboard.id,
+                                  allowed: false
                                 })}
                                 disabled={!isAllowed}
                               >
                                 Deny
                               </button>
                               {isCustom && (
-                                <button 
+                                <button
                                   className="btn btnSmall btnSecondary"
-                                  onClick={() => resetPermission.mutate({ 
-                                    userId: selectedUserForPerms.id, 
-                                    dashboard: dashboard.id 
+                                  onClick={() => resetPermission.mutate({
+                                    userId: selectedUserForPerms.id,
+                                    dashboard: dashboard.id
                                   })}
                                 >
                                   Reset
@@ -465,17 +474,20 @@ export function UsersPage() {
                   </tbody>
                 </table>
               )}
-              
-              <div style={{ marginTop: 20, padding: 15, background: '#fef3c7', borderRadius: 8, fontSize: 13 }}>
-                <strong>Note:</strong> Setting to "Allow" or "Deny" creates a custom permission override. 
-                "Reset" removes the override and reverts to role default.
+
+              <div className="permissionsModalNote">
+                <span className="permissionsModalNoteIcon">💡</span>
+                <div className="permissionsModalNoteText">
+                  <strong>Note:</strong> Setting to "Allow" or "Deny" creates a custom permission override.
+                  "Reset" removes the override and reverts to role default.
+                </div>
               </div>
-              
+
               {/* Permission message */}
               {permMessage && (
-                <div style={{ 
-                  marginTop: 16, 
-                  padding: 12, 
+                <div style={{
+                  marginTop: 16,
+                  padding: 12,
                   borderRadius: 8,
                   background: permMessage.type === 'success' ? 'var(--successLight)' : 'var(--brandLight)',
                   color: permMessage.type === 'success' ? 'var(--success)' : 'var(--brand)',

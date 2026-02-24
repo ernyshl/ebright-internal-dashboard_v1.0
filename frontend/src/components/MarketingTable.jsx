@@ -11,7 +11,7 @@ function fmtNum(n) {
 function cell(d, isGoogleChannel = false) {
   if (!d) return <span className="muted">—</span>;
   const metricLabel = isGoogleChannel ? 'Conv' : 'Leads';
-  
+
   return (
     <div style={{ lineHeight: 1.6 }}>
       <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtRM(d.spend)}</div>
@@ -35,7 +35,8 @@ export function MarketingTable({ title, rows }) {
         fontWeight: 700,
         fontSize: 14,
         borderBottom: '1px solid var(--border)',
-        background: '#f8fafc',
+        background: 'var(--tableHeaderBg)',
+        color: 'var(--text)',
       }}>
         {title}
       </div>
