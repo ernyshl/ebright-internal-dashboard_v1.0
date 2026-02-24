@@ -2244,12 +2244,14 @@
 
 .permissionUserCard:hover {
   border-color: var(--brand);
-  background: var(--brandLight);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .permissionUserCard.selected {
   border-color: var(--brand);
   background: var(--brandLight);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.15);
 }
 
 .permissionUserAvatar {
@@ -2352,8 +2354,9 @@
 
 .permissionSource {
   font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 500;
 }
 
 .permissionSource.custom {
@@ -2364,6 +2367,7 @@
 .permissionSource.role {
   background: var(--bg);
   color: var(--textSecondary);
+  border: 1px solid var(--border);
 }
 
 .permissionActions {
@@ -3695,7 +3699,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px;
+  padding: 16px 20px;
   background: var(--panel);
   border: 2px solid var(--border);
   border-radius: var(--radius-lg);
@@ -3920,7 +3924,7 @@
 }
 
 .permissionSource.role {
-  background: var(--bg);
+  background: var(--panel);
   color: var(--textSecondary);
   border: 1px solid var(--border);
 }
@@ -4044,17 +4048,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 24px;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--glassBg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glassBorder);
   border-radius: var(--radius-xl);
   margin-bottom: 24px;
-  box-shadow: var(--shadow-sm);
-}
-
-.permissionsHeaderLeft {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+  box-shadow: 0 4px 15px -5px var(--glassShadow);
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .permissionsAvatarLarge {
@@ -4102,6 +4103,7 @@
   padding: 12px 20px;
   background: var(--bg);
   border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
 }
 
 .permissionsStatValue {
@@ -4133,11 +4135,15 @@
 }
 
 .permissionsUserCard {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--glassBg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glassBorder);
   border-radius: var(--radius-xl);
   padding: 24px;
   height: fit-content;
+  box-shadow: 0 4px 15px -5px var(--glassShadow);
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .permissionsUserList {
@@ -4147,6 +4153,16 @@
   max-height: 500px;
   overflow-y: auto;
   margin-top: 16px;
+  padding-right: 4px;
+}
+
+.permissionsUserList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.permissionsUserList::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
 }
 
 .permissionsUserItem {
@@ -4160,22 +4176,32 @@
   cursor: pointer;
   transition: all var(--transition);
   text-align: left;
+  color: var(--text);
 }
 
 .permissionsUserItem:hover {
   border-color: var(--border);
   background: var(--panel);
+  transform: translateX(4px);
 }
 
 .permissionsUserItem.selected {
   border-color: var(--brand);
   background: var(--brandLight);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
 }
 
 .permissionsUserItem .permissionsUserAvatar {
   width: 40px;
   height: 40px;
   font-size: 14px;
+  border-radius: 50%;
+  background: var(--brandGradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
 }
 
 .permissionsUserItem .permissionsUserDetails {
@@ -4185,12 +4211,15 @@
 
 .permissionsUserItem .permissionsUserName {
   font-size: 14px;
+  font-weight: 600;
   margin-bottom: 2px;
+  color: var(--text);
 }
 
 .permissionsUserItem .permissionsUserEmail {
   font-size: 12px;
   margin-bottom: 0;
+  color: var(--textSecondary);
 }
 
 .badgeSmall {
@@ -4199,10 +4228,15 @@
 }
 
 .permissionsDetailCard {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--glassBg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glassBorder);
   border-radius: var(--radius-xl);
   padding: 24px;
+  box-shadow: 0 4px 15px -5px var(--glassShadow);
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.1s;
 }
 
 .permissionsList {
@@ -4218,12 +4252,16 @@
   justify-content: space-between;
   padding: 16px 20px;
   background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   transition: all var(--transition);
 }
 
 .permissionsListItem:hover {
-  background: var(--borderLight);
+  background: var(--panel);
+  border-color: var(--brand);
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .permissionsListLeft {
@@ -4239,6 +4277,7 @@
   align-items: center;
   justify-content: center;
   background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-size: 24px;
 }
@@ -4269,8 +4308,10 @@
 .permissionsBadge {
   padding: 6px 14px;
   border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .permissionsBadge.allowed {
@@ -4286,19 +4327,23 @@
 .permissionsSource {
   padding: 6px 12px;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.permissionsSource.custom {
-  background: #f0fdf4;
-  color: #166534;
-}
-
-.permissionsSource.role {
+  font-size: 11px;
+  font-weight: 600;
   background: var(--panel);
   color: var(--textSecondary);
   border: 1px solid var(--border);
+}
+
+.permissionsSource.custom {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+[data-theme='dark'] .permissionsSource.custom {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 .permissionsActions {
@@ -4309,9 +4354,14 @@
 .permissionsSecurityTips {
   margin-top: 24px;
   padding: 24px;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--glassBg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glassBorder);
   border-radius: var(--radius-xl);
+  box-shadow: 0 4px 15px -5px var(--glassShadow);
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.2s;
 }
 
 .permissionsSecurityTips h4 {
@@ -4331,51 +4381,4 @@
   color: var(--textSecondary);
   margin-bottom: 8px;
   line-height: 1.5;
-}
-
-.permissionsSecurityTips li:last-child {
-  margin-bottom: 0;
-}
-
-/* Responsive Permissions V2 */
-@media (max-width: 1024px) {
-  .permissionsGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .permissionsHeaderCard {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-
-  .permissionsHeaderLeft {
-    flex-direction: column;
-  }
-
-  .permissionsHeaderStats {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 768px) {
-  .permissionsListItem {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .permissionsListRight {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .permissionsActions {
-    width: 100%;
-  }
-
-  .permissionsActions .btn {
-    flex: 1;
-  }
 }
