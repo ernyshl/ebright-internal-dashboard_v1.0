@@ -153,11 +153,10 @@ export function PermissionsPage() {
         <div className="permissionsGrid">
           {/* User Selection Card */}
           <div className="permissionsUserCard">
-            <div className="profileCardHeader">
-              <span className="profileCardIcon">👥</span>
-              <h3>Select User</h3>
+            <div className="cardHeader" style={{ border: 'none', marginBottom: 0, paddingBottom: 0 }}>
+              <h3 className="cardTitle">👥 Select User</h3>
             </div>
-            <p className="profileCardDesc">
+            <p className="cardDescription">
               Click on a user to manage their dashboard permissions
             </p>
             <div className="permissionsUserList">
@@ -185,11 +184,10 @@ export function PermissionsPage() {
           {/* Permissions Card */}
           {selectedUser && (
             <div className="permissionsDetailCard">
-              <div className="profileCardHeader">
-                <span className="profileCardIcon">📋</span>
-                <h3>Dashboard Access</h3>
+              <div className="cardHeader" style={{ border: 'none', marginBottom: 0, paddingBottom: 0 }}>
+                <h3 className="cardTitle">📋 Dashboard Access</h3>
               </div>
-              <p className="profileCardDesc">
+              <p className="cardDescription">
                 Manage dashboard permissions for <strong>{selectedUser.fullName}</strong>
               </p>
 
@@ -245,7 +243,8 @@ export function PermissionsPage() {
                           )}
                           {isCustom && (
                             <button
-                              className="btn btnSmall btnSecondary"
+                              className="btn btnSmall"
+                              style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}
                               onClick={() => resetPermission.mutate({
                                 userId: selectedUser.id,
                                 dashboard: dashboard.id
