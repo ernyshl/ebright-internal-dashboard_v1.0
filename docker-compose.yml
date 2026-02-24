@@ -1,27 +1,5 @@
 
 services:
-  # PostgreSQL Database
-  db:
-    image: postgres:15
-    container_name: ebright-dashboard-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ebrightleads_db
-      POSTGRES_USER: ${DB_USER:-dashboard_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_this_password}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/sql:/docker-entrypoint-initdb.d
-    # ports:
-    #   - "5432:5432"  # Uncomment only for local development DB access
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dashboard_user} -d ebrightleads_db"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # Backend API
   backend:
     build:
@@ -33,9 +11,6 @@ services:
       - NODE_ENV=production
     env_file:
       - ./backend/.env
-    depends_on:
-      db:
-        condition: service_healthy
     ports:
       - "4000:4000"
     networks:
@@ -70,17 +45,12 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl  # For self-signed certificates
-      - /etc/letsencrypt:/etc/letsencrypt  # For Let's Encrypt certificates
+      - ./ssl:/etc/nginx/ssl
     depends_on:
       - backend
       - frontend
     networks:
       - app-network
-
-volumes:
-  postgres_data:
-    driver: local
 
 networks:
   app-network:
