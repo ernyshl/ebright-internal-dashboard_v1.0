@@ -94,7 +94,7 @@ function createApp() {
   app.use('/api/academy', academyRouter);
 
   // Leads Centre endpoint - with filtering, search, pagination
-  app.get('/api/leads-centre', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm']), async (req, res) => {
+  app.get('/api/leads-centre', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res) => {
     try {
       const {
         search = '',
@@ -116,10 +116,9 @@ function createApp() {
       if (search) {
         const sanitizedSearch = sanitizeSearchTerm(search);
         conditions.push(`(
-          LOWER(name) LIKE $${paramIndex} OR
+          LOWER(full_name) LIKE $${paramIndex} OR
           LOWER(email) LIKE $${paramIndex} OR
-          LOWER(phone) LIKE $${paramIndex} OR
-          LOWER(notes) LIKE $${paramIndex}
+          LOWER(phone_number) LIKE $${paramIndex}
         )`);
         params.push(`%${sanitizedSearch.toLowerCase()}%`);
         paramIndex++;
@@ -173,9 +172,9 @@ function createApp() {
       );
       const total = parseInt(countResult.rows[0].count, 10);
 
-      // Get filtered data — explicit columns only (no SELECT *)
+      // Get filtered data — use actual columns from the table
       const dataResult = await pool.query(
-        `SELECT lead_source, full_name, phone_number, email, submitted_at, clean_branch, region
+        `SELECT lead_source, full_name, phone_number, email, submitted_at, raw_branch_text, clean_branch, region
          FROM master_leads_powerbi ${whereClause}
          ORDER BY submitted_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
         [...params, Number(limit), offset]
