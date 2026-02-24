@@ -4382,3 +4382,108 @@
   margin-bottom: 8px;
   line-height: 1.5;
 }
+
+/* ===== PERMISSIONS PAGE DARK MODE OVERRIDES ===== */
+[data-theme='dark'] .permissionsHeaderCard {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .permissionsUserCard {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .permissionsDetailCard {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .permissionsSecurityTips {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .permissionsUserItem {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .permissionsUserItem:hover {
+  background: #334155;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] .permissionsUserItem.selected {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: var(--brand);
+}
+
+[data-theme='dark'] .permissionsUserItem .permissionsUserName {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .permissionsUserItem .permissionsUserEmail {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .permissionsListItem {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .permissionsListItem:hover {
+  background: #1e293b;
+  border-color: var(--brand);
+}
+
+[data-theme='dark'] .permissionsListName {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .permissionsListDesc {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .permissionsListIcon {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .permissionsStat {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .permissionsStatLabel {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .cardDescription {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .permissionsSecurityTips h4 {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .permissionsSecurityTips li {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .permissionsName {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .permissionsEmail {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .badgeSmall {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
