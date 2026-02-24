@@ -10,8 +10,8 @@ const router = express.Router();
 
 // Rate limiting store (in-memory)
 const loginAttempts = new Map();
-const MAX_ATTEMPTS = 100;
-const WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_ATTEMPTS = 1000; // Increased to 1000 attempts per window
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes window
 
 function checkRateLimit(email) {
   const now = Date.now();
