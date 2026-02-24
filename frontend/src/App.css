@@ -4614,3 +4614,84 @@
   border-color: rgba(255, 255, 255, 0.1);
   border-top-color: var(--brand);
 }
+
+/* ULTRA AGGRESSIVE PERMISSIONS DARK MODE - FORCE VISIBILITY */
+[data-theme='dark'] .permissionsPage,
+[data-theme='dark'] .permissionsPage * {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsUserName {
+  color: #f8fafc !important;
+  font-weight: 600 !important;
+}
+
+[data-theme='dark'] .permissionsUserEmail {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .permissionsListName {
+  color: #f8fafc !important;
+  font-weight: 600 !important;
+}
+
+[data-theme='dark'] .permissionsListDesc {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .cardDescription {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .permissionsSecurityTips,
+[data-theme='dark'] .permissionsSecurityTips * {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsSecurityTips h4 {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsSecurityTips li {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .permissionsSecurityTips ul {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .permissionsListItem strong {
+  color: #f8fafc !important;
+}
+
+/* Force all permissions text to be visible */
+[data-theme='dark'] .permissionsHeaderCard,
+[data-theme='dark'] .permissionsHeaderCard * {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsUserCard,
+[data-theme='dark'] .permissionsUserCard * {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsDetailCard,
+[data-theme='dark'] .permissionsDetailCard * {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsStatValue {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsStatLabel {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .permissionsBadge {
+  color: #f8fafc !important;
+}
+
+[data-theme='dark'] .permissionsSource {
+  color: #94a3b8 !important;
+}
