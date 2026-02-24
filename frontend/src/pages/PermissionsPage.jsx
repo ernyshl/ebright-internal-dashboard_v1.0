@@ -190,6 +190,12 @@ export function PermissionsPage() {
               <p className="cardDescription">
                 Manage dashboard permissions for <strong>{selectedUser.fullName}</strong>
               </p>
+              
+              {/* Note about permissions */}
+              <div className="permissionsNote">
+                💡 Setting to <strong>"Allow"</strong> or <strong>"Deny"</strong> creates a custom permission override. 
+                <strong>"Reset"</strong> removes the override and reverts to role default.
+              </div>
 
               <div className="permissionsList">
                 {dashboards.map((dashboard) => {
