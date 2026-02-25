@@ -1,24 +1,27 @@
 const express = require('express');
 const { z } = require('zod');
 const { pool } = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Validation schema for creating/updating events
 const eventSchema = z.object({
-  event_name: z.string().min(1, 'Event name is required'),
-  date_from: z.string().min(1, 'Start date is required'),
-  date_to: z.string().min(1, 'End date is required'),
-  location: z.string().optional().default(''),
-  organizers: z.string().optional().default(''),
+  event_name: z.string().min(1, 'Event name is required').max(255),
+  date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid start date format'),
+  date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid end date format'),
+  location: z.string().max(500).optional().default(''),
+  organizers: z.string().max(500).optional().default(''),
+}).refine(data => new Date(data.date_to) >= new Date(data.date_from), {
+  message: "End date must be after or equal to start date",
+  path: ["date_to"],
 });
 
 // GET /api/events - List all events
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing', 'od', 'rm']), async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT e.*, u.full_name as creator_name
+      SELECT e.id, e.event_name, e.date_from, e.date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name
       FROM events e
       LEFT JOIN users u ON e.created_by = u.id
       ORDER BY e.date_from DESC, e.created_at DESC
@@ -26,19 +29,19 @@ router.get('/', requireAuth, async (req, res) => {
     res.json({ events: result.rows });
   } catch (error) {
     console.error('Error fetching events:', error);
-    res.status(500).json({ error: 'Failed to fetch events' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // POST /api/events - Create new event
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), async (req, res) => {
   try {
     const data = eventSchema.parse(req.body);
     
     const result = await pool.query(
       `INSERT INTO events (event_name, date_from, date_to, location, organizers, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+       RETURNING id, event_name, date_from, date_to, location, organizers`,
       [data.event_name, data.date_from, data.date_to, data.location || '', data.organizers || '', req.user.sub]
     );
     
@@ -48,15 +51,15 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
     }
     console.error('Error creating event:', error);
-    res.status(500).json({ error: 'Failed to create event' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // GET /api/events/:id - Get single event
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing', 'od', 'rm']), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT e.*, u.full_name as creator_name
+      `SELECT e.id, e.event_name, e.date_from, e.date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name
        FROM events e
        LEFT JOIN users u ON e.created_by = u.id
        WHERE e.id = $1`,
@@ -70,12 +73,12 @@ router.get('/:id', requireAuth, async (req, res) => {
     res.json({ event: result.rows[0] });
   } catch (error) {
     console.error('Error fetching event:', error);
-    res.status(500).json({ error: 'Failed to fetch event' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // PUT /api/events/:id - Update event
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), async (req, res) => {
   try {
     const data = eventSchema.parse(req.body);
     
@@ -101,7 +104,7 @@ router.put('/:id', requireAuth, async (req, res) => {
        SET event_name = $1, date_from = $2, date_to = $3, location = $4, 
            organizers = $5, updated_at = now()
        WHERE id = $6
-       RETURNING *`,
+       RETURNING id, event_name, date_from, date_to, location, organizers`,
       [data.event_name, data.date_from, data.date_to, data.location || '', data.organizers || '', req.params.id]
     );
     
@@ -111,12 +114,12 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
     }
     console.error('Error updating event:', error);
-    res.status(500).json({ error: 'Failed to update event' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // DELETE /api/events/:id - Delete event
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), async (req, res) => {
   try {
     // Check if event exists and user is creator or super_admin
     const checkResult = await pool.query(
@@ -140,7 +143,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     res.json({ message: 'Event deleted successfully' });
   } catch (error) {
     console.error('Error deleting event:', error);
-    res.status(500).json({ error: 'Failed to delete event' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
