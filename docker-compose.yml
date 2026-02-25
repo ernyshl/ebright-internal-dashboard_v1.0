@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - TZ=Asia/Kuala_Lumpur
     env_file:
       - ./backend/.env
     ports:
