@@ -1,12 +1,20 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
 import { getUser } from '../lib/auth';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from '../lib/api';
 
 export function DashboardHomePage() {
   const navigate = useNavigate();
   const user = getUser();
   const isSuperAdmin = user?.role === 'super_admin';
   const { permissions, dashboards, isLoading } = usePermissions();
+
+  // Fetch recent events for dashboard overview
+  const { data: eventsData } = useQuery({
+    queryKey: ['events'],
+    queryFn: () => apiFetch('/api/events'),
+  });
 
   const visibleDashboards = getAccessibleDashboards(permissions, dashboards);
 
@@ -29,7 +37,8 @@ export function DashboardHomePage() {
       icon: '🎓',
       color: '#8b5cf6',
       links: [
-        { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' }
+        { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
+        { label: '🎪 Event Dashboard', path: '/events', dashboard: 'events' }
       ]
     },
     {

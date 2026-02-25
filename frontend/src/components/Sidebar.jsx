@@ -64,6 +64,7 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   const navItems = [
     { to: '/', label: 'Dashboard Home', icon: '🏠', dashboard: null },
     { to: '/leads-centre', label: 'Leads Centre', icon: '📋', dashboard: null },
+    { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },
   ];
 
   // Super admin has access to user management

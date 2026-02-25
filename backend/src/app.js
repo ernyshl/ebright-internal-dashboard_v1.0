@@ -10,6 +10,7 @@ const { leadsRouter } = require('./routes/leads');
 const { usersRouter } = require('./routes/users');
 const { permissionsRouter } = require('./routes/permissions');
 const { academyRouter } = require('./routes/academy');
+const { eventsRouter } = require('./routes/events');
 const { pool } = require('./db');
 
 const { requireAuth, requireRole } = require('./middleware/auth');
@@ -142,6 +143,7 @@ function createApp() {
   app.use('/api/users', applyRoleBasedRateLimit, usersRouter);
   app.use('/api/permissions', applyRoleBasedRateLimit, permissionsRouter);
   app.use('/api/academy', applyRoleBasedRateLimit, academyRouter);
+  app.use('/api/events', applyRoleBasedRateLimit, eventsRouter);
 
   // Leads Centre endpoint - with filtering, search, pagination
   app.get('/api/leads-centre', applyRoleBasedRateLimit, requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res) => {

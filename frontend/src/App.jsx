@@ -17,6 +17,8 @@ import { LeadsCentrePage } from './pages/LeadsCentrePage';
 import { PermissionsPage } from './pages/PermissionsPage';
 import { AcademyDashboardPage } from './pages/AcademyDashboardPage';
 import { HrRecruitmentFunnelPage } from './pages/HrRecruitmentFunnelPage';
+import { EventDashboardPage } from './pages/EventDashboardPage';
+import { EventEntryPage } from './pages/EventEntryPage';
 
 export default function App() {
   useEffect(() => {
@@ -31,6 +33,12 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />
+          <Route path="/events" element={
+            <RequirePermission dashboard="events"><EventDashboardPage /></RequirePermission>
+          } />
+          <Route path="/event-entry" element={
+            <RequirePermission dashboard="events"><EventEntryPage /></RequirePermission>
+          } />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leads-centre" element={
             <RequirePermission roles={['super_admin', 'ceo', 'marketing', 'od', 'rm']}>
