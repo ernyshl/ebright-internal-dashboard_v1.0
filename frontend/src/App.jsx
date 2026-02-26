@@ -41,7 +41,7 @@ export default function App() {
           } />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leads-centre" element={
-            <RequirePermission roles={['super_admin', 'ceo', 'marketing', 'od', 'rm']}>
+            <RequirePermission roles={['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr']}>
               <LeadsCentrePage />
             </RequirePermission>
           } />
