@@ -78,11 +78,11 @@ router.get('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'm
 });
 
 // PUT /api/events/:id - Update event
-router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), async (req, res) => {
+router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing']), async (req, res) => {
   try {
     const data = eventSchema.parse(req.body);
     
-    // Check if event exists and user is creator or super_admin
+    // Check if event exists
     const checkResult = await pool.query(
       'SELECT created_by FROM events WHERE id = $1',
       [req.params.id]
@@ -92,10 +92,11 @@ router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), 
       return res.status(404).json({ error: 'Event not found' });
     }
     
+    // Allow if: super_admin, ceo, academy, marketing, or creator
     const isCreator = checkResult.rows[0].created_by === req.user.sub;
-    const isSuperAdmin = req.user.role === 'super_admin';
+    const isAllowedRole = ['super_admin', 'ceo', 'academy', 'marketing'].includes(req.user.role);
     
-    if (!isCreator && !isSuperAdmin) {
+    if (!isCreator && !isAllowedRole) {
       return res.status(403).json({ error: 'Not authorized to update this event' });
     }
     
@@ -119,9 +120,9 @@ router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), 
 });
 
 // DELETE /api/events/:id - Delete event
-router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing']), async (req, res) => {
   try {
-    // Check if event exists and user is creator or super_admin
+    // Check if event exists
     const checkResult = await pool.query(
       'SELECT created_by FROM events WHERE id = $1',
       [req.params.id]
@@ -131,10 +132,11 @@ router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy']
       return res.status(404).json({ error: 'Event not found' });
     }
     
+    // Allow if: super_admin, ceo, academy, marketing, or creator
     const isCreator = checkResult.rows[0].created_by === req.user.sub;
-    const isSuperAdmin = req.user.role === 'super_admin';
+    const isAllowedRole = ['super_admin', 'ceo', 'academy', 'marketing'].includes(req.user.role);
     
-    if (!isCreator && !isSuperAdmin) {
+    if (!isCreator && !isAllowedRole) {
       return res.status(403).json({ error: 'Not authorized to delete this event' });
     }
     
