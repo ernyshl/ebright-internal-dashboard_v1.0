@@ -60,25 +60,32 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
 
   const linkClass = ({ isActive }) => (isActive ? 'navLink navLinkActive' : 'navLink');
 
-  // Navigation items - Leads Centre is visible to all users
+  // Navigation items with role-based visibility
   const navItems = [
-    { to: '/', label: 'Dashboard Home', icon: '🏠', dashboard: null },
-    { to: '/leads-centre', label: 'Leads Centre', icon: '📋', dashboard: null },
+    { to: '/', label: 'Dashboard Home', icon: '🏠', roles: null },
+    { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr', 'finance'] },
     { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },
   ];
 
   // Super admin has access to user management
   const adminNavItems = [
-    { to: '/users', label: 'User Management', icon: '👥', dashboard: null },
+    { to: '/users', label: 'User Management', icon: '👥', roles: ['super_admin'] },
   ];
 
   // Super admin has access to everything
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Filter nav items based on permissions - super admin sees all
+  // Filter nav items based on role or permissions
   const visibleNavItems = isSuperAdmin 
     ? [...navItems, ...adminNavItems]
-    : navItems.filter(item => !item.dashboard || canAccess(item.dashboard, permissions));
+    : navItems.filter(item => {
+        // Check role-based visibility
+        if (item.roles !== null && item.roles !== undefined) {
+          return item.roles.includes(user?.role);
+        }
+        // Check permission-based visibility for dashboards
+        return !item.dashboard || canAccess(item.dashboard, permissions);
+      });
 
   return (
     <>
