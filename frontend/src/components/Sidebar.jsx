@@ -63,7 +63,7 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   // Navigation items with role-based visibility
   const navItems = [
     { to: '/', label: 'Dashboard Home', icon: '🏠', roles: null },
-    { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr', 'finance'] },
+    { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr'] },
     { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },
   ];
 
