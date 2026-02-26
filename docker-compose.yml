@@ -10,6 +10,7 @@ services:
     environment:
       - NODE_ENV=production
       - TZ=Asia/Kuala_Lumpur
+      - CORS_ORIGIN=https://dashboard.ebright.my
     env_file:
       - ./backend/.env
     ports:
