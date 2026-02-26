@@ -10,11 +10,28 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET);
-    req.user = payload;
+    const payload = jwt.verify(token, env.JWT_SECRET, {
+      issuer: 'ebright-dashboard',
+      audience: 'ebright-users',
+      algorithms: ['HS256'],
+      complete: true,
+    });
+    
+    // Additional security checks
+    if (!payload.payload.sub || !payload.payload.email || !payload.payload.role) {
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
+    
+    req.user = payload.payload;
     return next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    return res.status(401).json({ error: 'Authentication failed' });
   }
 }
 

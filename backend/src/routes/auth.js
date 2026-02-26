@@ -10,24 +10,36 @@ const router = express.Router();
 
 // Rate limiting store (in-memory)
 const loginAttempts = new Map();
-const MAX_ATTEMPTS = 1000; // Increased to 1000 attempts per window
+const MAX_ATTEMPTS = 5; // Maximum 5 failed attempts per window
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes window
+const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minute lockout after max attempts
 
 function checkRateLimit(email) {
   const now = Date.now();
-  const record = loginAttempts.get(email) || { count: 0, resetTime: now + WINDOW_MS };
+  const record = loginAttempts.get(email) || { count: 0, resetTime: now + WINDOW_MS, lockedUntil: 0 };
 
+  // Check if account is locked
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const waitTime = Math.ceil((record.lockedUntil - now) / 1000);
+    return { blocked: true, waitTime, locked: true };
+  }
+
+  // Reset if window has passed
   if (now > record.resetTime) {
     record.count = 0;
     record.resetTime = now + WINDOW_MS;
+    record.lockedUntil = 0;
   }
 
   record.count++;
   loginAttempts.set(email, record);
 
+  // Lock account if max attempts exceeded
   if (record.count > MAX_ATTEMPTS) {
-    const waitTime = Math.ceil((record.resetTime - now) / 1000);
-    return { blocked: true, waitTime };
+    record.lockedUntil = now + LOCKOUT_DURATION;
+    loginAttempts.set(email, record);
+    const waitTime = Math.ceil((record.lockedUntil - now) / 1000);
+    return { blocked: true, waitTime, locked: true };
   }
 
   return { blocked: false, remaining: MAX_ATTEMPTS - record.count };
@@ -47,7 +59,18 @@ const VALID_ROLES = [
 
 const LoginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+// Password complexity requirements
+const PasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
 });
 
 router.post('/login', async (req, res, next) => {
@@ -79,7 +102,12 @@ router.post('/login', async (req, res, next) => {
     }
 
     const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+    
+    if (!ok) {
+      // Log failed attempt for security monitoring
+      console.log(`Failed login attempt for email: ${email} at ${new Date().toISOString()}`);
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     const token = jwt.sign(
       {
@@ -87,9 +115,14 @@ router.post('/login', async (req, res, next) => {
         email: user.email,
         role: user.role,
         fullName: user.full_name,
+        iat: Math.floor(Date.now() / 1000),
       },
       env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN },
+      { 
+        expiresIn: env.JWT_EXPIRES_IN,
+        issuer: 'ebright-dashboard',
+        audience: 'ebright-users'
+      },
     );
 
     return res.json({
@@ -164,6 +197,20 @@ router.put('/profile', requireAuth, async (req, res, next) => {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }
 
+      // Prevent password reuse (check last 5 passwords)
+      const { rows: passwordHistory } = await pool.query(
+        'SELECT password_hash FROM password_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5',
+        [req.user.sub]
+      );
+
+      for (const oldHash of passwordHistory) {
+        if (await bcrypt.compare(newPassword, oldHash.password_hash)) {
+          return res.status(400).json({ 
+            error: 'Cannot reuse any of your last 5 passwords' 
+          });
+        }
+      }
+
       // Validate new password strength
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
       if (!passwordRegex.test(newPassword)) {
@@ -171,6 +218,12 @@ router.put('/profile', requireAuth, async (req, res, next) => {
           error: 'Password must contain: uppercase, lowercase, number, and special character'
         });
       }
+
+      // Store old password in history before updating
+      await pool.query(
+        'INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)',
+        [req.user.sub, userRows[0].password_hash]
+      );
     }
 
     // Update user
