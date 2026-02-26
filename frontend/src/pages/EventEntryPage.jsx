@@ -44,6 +44,9 @@ export function EventEntryPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['events']);
     },
+    onError: (error) => {
+      alert(error.data?.error || 'Failed to delete event');
+    },
   });
 
   const resetForm = () => {
@@ -90,7 +93,7 @@ export function EventEntryPage() {
     <div className="eventEntryPage" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
         <BackButton />
-        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '700', color: 'var(--text-color, #1f2937)' }}>📝 Event Entry</h1>
+        <h1 className="pageHeaderTitle">Event Entry</h1>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px', alignItems: 'start' }}>
