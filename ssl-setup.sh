@@ -5,8 +5,8 @@
 
 set -e
 
-DOMAIN=${1:-"yourdomain.com"}
-EMAIL=${2:-"admin@yourdomain.com"}
+DOMAIN=${1:-"dashboard.ebright.my"}
+EMAIL=${2:-"admin@ebright.my"}
 
 echo "🔒 Setting up SSL for $DOMAIN"
 
