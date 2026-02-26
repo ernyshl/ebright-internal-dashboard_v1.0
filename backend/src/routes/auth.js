@@ -52,6 +52,8 @@ const LoginSchema = z.object({
 
 router.post('/login', async (req, res, next) => {
   try {
+    console.log('Login request body:', JSON.stringify(req.body));
+    console.log('Login request headers:', JSON.stringify(req.headers));
     const { email, password } = LoginSchema.parse(req.body);
 
     // Check rate limit
