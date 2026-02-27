@@ -96,7 +96,7 @@ export function EventDashboardPage() {
   );
 
   return (
-    <div className="eventDashboardPage" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="eventDashboardPage" style={{ padding: '16px', maxWidth: '1400px', margin: '0 auto' }}>
       <div className="pageHeader">
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
@@ -110,19 +110,38 @@ export function EventDashboardPage() {
       ) : (
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(3, 1fr)', 
-          gap: '24px',
+          gridTemplateColumns: 'repeat(1, 1fr)',
+          gap: '16px',
           backgroundColor: 'var(--dashboard-bg, #0f172a)',
-          padding: '32px',
+          padding: '16px',
           borderRadius: '16px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
           border: '1px solid var(--border-color, transparent)'
-        }}>
+        }}
+        className="eventDashboardGrid"
+        >
           <EventSection title="Upcoming" events={upcomingEvents} color="#3b82f6" icon="Soon" headerColor="#1e3a8a" />
           <EventSection title="Ongoing" events={ongoingEvents} color="#ef4444" icon="Live" headerColor="#7f1d1d" />
           <EventSection title="Completed" events={completedEvents} color="#10b981" icon="Done" headerColor="#064e3b" />
         </div>
       )}
+      
+      <style>{`
+        @media (min-width: 640px) {
+          .eventDashboardGrid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: '20px' !important;
+            padding: '20px' !important;
+          }
+        }
+        @media (min-width: 1024px) {
+          .eventDashboardGrid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: '24px' !important;
+            padding: '32px' !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
