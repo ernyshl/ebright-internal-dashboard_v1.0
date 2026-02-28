@@ -11,6 +11,7 @@ export function EventEntryPage() {
     date_to: '',
     location: '',
     organizers: '',
+    remarks: '',
   });
   const [editingId, setEditingId] = useState(null);
 
@@ -77,6 +78,7 @@ export function EventEntryPage() {
       date_to: event.date_to,
       location: event.location || '',
       organizers: event.organizers || '',
+      remarks: event.remarks || '',
     });
     setEditingId(event.id);
   };
@@ -179,6 +181,10 @@ export function EventEntryPage() {
             <div>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Organizers</label>
               <input type="text" value={formData.organizers} onChange={(e) => setFormData({ ...formData, organizers: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Remarks</label>
+              <textarea value={formData.remarks || ''} onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} rows={3} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px', resize: 'vertical' }} />
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
               <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} style={{ flex: 1, padding: '10px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
