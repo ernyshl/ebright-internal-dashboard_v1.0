@@ -34,7 +34,7 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'mark
 });
 
 // POST /api/events - Create new event
-router.post('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), async (req, res) => {
+router.post('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing']), async (req, res) => {
   try {
     const data = eventSchema.parse(req.body);
     
