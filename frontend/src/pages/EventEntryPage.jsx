@@ -90,13 +90,13 @@ export function EventEntryPage() {
   const events = data?.events || [];
 
   return (
-    <div className="eventEntryPage" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+    <div className="eventEntryPage" style={{ padding: '16px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <BackButton />
         <h1 className="pageHeaderTitle">Event Entry</h1>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '32px', alignItems: 'start' }}>
+      <div className="eventEntryGrid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', alignItems: 'start' }}>
         {/* Events List Table */}
         <div style={{ 
           backgroundColor: 'var(--card-bg, white)', 
@@ -105,16 +105,16 @@ export function EventEntryPage() {
           overflow: 'hidden',
           border: '1px solid var(--border-color, #e5e7eb)'
         }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color, #e5e7eb)', backgroundColor: 'var(--table-header-bg, #f9fafb)' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', color: 'var(--text-color, #1f2937)' }}>Existing Events ({events.length})</h2>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color, #e5e7eb)', backgroundColor: 'var(--table-header-bg, #f9fafb)' }}>
+            <h2 style={{ margin: 0, fontSize: '16px', color: 'var(--text-color, #1f2937)' }}>Existing Events ({events.length})</h2>
           </div>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '500px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color, #e5e7eb)', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted, #4b5563)' }}>Event Name</th>
-                  <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted, #4b5563)' }}>Dates</th>
-                  <th style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted, #4b5563)', textAlign: 'center' }}>Actions</th>
+                  <th style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted, #4b5563)' }}>Event Name</th>
+                  <th style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted, #4b5563)' }}>Dates</th>
+                  <th style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted, #4b5563)', textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,17 +125,17 @@ export function EventEntryPage() {
                 ) : (
                   events.map(event => (
                     <tr key={event.id} style={{ borderBottom: '1px solid var(--border-color, #f3f4f6)' }}>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '10px 12px' }}>
                         <div style={{ fontWeight: '500', fontSize: '14px', color: 'var(--text-color, #1f2937)' }}>{event.event_name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted, #9ca3af)' }}>📍 {event.location || 'N/A'}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted, #9ca3af)' }}>📍 {event.location || 'N/A'}</div>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-color, #4b5563)' }}>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-color, #4b5563)' }}>
                         {event.date_from} to {event.date_to}
                       </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button onClick={() => handleEdit(event)} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Edit</button>
-                          <button onClick={() => handleDelete(event.id)} style={{ padding: '6px 12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button onClick={() => handleEdit(event)} style={{ padding: '5px 10px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Edit</button>
+                          <button onClick={() => handleDelete(event.id)} style={{ padding: '5px 10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -149,48 +149,66 @@ export function EventEntryPage() {
         {/* Entry Form */}
         <div style={{ 
           backgroundColor: 'var(--card-bg, white)', 
-          padding: '24px', 
+          padding: '16px', 
           borderRadius: '12px', 
           boxShadow: '0 4px 6px rgba(0,0,0,0.05)', 
           position: 'sticky', 
-          top: '24px',
+          top: '16px',
           border: '1px solid var(--border-color, #e5e7eb)'
         }}>
-          <h2 style={{ marginTop: 0, marginBottom: '20px', fontSize: '20px', color: 'var(--text-color, #1f2937)' }}>{editingId ? 'Edit Event' : 'Add New Event'}</h2>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <h2 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', color: 'var(--text-color, #1f2937)' }}>{editingId ? 'Edit Event' : 'Add New Event'}</h2>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Event Name *</label>
-              <input type="text" value={formData.event_name} onChange={(e) => setFormData({ ...formData, event_name: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)' }} />
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Event Name *</label>
+              <input type="text" value={formData.event_name} onChange={(e) => setFormData({ ...formData, event_name: e.target.value })} required style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>From *</label>
-                <input type="date" value={formData.date_from} onChange={(e) => setFormData({ ...formData, date_from: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)' }} />
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>From *</label>
+                <input type="date" value={formData.date_from} onChange={(e) => setFormData({ ...formData, date_from: e.target.value })} required style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px' }} />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>To *</label>
-                <input type="date" value={formData.date_to} onChange={(e) => setFormData({ ...formData, date_to: e.target.value })} required style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)' }} />
+                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>To *</label>
+                <input type="date" value={formData.date_to} onChange={(e) => setFormData({ ...formData, date_to: e.target.value })} required style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px' }} />
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Location</label>
-              <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)' }} />
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Location</label>
+              <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px' }} />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Organizers</label>
-              <input type="text" value={formData.organizers} onChange={(e) => setFormData({ ...formData, organizers: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)' }} />
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: '600', color: 'var(--text-color, #1f2937)' }}>Organizers</label>
+              <input type="text" value={formData.organizers} onChange={(e) => setFormData({ ...formData, organizers: e.target.value })} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid var(--border-color, #d1d5db)', backgroundColor: 'var(--input-bg, white)', color: 'var(--text-color, black)', fontSize: '14px' }} />
             </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-              <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} style={{ flex: 1, padding: '12px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} style={{ flex: 1, padding: '10px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
                 {createMutation.isPending || updateMutation.isPending ? 'Saving...' : (editingId ? 'Update Event' : 'Save Event')}
               </button>
               {editingId && (
-                <button type="button" onClick={resetForm} style={{ padding: '12px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                <button type="button" onClick={resetForm} style={{ padding: '10px', backgroundColor: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>Cancel</button>
               )}
             </div>
           </form>
         </div>
       </div>
+      
+      <style>{`
+        @media (min-width: 768px) {
+          .eventEntryGrid {
+            grid-template-columns: 1fr 350px !important;
+            gap: '24px' !important;
+          }
+        }
+        @media (min-width: 1024px) {
+          .eventEntryGrid {
+            grid-template-columns: 1fr 400px !important;
+            gap: '32px' !important;
+          }
+          .eventEntryPage {
+            padding: '24px' !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
