@@ -73,8 +73,8 @@ export function EventDashboardPage() {
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{event.event_name}</h3>
                 </div>
                 <div style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '500' }}>
-                  {event.date_from}
-                  {event.date_from !== event.date_to && ` to ${event.date_to}`}
+                  {new Date(event.date_from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {event.date_from !== event.date_to && ` – ${new Date(event.date_to).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                 </div>
               </div>
               
