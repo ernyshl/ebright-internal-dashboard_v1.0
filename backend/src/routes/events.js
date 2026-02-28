@@ -21,7 +21,7 @@ const eventSchema = z.object({
 router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing', 'od', 'rm']), async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT e.id, e.event_name, e.date_from::date as date_from, e.date_to::date as date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name
+      SELECT e.id, e.event_name, TO_CHAR(e.date_from, 'YYYY-MM-DD') as date_from, TO_CHAR(e.date_to, 'YYYY-MM-DD') as date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name
       FROM events e
       LEFT JOIN users u ON e.created_by = u.id
       ORDER BY e.date_from DESC, e.created_at DESC
@@ -41,7 +41,7 @@ router.post('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), as
     const result = await pool.query(
       `INSERT INTO events (event_name, date_from, date_to, location, organizers, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, event_name, date_from::date as date_from, date_to::date as date_to, location, organizers`,
+       RETURNING id, event_name, TO_CHAR(date_from, 'YYYY-MM-DD') as date_from, TO_CHAR(date_to, 'YYYY-MM-DD') as date_to, location, organizers`,
       [data.event_name, data.date_from, data.date_to, data.location || '', data.organizers || '', req.user.sub]
     );
     
@@ -59,7 +59,7 @@ router.post('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy']), as
 router.get('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing', 'od', 'rm']), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT e.id, e.event_name, e.date_from, e.date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name
+      `SELECT e.id, e.event_name, TO_CHAR(e.date_from, 'YYYY-MM-DD') as date_from, TO_CHAR(e.date_to, 'YYYY-MM-DD') as date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name
        FROM events e
        LEFT JOIN users u ON e.created_by = u.id
        WHERE e.id = $1`,
@@ -105,7 +105,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'm
        SET event_name = $1, date_from = $2, date_to = $3, location = $4, 
            organizers = $5, updated_at = now()
        WHERE id = $6
-       RETURNING id, event_name, date_from::date as date_from, date_to::date as date_to, location, organizers`,
+       RETURNING id, event_name, TO_CHAR(date_from, 'YYYY-MM-DD') as date_from, TO_CHAR(date_to, 'YYYY-MM-DD') as date_to, location, organizers`,
       [data.event_name, data.date_from, data.date_to, data.location || '', data.organizers || '', req.params.id]
     );
     
