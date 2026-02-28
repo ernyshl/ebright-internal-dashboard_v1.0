@@ -19,6 +19,8 @@ export function EventEntryPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['events'],
     queryFn: () => apiFetch('/api/events'),
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Create event mutation
