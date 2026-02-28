@@ -71,6 +71,9 @@ function sanitizeSearchTerm(term) {
 function createApp() {
   const app = express();
 
+  // Trust proxy for rate limiting behind Nginx
+  app.set('trust proxy', 1);
+
   // Security headers with Helmet
   app.use(helmet({
     contentSecurityPolicy: {
