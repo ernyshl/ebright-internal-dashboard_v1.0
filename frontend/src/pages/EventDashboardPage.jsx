@@ -13,13 +13,20 @@ export function EventDashboardPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const upcomingEvents = events.filter(event => new Date(event.date_from) > today);
+  // Helper to parse YYYY-MM-DD string as local date
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const upcomingEvents = events.filter(event => parseLocalDate(event.date_from) > today);
   const ongoingEvents = events.filter(event => {
-    const from = new Date(event.date_from);
-    const to = new Date(event.date_to);
+    const from = parseLocalDate(event.date_from);
+    const to = parseLocalDate(event.date_to);
     return from <= today && to >= today;
   });
-  const completedEvents = events.filter(event => new Date(event.date_to) < today);
+  const completedEvents = events.filter(event => parseLocalDate(event.date_to) < today);
 
   const EventSection = ({ title, events, color, icon, headerColor }) => (
     <div style={{ marginBottom: '24px' }}>
