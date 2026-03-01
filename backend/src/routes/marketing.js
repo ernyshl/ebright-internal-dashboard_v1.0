@@ -204,7 +204,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
     // NOTE: Google channel's "leads" field actually represents conversions
     function sumPeriods(fbData, ttData, googleData) {
       const out = {};
-      for (const k of ['today', 'yesterday', 'd7', 'd30']) {
+      for (const k of ['today', 'yesterday', 'd7', 'd30', 'monthly']) {
         const fb = fbData[k];
         const tt = ttData[k];
         const gg = googleData[k];
@@ -212,17 +212,13 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
         const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
         const convs = (fb?.convs || 0) + (gg?.leads || 0); // Google's "leads" are actually conversions
-        const leadSpend = (fb?.leadSpend || 0) + (tt?.leadSpend || 0);
-        const convSpend = (fb?.convSpend || 0) + (gg?.leadSpend || 0); // Google's "leadSpend" is conv spend
 
         out[k] = {
           spend,
           leads,
           convs,
-          leadSpend,
-          convSpend,
-          cpl: leads > 0 ? leadSpend / leads : 0,
-          cpc: convs > 0 ? convSpend / convs : 0,
+          cpl: leads > 0 ? spend / leads : 0,
+          cpc: convs > 0 ? spend / convs : 0,
         };
       }
       return out;
