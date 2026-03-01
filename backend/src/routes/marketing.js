@@ -154,14 +154,15 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
 
     function toPeriodStatsGoogle(row, prefix) {
       const spend = Number(row[`spend_${prefix}`] ?? 0);
-      const leads = Number(row[`leads_${prefix}`] ?? 0);
-      const leadSpend = Number(row[`lead_spend_${prefix}`] ?? 0);
-      const cpl = leads > 0 ? leadSpend / leads : 0;
+      const convs = Number(row[`convs_${prefix}`] ?? 0);
+      const convSpend = Number(row[`conv_spend_${prefix}`] ?? 0);
+      const cpc = convs > 0 ? convSpend / convs : 0;
 
       return {
         spend,
-        leads,
-        cpl,
+        convs,
+        convSpend,
+        cpc,
       };
     }
 
@@ -236,9 +237,9 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
 
         const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
         const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
-        const convs = (fb?.convs || 0) + (gg?.leads || 0); // Google's "leads" are actually conversions
+        const convs = (fb?.convs || 0) + (gg?.convs || 0); // Google's "convs" are conversions
         const leadSpend = (fb?.leadSpend || 0) + (tt?.leadSpend || 0);
-        const convSpend = (fb?.convSpend || 0) + (gg?.leadSpend || 0); // Google's "leadSpend" is conv spend
+        const convSpend = (fb?.convSpend || 0) + (gg?.convSpend || 0); // Google's "convSpend" is conv spend
 
         out[k] = {
           spend,
