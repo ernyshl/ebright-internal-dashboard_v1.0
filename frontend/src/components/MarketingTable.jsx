@@ -19,7 +19,7 @@ function cell(d, isGoogleChannel = false, label = '') {
       <div style={{ lineHeight: 1.6 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtRM(d.spend)}</div>
         <div className="muted" style={{ fontSize: 11.5 }}>
-          {fmtNum(d.convs || d.leads || 0)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || d.cpl || 0).toFixed(2)}</span> CPC
+          {fmtNum(d.convs || 0)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || 0).toFixed(2)}</span> CPC
         </div>
       </div>
     );
