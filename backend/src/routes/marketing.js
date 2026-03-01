@@ -209,16 +209,21 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         const tt = ttData[k];
         const gg = googleData[k];
 
-        const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
+        const totalSpend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
         const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
         const convs = (fb?.convs || 0) + (gg?.leads || 0); // Google's "leads" are actually conversions
+        
+        // CPL should only use spend from lead-generating channels (FB + TikTok)
+        const leadSpend = (fb?.spend || 0) + (tt?.spend || 0);
+        // CPC should only use spend from conversion-generating channels (FB + Google)
+        const convSpend = (fb?.spend || 0) + (gg?.spend || 0);
 
         out[k] = {
-          spend,
+          spend: totalSpend,
           leads,
           convs,
-          cpl: leads > 0 ? spend / leads : 0,
-          cpc: convs > 0 ? spend / convs : 0,
+          cpl: leads > 0 ? leadSpend / leads : 0,
+          cpc: convs > 0 ? convSpend / convs : 0,
         };
       }
       return out;
