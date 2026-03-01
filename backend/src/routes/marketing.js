@@ -154,9 +154,9 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
 
     function toPeriodStatsGoogle(row, prefix) {
       const spend = Number(row[`spend_${prefix}`] ?? 0);
-      const convs = Number(row[`convs_${prefix}`] ?? 0);
+      const convs = Math.floor(Number(row[`convs_${prefix}`] ?? 0));
       const convSpend = Number(row[`conv_spend_${prefix}`] ?? 0);
-      const cpc = convs > 0 ? convSpend / convs : 0;
+      const cpc = convs > 0 ? spend / convs : 0;
 
       return {
         spend,
