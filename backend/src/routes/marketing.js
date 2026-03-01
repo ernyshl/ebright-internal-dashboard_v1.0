@@ -30,23 +30,33 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as spend_today,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as leads_today,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as convs_today,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) AND leads > 0) as lead_spend_today,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) AND conversions > 0) as conv_spend_today,
 
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as spend_yesterday,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as leads_yesterday,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as convs_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1 AND leads > 0) as lead_spend_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1 AND conversions > 0) as conv_spend_yesterday,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days') as spend_7d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days') as leads_7d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days') as convs_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND leads > 0) as lead_spend_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND conversions > 0) as conv_spend_7d,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days') as spend_30d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days') as leads_30d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days') as convs_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d,
         
         -- Monthly stats for charts (filtered by query params)
         SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as spend_monthly,
         SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as leads_monthly,
-        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as convs_monthly
+        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as convs_monthly,
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4 AND leads > 0) as lead_spend_monthly,
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4 AND conversions > 0) as conv_spend_monthly
       FROM meta_spend
       WHERE account_id = $2
     `;
@@ -58,23 +68,33 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as spend_today,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as leads_today,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as convs_today,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) AND leads > 0) as lead_spend_today,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) AND conversions > 0) as conv_spend_today,
 
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as spend_yesterday,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as leads_yesterday,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as convs_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1 AND leads > 0) as lead_spend_yesterday,
+        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1 AND conversions > 0) as conv_spend_yesterday,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days') as spend_7d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days') as leads_7d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days') as convs_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND leads > 0) as lead_spend_7d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND conversions > 0) as conv_spend_7d,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days') as spend_30d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days') as leads_30d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days') as convs_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND leads > 0) as lead_spend_30d,
+        SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND conversions > 0) as conv_spend_30d,
         
         -- Monthly stats for charts (filtered by query params)
         SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as spend_monthly,
         SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as leads_monthly,
-        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as convs_monthly
+        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as convs_monthly,
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3 AND leads > 0) as lead_spend_monthly,
+        SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3 AND conversions > 0) as conv_spend_monthly
       FROM meta_spend
       WHERE account_id = $1
       GROUP BY campaign_name
@@ -116,13 +136,17 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       const spend = Number(row[`spend_${prefix}`] ?? 0);
       const leads = Number(row[`leads_${prefix}`] ?? 0);
       const convs = Number(row[`convs_${prefix}`] ?? 0);
-      const cpl = leads > 0 ? spend / leads : 0;
-      const cpc = convs > 0 ? spend / convs : 0;
+      const leadSpend = Number(row[`lead_spend_${prefix}`] ?? 0);
+      const convSpend = Number(row[`conv_spend_${prefix}`] ?? 0);
+      const cpl = leads > 0 ? leadSpend / leads : 0;
+      const cpc = convs > 0 ? convSpend / convs : 0;
 
       return {
         spend,
         leads,
         convs,
+        leadSpend,
+        convSpend,
         cpl,
         cpc,
       };
@@ -131,7 +155,8 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
     function toPeriodStatsGoogle(row, prefix) {
       const spend = Number(row[`spend_${prefix}`] ?? 0);
       const leads = Number(row[`leads_${prefix}`] ?? 0);
-      const cpl = leads > 0 ? spend / leads : 0;
+      const leadSpend = Number(row[`lead_spend_${prefix}`] ?? 0);
+      const cpl = leads > 0 ? leadSpend / leads : 0;
 
       return {
         spend,
@@ -209,19 +234,18 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         const tt = ttData[k];
         const gg = googleData[k];
 
-        const totalSpend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
+        const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
         const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
         const convs = (fb?.convs || 0) + (gg?.leads || 0); // Google's "leads" are actually conversions
-        
-        // CPL should only use spend from lead-generating channels (FB + TikTok)
-        const leadSpend = (fb?.spend || 0) + (tt?.spend || 0);
-        // CPC should only use spend from conversion-generating channels (FB + Google)
-        const convSpend = (fb?.spend || 0) + (gg?.spend || 0);
+        const leadSpend = (fb?.leadSpend || 0) + (tt?.leadSpend || 0);
+        const convSpend = (fb?.convSpend || 0) + (gg?.leadSpend || 0); // Google's "leadSpend" is conv spend
 
         out[k] = {
-          spend: totalSpend,
+          spend,
           leads,
           convs,
+          leadSpend,
+          convSpend,
           cpl: leads > 0 ? leadSpend / leads : 0,
           cpc: convs > 0 ? convSpend / convs : 0,
         };
