@@ -8,17 +8,30 @@ function fmtNum(n) {
   return Math.round(x).toLocaleString();
 }
 
-function cell(d, isGoogleChannel = false) {
+function cell(d, isGoogleChannel = false, label = '') {
   if (!d) return <span className="muted">—</span>;
-  const metricLabel = isGoogleChannel ? 'Conv' : 'Leads';
+  
+  // For Online channel and Google, we only show Conversions
+  const isOnlineOrGoogle = isGoogleChannel || label.toLowerCase().includes('online');
+
+  if (isOnlineOrGoogle) {
+    return (
+      <div style={{ lineHeight: 1.6 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtRM(d.spend)}</div>
+        <div className="muted" style={{ fontSize: 11.5 }}>
+          {fmtNum(d.convs || d.leads || 0)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || d.cpl || 0).toFixed(2)}</span> CPC
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ lineHeight: 1.6 }}>
       <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtRM(d.spend)}</div>
       <div className="muted" style={{ fontSize: 11.5 }}>
-        {fmtNum(d.leads || d.convs || 0)} {metricLabel} · <span style={{ color: 'var(--brand)' }}>RM {Number(d.cpl || 0).toFixed(2)}</span> CPL
+        {fmtNum(d.leads || 0)} Leads · <span style={{ color: 'var(--brand)' }}>RM {Number(d.cpl || 0).toFixed(2)}</span> CPL
       </div>
-      {!isGoogleChannel && d.convs > 0 && (
+      {d.convs > 0 && (
         <div className="muted" style={{ fontSize: 11.5 }}>
           {fmtNum(d.convs)} Conv · <span style={{ color: 'var(--info)' }}>RM {Number(d.cpc || 0).toFixed(2)}</span> CPC
         </div>
@@ -62,10 +75,10 @@ export function MarketingTable({ title, rows }) {
                 } : undefined}
               >
                 <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{r.label}</td>
-                <td>{cell(r.today, r.isGoogle)}</td>
-                <td>{cell(r.yesterday, r.isGoogle)}</td>
-                <td>{cell(r.d7, r.isGoogle)}</td>
-                <td>{cell(r.d30, r.isGoogle)}</td>
+                <td>{cell(r.today, r.isGoogle, r.label)}</td>
+                <td>{cell(r.yesterday, r.isGoogle, r.label)}</td>
+                <td>{cell(r.d7, r.isGoogle, r.label)}</td>
+                <td>{cell(r.d30, r.isGoogle, r.label)}</td>
               </tr>
             ))}
           </tbody>
