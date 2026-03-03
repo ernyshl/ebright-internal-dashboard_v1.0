@@ -132,12 +132,12 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       console.warn('Campaign data not available:', campaignErr.message);
     }
 
-    function toPeriodStats(row, prefix) {
+    function toPeriodStats(row, prefix, useTotalSpendForCpc = false) {
       const spend = Number(row[`spend_${prefix}`] ?? 0);
       const leads = Number(row[`leads_${prefix}`] ?? 0);
       const convs = Number(row[`convs_${prefix}`] ?? 0);
       const leadSpend = Number(row[`lead_spend_${prefix}`] ?? 0);
-      const convSpend = Number(row[`conv_spend_${prefix}`] ?? 0);
+      const convSpend = useTotalSpendForCpc ? spend : Number(row[`conv_spend_${prefix}`] ?? 0);
       const cpl = leads > 0 ? leadSpend / leads : 0;
       const cpc = convs > 0 ? convSpend / convs : 0;
 
@@ -166,14 +166,14 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       };
     }
 
-    function formatChannel(result) {
+    function formatChannel(result, useTotalSpendForCpc = false) {
       const row = result.rows[0] || {};
       return {
-        today: toPeriodStats(row, 'today'),
-        yesterday: toPeriodStats(row, 'yesterday'),
-        d7: toPeriodStats(row, '7d'),
-        d30: toPeriodStats(row, '30d'),
-        monthly: toPeriodStats(row, 'monthly'),
+        today: toPeriodStats(row, 'today', useTotalSpendForCpc),
+        yesterday: toPeriodStats(row, 'yesterday', useTotalSpendForCpc),
+        d7: toPeriodStats(row, '7d', useTotalSpendForCpc),
+        d30: toPeriodStats(row, '30d', useTotalSpendForCpc),
+        monthly: toPeriodStats(row, 'monthly', useTotalSpendForCpc),
       };
     }
 
@@ -188,14 +188,14 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       };
     }
 
-    function formatCampaigns(result) {
+    function formatCampaigns(result, useTotalSpendForCpc = false) {
       return result.rows.map(row => ({
         name: row.campaign_name,
-        today: toPeriodStats(row, 'today'),
-        yesterday: toPeriodStats(row, 'yesterday'),
-        d7: toPeriodStats(row, '7d'),
-        d30: toPeriodStats(row, '30d'),
-        monthly: toPeriodStats(row, 'monthly'),
+        today: toPeriodStats(row, 'today', useTotalSpendForCpc),
+        yesterday: toPeriodStats(row, 'yesterday', useTotalSpendForCpc),
+        d7: toPeriodStats(row, '7d', useTotalSpendForCpc),
+        d30: toPeriodStats(row, '30d', useTotalSpendForCpc),
+        monthly: toPeriodStats(row, 'monthly', useTotalSpendForCpc),
       }));
     }
 
@@ -214,7 +214,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       fb_group: formatChannel(mainFb),
       tiktok: formatChannel(tt),
       sara: formatChannel(sara),
-      online: formatChannel(online),
+      online: formatChannel(online, true), // Ebright Online uses total spend for CPC
       google: formatGoogleChannel(googleData),
     };
 
@@ -222,7 +222,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       fb_group: formatCampaigns(fbCampaigns),
       tiktok: formatCampaigns(ttCampaigns),
       sara: formatCampaigns(saraCampaigns),
-      online: formatCampaigns(onlineCampaigns),
+      online: formatCampaigns(onlineCampaigns, true), // Ebright Online uses total spend for CPC
       google: formatGoogleCampaigns(googleCampaigns),
     };
 
