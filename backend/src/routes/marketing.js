@@ -31,32 +31,32 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as leads_today,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as convs_today,
         SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as lead_spend_today,
-        SUM(CASE WHEN campaign_name ILIKE '%conv%' OR campaign_name ILIKE '%eng%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as conv_spend_today,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as conv_spend_today,
 
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as spend_yesterday,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as leads_yesterday,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as convs_yesterday,
         SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as lead_spend_yesterday,
-        SUM(CASE WHEN campaign_name ILIKE '%conv%' OR campaign_name ILIKE '%eng%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as conv_spend_yesterday,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as conv_spend_yesterday,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as spend_7d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as leads_7d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as convs_7d,
         SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as lead_spend_7d,
-        SUM(CASE WHEN campaign_name ILIKE '%conv%' OR campaign_name ILIKE '%eng%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as conv_spend_7d,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as conv_spend_7d,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as spend_30d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as leads_30d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as convs_30d,
         SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as lead_spend_30d,
-        SUM(CASE WHEN campaign_name ILIKE '%conv%' OR campaign_name ILIKE '%eng%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as conv_spend_30d,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as conv_spend_30d,
         
         -- Monthly stats for charts (filtered by query params)
         SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as spend_monthly,
         SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as leads_monthly,
         SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as convs_monthly,
         SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as lead_spend_monthly,
-        SUM(CASE WHEN campaign_name ILIKE '%conv%' OR campaign_name ILIKE '%eng%' THEN spend ELSE 0 END) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as conv_spend_monthly
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $3 AND EXTRACT(YEAR FROM data_date) = $4) as conv_spend_monthly
       FROM meta_spend
       WHERE account_id = $2
     `;
@@ -68,27 +68,33 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as spend_today,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as leads_today,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as convs_today,
-        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) AND leads > 0) as lead_spend_today,
-        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) AND conversions > 0) as conv_spend_today,
+        SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as lead_spend_today,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest)) as conv_spend_today,
 
         SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as spend_yesterday,
         SUM(leads) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as leads_yesterday,
         SUM(conversions) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as convs_yesterday,
-        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1 AND leads > 0) as lead_spend_yesterday,
-        SUM(spend) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1 AND conversions > 0) as conv_spend_yesterday,
+        SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as lead_spend_yesterday,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date = (SELECT today FROM latest) - 1) as conv_spend_yesterday,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as spend_7d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as leads_7d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as convs_7d,
+        SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as lead_spend_7d,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '7 days' AND data_date::date < (SELECT today FROM latest)) as conv_spend_7d,
 
         SUM(spend) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as spend_30d,
         SUM(leads) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as leads_30d,
         SUM(conversions) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as convs_30d,
+        SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as lead_spend_30d,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE data_date::date >= (SELECT today FROM latest) - INTERVAL '30 days' AND data_date::date < (SELECT today FROM latest)) as conv_spend_30d,
         
         -- Monthly stats for charts (filtered by query params)
         SUM(spend) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as spend_monthly,
         SUM(leads) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as leads_monthly,
-        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as convs_monthly
+        SUM(conversions) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as convs_monthly,
+        SUM(CASE WHEN campaign_name ILIKE '%lead%' THEN spend ELSE 0 END) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as lead_spend_monthly,
+        SUM(CASE WHEN campaign_name ILIKE '%conversion%' THEN spend ELSE 0 END) FILTER (WHERE EXTRACT(MONTH FROM data_date) = $2 AND EXTRACT(YEAR FROM data_date) = $3) as conv_spend_monthly
       FROM meta_spend
       WHERE account_id = $1
       GROUP BY campaign_name
