@@ -34,7 +34,7 @@ export function AppLayout() {
 
   function onLogout() {
     clearToken();
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   }
 
   function toggleSidebar() {

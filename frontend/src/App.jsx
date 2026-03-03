@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { LandingPage } from './pages/LandingPage';
 import { useEffect } from 'react';
 import './App.css';
 import { RequireAuth } from './components/RequireAuth';
@@ -28,6 +29,7 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
 
       <Route element={<RequireAuth />}>
@@ -79,7 +81,7 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/landing" replace />} />
     </Routes>
   );
 }
