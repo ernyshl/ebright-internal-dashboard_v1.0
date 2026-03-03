@@ -159,7 +159,10 @@ export function MarketingPerformancePage() {
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
           <div className="pageHeaderTitle">Marketing Performance</div>
-          <div className="pageHeaderSub">Spend, leads, conversions, CPL & CPC · Auto-refresh every 3 min</div>
+          <div className="pageHeaderSub">
+            <span className="live-dot" />
+            Spend, leads, conversions, CPL & CPC · Auto-refresh every 3 min
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>

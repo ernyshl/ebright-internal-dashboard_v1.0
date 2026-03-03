@@ -97,7 +97,7 @@ function LandingCarousel() {
                     <span className="lp-mockup-title">{slide.title} Integration</span>
                 </div>
 
-                <div className="lp-carousel-slide-content">
+                <div className="lp-carousel-slide-content" key={slide.id}>
                     <div className="lp-slide-visual">
                         <img
                             src={slide.image}

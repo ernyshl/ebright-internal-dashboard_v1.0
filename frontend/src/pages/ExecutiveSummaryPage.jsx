@@ -38,7 +38,10 @@ export function ExecutiveSummaryPage() {
       <div className="pageHeader">
         <div>
           <div className="pageHeaderTitle">Executive Summary</div>
-          <div className="pageHeaderSub">Real-time overview of marketing spend and lead generation</div>
+          <div className="pageHeaderSub">
+            <span className="live-dot" />
+            Real-time overview of marketing spend and lead generation
+          </div>
         </div>
       </div>
 
