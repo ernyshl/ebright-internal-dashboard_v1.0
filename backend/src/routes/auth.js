@@ -14,15 +14,29 @@ const MAX_ATTEMPTS = 5; // Maximum 5 failed attempts per window
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes window
 const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minute lockout after max attempts
 
-function checkRateLimit(email) {
+function isRateLimited(email) {
   const now = Date.now();
-  const record = loginAttempts.get(email) || { count: 0, resetTime: now + WINDOW_MS, lockedUntil: 0 };
+  const record = loginAttempts.get(email);
+  if (!record) return { blocked: false };
 
   // Check if account is locked
   if (record.lockedUntil && now < record.lockedUntil) {
     const waitTime = Math.ceil((record.lockedUntil - now) / 1000);
-    return { blocked: true, waitTime, locked: true };
+    return { blocked: true, waitTime };
   }
+
+  // Reset if window has passed
+  if (now > record.resetTime) {
+    loginAttempts.delete(email);
+    return { blocked: false };
+  }
+
+  return { blocked: false };
+}
+
+function recordLoginFailure(email) {
+  const now = Date.now();
+  const record = loginAttempts.get(email) || { count: 0, resetTime: now + WINDOW_MS, lockedUntil: 0 };
 
   // Reset if window has passed
   if (now > record.resetTime) {
@@ -32,17 +46,16 @@ function checkRateLimit(email) {
   }
 
   record.count++;
-  loginAttempts.set(email, record);
 
-  // Lock account if max attempts exceeded
-  if (record.count > MAX_ATTEMPTS) {
+  if (record.count >= MAX_ATTEMPTS) {
     record.lockedUntil = now + LOCKOUT_DURATION;
-    loginAttempts.set(email, record);
-    const waitTime = Math.ceil((record.lockedUntil - now) / 1000);
-    return { blocked: true, waitTime, locked: true };
   }
 
-  return { blocked: false, remaining: MAX_ATTEMPTS - record.count };
+  loginAttempts.set(email, record);
+}
+
+function clearLoginAttempts(email) {
+  loginAttempts.delete(email);
 }
 
 // Valid roles for the company
@@ -77,8 +90,8 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = LoginSchema.parse(req.body);
 
-    // Check rate limit
-    const rateLimit = checkRateLimit(email);
+    // Check rate limit (passive check)
+    const rateLimit = isRateLimited(email);
     if (rateLimit.blocked) {
       return res.status(429).json({
         error: 'Too many login attempts. Please try again later.',
@@ -98,16 +111,21 @@ router.post('/login', async (req, res, next) => {
 
     const user = rows[0];
     if (!user || !user.is_active) {
+      recordLoginFailure(email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const ok = await bcrypt.compare(password, user.password_hash);
-    
+
     if (!ok) {
       // Log failed attempt for security monitoring
       console.log(`Failed login attempt for email: ${email} at ${new Date().toISOString()}`);
+      recordLoginFailure(email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    // Success! Clear any existing failure records
+    clearLoginAttempts(email);
 
     const token = jwt.sign(
       {
@@ -118,7 +136,7 @@ router.post('/login', async (req, res, next) => {
         iat: Math.floor(Date.now() / 1000),
       },
       env.JWT_SECRET,
-      { 
+      {
         expiresIn: env.JWT_EXPIRES_IN,
         issuer: 'ebright-dashboard',
         audience: 'ebright-users'
@@ -205,8 +223,8 @@ router.put('/profile', requireAuth, async (req, res, next) => {
 
       for (const oldHash of passwordHistory) {
         if (await bcrypt.compare(newPassword, oldHash.password_hash)) {
-          return res.status(400).json({ 
-            error: 'Cannot reuse any of your last 5 passwords' 
+          return res.status(400).json({
+            error: 'Cannot reuse any of your last 5 passwords'
           });
         }
       }
