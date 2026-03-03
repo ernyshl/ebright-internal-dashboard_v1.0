@@ -354,23 +354,26 @@
 
 .sidebarUserWrapper {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding: 0 4px;
 }
 
 .sidebarUserButton {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: inherit;
   cursor: pointer;
-  flex: 1;
+  width: 100%;
   transition: all var(--transition);
+  text-align: left;
+  overflow: hidden;
 }
 
 .sidebarUserButton:hover {
@@ -379,21 +382,25 @@
 }
 
 .sidebarUserAvatar {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: var(--brandGradient);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   color: white;
 }
 
 .sidebarUserInfo {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .sidebarUserName {
@@ -403,28 +410,28 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
 }
 
-.sidebarUserRole {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  text-transform: capitalize;
-}
-
-.sidebarLogout {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
+.sidebarLogoutBtn {
+  width: 100%;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: #f87171;
   cursor: pointer;
   padding: 8px;
   border-radius: var(--radius-sm);
   transition: all var(--transition);
-  font-size: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.sidebarLogout:hover {
-  background: rgba(220, 38, 38, 0.2);
-  color: var(--brand);
+.sidebarLogoutBtn:hover {
+  background: var(--brand);
+  color: white;
+  border-color: var(--brand);
 }
 
 /* ===== CONTENT AREA ===== */

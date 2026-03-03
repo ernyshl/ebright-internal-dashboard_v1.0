@@ -121,12 +121,12 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
           >
             <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
             <div className="sidebarUserInfo">
-              <div className="sidebarUserName">{user?.fullName || 'User'}</div>
+              <div className="sidebarUserName" title={user?.fullName}>{user?.fullName || 'User'}</div>
               <span className={`badge ${getRoleBadgeClass(user?.role)}`}>{getRoleLabel(user?.role)}</span>
             </div>
           </button>
-          <button className="sidebarLogout" onClick={handleLogout} title="Logout">
-            🚪
+          <button className="sidebarLogoutBtn" onClick={handleLogout} title="Logout">
+            Logout
           </button>
         </div>
         <button 
