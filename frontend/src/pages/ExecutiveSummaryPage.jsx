@@ -90,6 +90,7 @@ export function ExecutiveSummaryPage() {
                   {[
                     { label: 'FB (Group)', data: channels.fb_group },
                     { label: 'TikTok', data: channels.tiktok },
+                    { label: 'Google Ads', data: channels.google },
                     { label: 'Sara', data: channels.sara },
                     { label: 'Online', data: channels.online },
                   ].map(ch => (

@@ -6,7 +6,7 @@ const features = [
     {
         icon: '📊',
         title: 'Marketing Analytics',
-        desc: 'Track spend, leads, and conversions across Facebook, TikTok, Sara & Online channels in real time.',
+        desc: 'Track spend, leads, and conversions across Facebook, TikTok, Google Ads, Sara & Online channels in real time.',
         accent: 'brand',
     },
     {
@@ -42,7 +42,7 @@ const features = [
 ];
 
 const stats = [
-    { value: '4', label: 'Marketing Channels' },
+    { value: '5', label: 'Marketing Channels' },
     { value: '10+', label: 'Campaign Views' },
     { value: '3 min', label: 'Auto-Refresh Cycle' },
     { value: '100%', label: 'Role-Secured' },
@@ -52,7 +52,7 @@ const carouselSlides = [
     {
         id: 'digital_marketing',
         title: 'Unified Marketing Analytics',
-        benefit: 'Track spend, leads, and conversion funnels across Facebook, TikTok, and Google Ads in one comprehensive dashboard.',
+        benefit: 'Track spend, leads, and conversion funnels across Facebook, TikTok, Google Ads, Sara, and Online in one comprehensive dashboard.',
         image: '/digital_marketing.jpg',
         position: 'center',
         accent: '#1877F2'
