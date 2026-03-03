@@ -130,9 +130,29 @@ function LandingCarousel() {
 
 export function LandingPage() {
     const navigate = useNavigate();
+    const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+    };
 
     return (
         <div className="lp-root">
+            {/* Theme Toggle */}
+            <button
+                className="lp-theme-toggle"
+                onClick={toggleTheme}
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                aria-label="Toggle dark mode"
+            >
+                {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+
             {/* Background orbs */}
             <div className="lp-orb lp-orb1" />
             <div className="lp-orb lp-orb2" />
