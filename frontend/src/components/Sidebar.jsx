@@ -76,16 +76,16 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   const isSuperAdmin = user?.role === 'super_admin';
 
   // Filter nav items based on role or permissions
-  const visibleNavItems = isSuperAdmin 
+  const visibleNavItems = isSuperAdmin
     ? [...navItems, ...adminNavItems]
     : navItems.filter(item => {
-        // Check role-based visibility
-        if (item.roles !== null && item.roles !== undefined) {
-          return item.roles.includes(user?.role);
-        }
-        // Check permission-based visibility for dashboards
-        return !item.dashboard || canAccess(item.dashboard, permissions);
-      });
+      // Check role-based visibility
+      if (item.roles !== null && item.roles !== undefined) {
+        return item.roles.includes(user?.role);
+      }
+      // Check permission-based visibility for dashboards
+      return !item.dashboard || canAccess(item.dashboard, permissions);
+    });
 
   return (
     <>
@@ -99,10 +99,10 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
 
       <nav className="nav">
         {visibleNavItems.map((item) => (
-          <NavLink 
-            key={item.to} 
-            to={item.to} 
-            end={item.to === '/'} 
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
             className={linkClass}
             onClick={handleNavClick}
           >
@@ -129,7 +129,7 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
             Logout
           </button>
         </div>
-        <button 
+        <button
           className="autoHideToggle"
           onClick={onToggleAutoHide}
           title={autoHide ? 'Click to freeze sidebar' : 'Click to enable auto-hide'}
