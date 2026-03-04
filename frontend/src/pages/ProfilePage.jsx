@@ -128,7 +128,7 @@ export function ProfilePage() {
       ceo: 'CEO',
       rm: 'Regional Manager',
       marketing: 'Marketing',
-      od: 'Operations Director',
+      od: 'Optimisation Department',
       hr: 'Human Resources',
       academy: 'Academy',
       finance: 'Finance',

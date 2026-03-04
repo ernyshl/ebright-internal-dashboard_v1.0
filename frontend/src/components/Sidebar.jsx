@@ -7,9 +7,9 @@ import { usePermissions, canAccess } from '../lib/permissions';
 const ROLE_LABELS = {
   super_admin: 'Super Admin',
   ceo: 'CEO',
-  rm: 'RM',
+  rm: 'Regional Manager',
   marketing: 'Marketing',
-  od: 'OD',
+  od: 'Optimisation Department',
   hr: 'HR',
   academy: 'Academy',
   finance: 'Finance',

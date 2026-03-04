@@ -52,7 +52,7 @@ export function DashboardHomePage() {
     },
     {
       id: 'operations',
-      name: 'Operations',
+      name: 'Optimisation',
       icon: '⚙️',
       color: '#3b82f6',
       links: [

@@ -8,9 +8,9 @@ import { useAllPermissions } from '../lib/permissions';
 const ROLES = [
   { value: 'super_admin', label: 'Super Admin' },
   { value: 'ceo', label: 'CEO' },
-  { value: 'rm', label: 'RM' },
+  { value: 'rm', label: 'Regional Manager' },
   { value: 'marketing', label: 'Marketing' },
-  { value: 'od', label: 'OD' },
+  { value: 'od', label: 'Optimisation Department' },
   { value: 'hr', label: 'HR' },
   { value: 'academy', label: 'Academy' },
   { value: 'finance', label: 'Finance' },
@@ -149,9 +149,9 @@ export function UsersPage() {
     const roleDefaults = {
       super_admin: ['marketing', 'finance', 'operations', 'department'],
       ceo: ['marketing', 'finance', 'operations', 'department'],
-      rm: ['operations'],
-      marketing: ['marketing'],
-      od: ['operations'],
+      rm: ['operations', 'academy'],
+      marketing: ['marketing', 'academy'],
+      od: ['operations', 'academy'],
       hr: ['department'],
     };
     const defaults = roleDefaults[role] || [];

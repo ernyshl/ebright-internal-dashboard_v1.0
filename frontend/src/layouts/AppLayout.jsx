@@ -32,6 +32,20 @@ export function AppLayout() {
     ? user.fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
+  const getRoleLabel = (role) => {
+    const labels = {
+      super_admin: 'Super Admin',
+      ceo: 'CEO',
+      rm: 'Regional Manager',
+      marketing: 'Marketing',
+      od: 'Optimisation Department',
+      hr: 'Human Resources',
+      academy: 'Academy',
+      finance: 'Finance',
+    };
+    return labels[role] || role;
+  };
+
   function onLogout() {
     clearToken();
     navigate('/', { replace: true });
@@ -109,7 +123,7 @@ export function AppLayout() {
                 <div className="avatar avatarBrand">{initials}</div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{user.fullName || user.email}</div>
-                  <div className="muted small" style={{ textTransform: 'capitalize' }}>{user.role}</div>
+                  <div className="muted small">{getRoleLabel(user.role)}</div>
                 </div>
               </div>
             )}

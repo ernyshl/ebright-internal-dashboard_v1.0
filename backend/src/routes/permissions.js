@@ -10,7 +10,7 @@ const DASHBOARDS = [
   { id: 'academy', name: 'Academy', icon: '🎓' },
   { id: 'marketing', name: 'Marketing', icon: '📈' },
   { id: 'finance', name: 'Finance', icon: '💰' },
-  { id: 'operations', name: 'Operations', icon: '⚙️' },
+  { id: 'operations', name: 'Optimisation', icon: '⚙️' },
   { id: 'department', name: 'Department', icon: '✅' },
   { id: 'hr', name: 'HR', icon: '👥' },
   { id: 'events', name: 'Events', icon: '🎪' },
@@ -96,7 +96,7 @@ router.get('/all', requireAuth, requireRole(['super_admin']), async (req, res, n
     const result = users.map(user => {
       const defaults = ROLE_DEFAULTS[user.role] || [];
       const custom = permMap[user.id] || {};
-      
+
       const permissions = {};
       DASHBOARDS.forEach(d => {
         if (custom.hasOwnProperty(d.id)) {
