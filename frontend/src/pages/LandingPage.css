@@ -936,6 +936,14 @@
     color: var(--text);
 }
 
+@media (max-width: 640px) {
+    .lp-theme-toggle {
+        right: auto;
+        left: 14px;
+        /* Move to left on mobile to avoid overlapping Sign In button */
+    }
+}
+
 [data-theme='dark'] .lp-theme-toggle {
     background: rgba(30, 41, 59, 0.6);
     border-color: rgba(255, 255, 255, 0.08);

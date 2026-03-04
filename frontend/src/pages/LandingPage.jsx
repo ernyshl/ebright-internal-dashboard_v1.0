@@ -72,6 +72,14 @@ const carouselSlides = [
         image: '/events_planning.jpg',
         position: 'center',
         accent: '#f97316'
+    },
+    {
+        id: 'finance',
+        title: 'Finance & Accounting',
+        benefit: 'Real-time fiscal monitoring. Revenue tracking, expense management, and budget utilization analytics in one secure view.',
+        image: '/finance_department.png',
+        position: 'center',
+        accent: '#10b981'
     }
 ];
 
