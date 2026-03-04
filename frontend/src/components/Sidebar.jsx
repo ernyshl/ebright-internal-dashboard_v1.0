@@ -7,9 +7,9 @@ import { usePermissions, canAccess } from '../lib/permissions';
 const ROLE_LABELS = {
   super_admin: 'Super Admin',
   ceo: 'CEO',
-  rm: 'Regional Manager',
+  rm: 'RM',
   marketing: 'Marketing',
-  od: 'Optimisation Department',
+  od: 'OD',
   hr: 'HR',
   academy: 'Academy',
   finance: 'Finance',
@@ -45,10 +45,10 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
         return 'badgeMarketing';
       case 'academy':
         return 'badgeAcademy';
-      case 'finance':
-        return 'badgeFinance';
       case 'rm':
       case 'od':
+      case 'finance':
+        return 'badgeFinance';
       case 'hr':
         return 'badgeSales';
       default:

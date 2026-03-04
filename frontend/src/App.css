@@ -1068,11 +1068,18 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
+  justify-content: center;
+  /* Center text */
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  /* Professional look for short forms */
+  min-width: 60px;
+  /* Minimum width for short form consistency */
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .badgeExecutive {
