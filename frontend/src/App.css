@@ -206,9 +206,9 @@
   transition: all 0.3s ease;
 }
 
-/* ===== SIDEBAR — MINI (icon-only) by default, expands on hover ===== */
+/* ===== SIDEBAR — always visible, expands on hover ===== */
 .sidebar {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.97);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: 0;
@@ -218,89 +218,83 @@
   left: 0;
   top: 0;
   height: 100vh;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
-  /* Mini width — always visible */
-  width: 64px;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  width: 280px;
   z-index: 1000;
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
-  overflow: hidden;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  /* Peek 64px: translate left by (280 - 64 = 216)px */
+  transform: translateX(-216px);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Expand on hover */
+/* Fully expand on hover */
 .sidebar:hover {
-  width: 280px;
+  transform: translateX(0);
+  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.4);
 }
 
 /* Frozen = always fully expanded */
 .sidebar.sidebarFrozen {
-  width: 280px !important;
+  transform: translateX(0) !important;
+  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Mobile: slide in on .sidebarVisible */
+/* Mobile: fully hidden, slides in on .sidebarVisible */
 @media (max-width: 768px) {
   .sidebar {
-    width: 280px;
-    transform: translateX(-100%);
+    transform: translateX(-100%) !important;
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .sidebar:hover {
-    width: 280px;
-    transform: translateX(0);
+    transform: translateX(-100%);
   }
 
-  .sidebar.sidebarVisible {
-    transform: translateX(0);
-  }
-
+  .sidebar.sidebarVisible,
   .sidebar.sidebarFrozen {
-    width: 280px !important;
     transform: translateX(0) !important;
   }
 }
 
-/* Sidebar trigger (mobile only — desktop no longer needs it) */
+/* Sidebar trigger - visible strip on left edge for mobile tap */
 .sidebarTrigger {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 100vh;
+  z-index: 999;
+  cursor: default;
   display: none;
+  /* Desktop: not needed, sidebar already visible */
 }
 
 @media (max-width: 768px) {
   .sidebarTrigger {
     display: block;
-    position: fixed;
-    left: 0;
-    top: 0;
     width: 20px;
-    height: 100vh;
-    z-index: 999;
     cursor: pointer;
   }
 }
 
 
-/* Sidebar Header */
+
+
+/* Sidebar Header: brand text on left, logo on right (right 64px shows logo) */
 .sidebarHeader {
   display: flex;
-  gap: 0;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  padding: 16px 10px;
+  justify-content: flex-end;
+  /* Push logo to the right */
+  padding: 20px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.15);
   white-space: nowrap;
-  overflow: hidden;
-}
-
-/* On expand: left-align */
-.sidebar:hover .sidebarHeader,
-.sidebar.sidebarFrozen .sidebarHeader {
-  justify-content: flex-start;
   gap: 12px;
-  padding: 20px 16px 16px;
 }
 
-/* Logo always visible (fixed size) */
+/* Logo always visible on right side */
 .sidebarLogo {
   width: 44px;
   height: 44px;
@@ -309,18 +303,22 @@
   border-radius: var(--radius-md);
 }
 
-/* Brand text: hidden in mini, show on expand */
+/* Brand text: on the left, hidden in mini, shown on expand */
 .sidebarBrandText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   opacity: 0;
-  transform: translateX(-8px);
-  transition: opacity 0.25s ease 0.05s, transform 0.25s ease 0.05s;
+  transition: opacity 0.25s ease 0.05s;
   pointer-events: none;
+  text-align: left;
+  min-width: 0;
 }
 
 .sidebar:hover .sidebarBrandText,
 .sidebar.sidebarFrozen .sidebarBrandText {
   opacity: 1;
-  transform: translateX(0);
   pointer-events: auto;
 }
 
@@ -363,62 +361,55 @@
   margin-top: 2px;
 }
 
+/* Nav container */
 .nav {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 16px 0;
-  /* Zero horizontal padding so items span full sidebar width */
+  padding: 16px 8px;
   flex: 1;
 }
 
-/* Nav labels: hidden in mini, appear on expand */
+/* Nav label: left side, hidden in mini */
 .navLabel {
+  flex: 1;
+  text-align: left;
   opacity: 0;
-  width: 0;
   overflow: hidden;
   white-space: nowrap;
-  transition: opacity 0.2s ease 0.1s, width 0.2s ease 0.1s;
-  flex-shrink: 0;
+  transition: opacity 0.2s ease 0.1s;
+  pointer-events: none;
 }
 
 .sidebar:hover .navLabel,
 .sidebar.sidebarFrozen .navLabel {
   opacity: 1;
-  width: auto;
+  pointer-events: auto;
 }
 
+/* Nav link: label on left, icon on right */
 .navLink {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  /* Icon centered in mini */
+  justify-content: flex-end;
+  /* Icon pushes to right = visible in peek */
   width: 100%;
   height: 48px;
-  padding: 0;
-  gap: 0;
-  border-radius: 0;
-  color: rgba(255, 255, 255, 0.65);
+  padding: 0 12px;
+  /* Icon sits in 12px + 24px icon + 12px = 48px from right */
+  gap: 12px;
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
   font-weight: 500;
-  transition: background var(--transition), color var(--transition), padding var(--transition), gap var(--transition), border-radius var(--transition);
+  transition: background var(--transition), color var(--transition), transform var(--transition);
   border: 1px solid transparent;
   white-space: nowrap;
   overflow: hidden;
   text-decoration: none;
   cursor: pointer;
-}
-
-/* On hover/expanded: left-align with label */
-.sidebar:hover .navLink,
-.sidebar.sidebarFrozen .navLink {
-  justify-content: flex-start;
-  padding: 0 14px;
-  gap: 12px;
-  border-radius: var(--radius-md);
-  margin: 0 8px;
-  width: calc(100% - 16px);
-  /* Account for added margin */
+  box-sizing: border-box;
 }
 
 .navLink:hover {
@@ -428,73 +419,40 @@
 
 .sidebar:hover .navLink:hover,
 .sidebar.sidebarFrozen .navLink:hover {
-  transform: translateX(4px);
-  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
 }
 
 .navLinkActive {
-  background: rgba(220, 38, 38, 0.15) !important;
+  background: rgba(220, 38, 38, 0.2) !important;
   color: #ffffff !important;
   font-weight: 600;
-  border: 1px solid rgba(220, 38, 38, 0.3);
-}
-
-.sidebar:hover .navLinkActive,
-.sidebar.sidebarFrozen .navLinkActive {
+  border: 1px solid rgba(220, 38, 38, 0.35) !important;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
 }
 
-/* Active indicator dot in mini mode */
-.navLinkActive .navIcon {
-  position: relative;
-}
-
-.navLinkActive .navIcon::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ef4444;
-}
-
+/* Icon — always visible, right-most item */
 .navIcon {
   font-size: 20px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   text-align: center;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
-/* Sidebar footer: compact in mini, expand on hover */
+/* Sidebar footer */
 .sidebarFooter {
   margin-top: auto;
-  padding: 10px 8px;
+  padding: 12px 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.15);
   overflow: hidden;
   white-space: nowrap;
 }
 
-.sidebar:hover .sidebarFooter,
-.sidebar.sidebarFrozen .sidebarFooter {
-  padding: 12px 10px;
-}
 
-/* User info, logout, auto-hide: hidden in mini, shown on expand */
-.sidebarUserInfo,
-.sidebarLogoutBtn,
-.autoHideToggle .toggleText {
-  opacity: 0;
-  transition: opacity 0.2s ease 0.05s;
-  pointer-events: none;
-}
 
 .sidebar:hover .sidebarUserInfo,
 .sidebar:hover .sidebarLogoutBtn,
@@ -515,11 +473,13 @@
   padding: 0 4px;
 }
 
+/* User button: avatar on RIGHT (visible in 64px peek), info hidden in mini */
 .sidebarUserButton {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 8px 8px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -529,6 +489,8 @@
   transition: all var(--transition);
   text-align: left;
   overflow: hidden;
+  justify-content: flex-end;
+  /* Avatar on right */
 }
 
 .sidebarUserButton:hover {
@@ -556,8 +518,16 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  /* Align badge to left by default but content-sized */
   gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease 0.05s;
+  pointer-events: none;
+}
+
+.sidebar:hover .sidebarUserInfo,
+.sidebar.sidebarFrozen .sidebarUserInfo {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .sidebarUserName {
@@ -568,6 +538,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+}
+
+/* Logout and auto-hide: hidden in mini, shown in expanded */
+.sidebarLogoutBtnHidden,
+.autoHideToggleHidden {
+  display: none;
+}
+
+.sidebar:hover .sidebarLogoutBtnHidden,
+.sidebar.sidebarFrozen .sidebarLogoutBtnHidden,
+.sidebar:hover .autoHideToggleHidden,
+.sidebar.sidebarFrozen .autoHideToggleHidden {
+  display: block;
 }
 
 .sidebarLogoutBtn {

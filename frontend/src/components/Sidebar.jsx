@@ -60,41 +60,36 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
 
   const linkClass = ({ isActive }) => (isActive ? 'navLink navLinkActive' : 'navLink');
 
-  // Navigation items with role-based visibility
   const navItems = [
     { to: '/', label: 'Dashboard Home', icon: '🏠', roles: null },
     { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr'] },
     { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },
   ];
 
-  // Super admin has access to user management
   const adminNavItems = [
     { to: '/users', label: 'User Management', icon: '👥', roles: ['super_admin'] },
   ];
 
-  // Super admin has access to everything
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Filter nav items based on role or permissions
   const visibleNavItems = isSuperAdmin
     ? [...navItems, ...adminNavItems]
     : navItems.filter(item => {
-      // Check role-based visibility
       if (item.roles !== null && item.roles !== undefined) {
         return item.roles.includes(user?.role);
       }
-      // Check permission-based visibility for dashboards
       return !item.dashboard || canAccess(item.dashboard, permissions);
     });
 
   return (
     <>
+      {/* Header: label on left, logo on right (logo visible in mini peek) */}
       <div className="sidebarHeader">
-        <img src="/OD LOGO.png" alt="OD Logo" className="sidebarLogo" />
         <div className="sidebarBrandText">
           <div className="brandTitle">Ebright</div>
           <div className="brandSubtitle">Internal Dashboard</div>
         </div>
+        <img src="/OD LOGO.png" alt="OD Logo" className="sidebarLogo" />
       </div>
 
       <nav className="nav">
@@ -107,8 +102,9 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
             onClick={handleNavClick}
             title={item.label}
           >
-            <span className="navIcon">{item.icon}</span>
+            {/* Label on left, icon on right — icon visible in mini peek */}
             <span className="navLabel">{item.label}</span>
+            <span className="navIcon">{item.icon}</span>
           </NavLink>
         ))}
       </nav>
@@ -120,18 +116,19 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
             onClick={() => navigate('/profile')}
             title={user?.fullName || 'Profile'}
           >
-            <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
             <div className="sidebarUserInfo">
               <div className="sidebarUserName" title={user?.fullName}>{user?.fullName || 'User'}</div>
               <span className={`badge ${getRoleBadgeClass(user?.role)}`}>{getRoleLabel(user?.role)}</span>
             </div>
+            {/* Avatar on the right — visible in mini peek */}
+            <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
           </button>
-          <button className="sidebarLogoutBtn" onClick={handleLogout} title="Logout">
+          <button className="sidebarLogoutBtn sidebarLogoutBtnHidden" onClick={handleLogout} title="Logout">
             Logout
           </button>
         </div>
         <button
-          className="autoHideToggle"
+          className="autoHideToggle autoHideToggleHidden"
           onClick={onToggleAutoHide}
           title={autoHide ? 'Click to freeze sidebar' : 'Click to enable auto-hide'}
         >
