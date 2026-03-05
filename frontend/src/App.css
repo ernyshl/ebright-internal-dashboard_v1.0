@@ -175,9 +175,14 @@
   /* Prevent flex overflow */
   margin-left: 64px;
   /* Always offset by mini sidebar */
-  transition: margin-left 0.35s ease, background 0.3s ease;
+  transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
   z-index: 1;
   position: relative;
+}
+
+/* Pinned (Frozen) sidebar offsets content by 280px on desktop */
+.sidebar.sidebarFrozen~.content {
+  margin-left: 280px;
 }
 
 /* Mobile: no margin (sidebar overlays) */
@@ -295,7 +300,8 @@
 }
 
 .sidebar:hover .sidebarBrandText,
-.sidebar.sidebarFrozen .sidebarBrandText {
+.sidebar.sidebarFrozen .sidebarBrandText,
+.sidebar.sidebarVisible .sidebarBrandText {
   opacity: 1;
 }
 
@@ -379,7 +385,8 @@
 }
 
 .sidebar:hover .navLabel,
-.sidebar.sidebarFrozen .navLabel {
+.sidebar.sidebarFrozen .navLabel,
+.sidebar.sidebarVisible .navLabel {
   opacity: 1;
 }
 
@@ -453,7 +460,8 @@
 }
 
 .sidebar:hover .sidebarUserInfo,
-.sidebar.sidebarFrozen .sidebarUserInfo {
+.sidebar.sidebarFrozen .sidebarUserInfo,
+.sidebar.sidebarVisible .sidebarUserInfo {
   opacity: 1;
 }
 
@@ -3456,44 +3464,8 @@
   text-align: left;
 }
 
-@media (max-width: 768px) {
-  .mobileOverlay.active {
-    display: block;
-  }
-}
 
-/* ===== DESKTOP SIDEBAR (Auto-hide on hover) ===== */
-@media (min-width: 769px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-
-  /* When sidebar is frozen, shift content to the right */
-  .sidebar.sidebarFrozen~.content {
-    margin-left: 280px;
-  }
-
-  /* When sidebar is not frozen, content is full width */
-  .sidebar:not(.sidebarFrozen)~.content {
-    margin-left: 0;
-  }
-
-  /* Constrain main content width and center it */
-  .main {
-    max-width: 1600px;
-    margin: 0 auto;
-  }
-
-  .mobileMenuBtn {
-    display: none !important;
-  }
-
-  .mobileOverlay {
-    display: none !important;
-  }
-}
-
-/* ===== MOBILE NAVIGATION ===== */
+/* ===== MEDIA QUERIES CLEANUP ===== */
 @media (max-width: 768px) {
   .nav {
     padding: 16px;
@@ -3505,120 +3477,18 @@
     font-size: 14px;
   }
 
-  .navIcon {
-    font-size: 22px;
-    width: 28px;
-  }
-
   .sidebarHeader {
     padding: 20px 16px;
   }
-
-  .brandMark {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
-  }
-
-  .brandTitle {
-    font-size: 16px;
-  }
-
-  .sidebarFooter {
-    padding: 16px;
-  }
-
-  .sidebarUser {
-    gap: 10px;
-  }
-
-  .sidebarUserInfo {
-    flex: 1;
-  }
-
-  .sidebarUserName {
-    font-size: 14px;
-  }
-
-  .sidebarUserRole {
-    font-size: 11px;
-  }
 }
 
-/* ===== LANDSCAPE MOBILE ===== */
-@media (max-width: 768px) and (orientation: landscape) {
-  .content {
-    padding: 12px;
-  }
-
-  .dashboardHomeGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .grid2 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .sourceCardStats {
-    grid-template-columns: repeat(4, 1fr);
-  }
+.loginCard {
+  padding: 20px;
 }
 
-/* ===== SMALL MOBILE ===== */
-@media (max-width: 480px) {
-  .content {
-    padding: 10px;
-  }
 
-  .pageHeader {
-    padding: 12px;
-  }
-
-  .pageHeaderTitle {
-    font-size: 20px;
-  }
-
-  .pageHeaderSub {
-    font-size: 12px;
-  }
-
-  .dashboardHomeHeader h1 {
-    font-size: 20px;
-  }
-
-  .dashboardHomeCard {
-    padding: 14px;
-  }
-
-  .card {
-    padding: 14px;
-    margin-bottom: 12px;
-  }
-
-  .sourceCardStats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .sourceCardTotalValue {
-    font-size: 28px;
-  }
-
-  .statCardValue {
-    font-size: 24px;
-  }
-
-  .btn {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  .loginCard {
-    padding: 20px;
-  }
-
-  .loginHeader h1 {
-    font-size: 22px;
-  }
+.loginHeader h1 {
+  font-size: 22px;
 }
 
 /* ===== PROFILE PAGE STYLES ===== */
