@@ -206,9 +206,9 @@
   transition: all 0.3s ease;
 }
 
-/* ===== SIDEBAR — always visible, expands on hover ===== */
+/* ===== SIDEBAR — MINI (icon-only) by default, expands on hover ===== */
 .sidebar {
-  background: rgba(15, 23, 42, 0.97);
+  background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   padding: 0;
@@ -219,82 +219,65 @@
   top: 0;
   height: 100vh;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
-  width: 280px;
+  width: 64px;
+  /* Default strip width */
   z-index: 1000;
-  /* Peek 64px: translate left by (280 - 64 = 216)px */
-  transform: translateX(-216px);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
+  overflow: hidden;
+  /* Clips the labels/text */
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Fully expand on hover */
-.sidebar:hover {
-  transform: translateX(0);
-  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.4);
-}
-
-/* Frozen = always fully expanded */
+.sidebar:hover,
 .sidebar.sidebarFrozen {
-  transform: translateX(0) !important;
-  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.4) !important;
+  width: 280px;
+  /* Fully expanded */
 }
 
-/* Mobile: fully hidden, slides in on .sidebarVisible */
+/* Mobile: Slide in instead of widening */
 @media (max-width: 768px) {
   .sidebar {
-    transform: translateX(-100%) !important;
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .sidebar:hover {
+    width: 280px;
     transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .sidebar.sidebarVisible,
   .sidebar.sidebarFrozen {
-    transform: translateX(0) !important;
+    transform: translateX(0);
   }
 }
 
-/* Sidebar trigger - visible strip on left edge for mobile tap */
+/* Sidebar Trigger for Mobile Overlay */
 .sidebarTrigger {
   position: fixed;
   left: 0;
   top: 0;
-  width: 64px;
+  width: 20px;
   height: 100vh;
   z-index: 999;
-  cursor: default;
+  cursor: pointer;
   display: none;
-  /* Desktop: not needed, sidebar already visible */
 }
 
 @media (max-width: 768px) {
   .sidebarTrigger {
     display: block;
-    width: 20px;
-    cursor: pointer;
   }
 }
 
-
-
-
-/* Sidebar Header: brand text on left, logo on right (right 64px shows logo) */
+/* Sidebar Header - Fixed width 280px inside clipped parent */
 .sidebarHeader {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
-  /* Push logo to the right */
-  padding: 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.15);
-  white-space: nowrap;
+  padding: 16px 10px;
   gap: 12px;
+  width: 280px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
 }
 
-/* Logo always visible on right side */
 .sidebarLogo {
   width: 44px;
   height: 44px;
@@ -303,23 +286,17 @@
   border-radius: var(--radius-md);
 }
 
-/* Brand text: on the left, hidden in mini, shown on expand */
 .sidebarBrandText {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   opacity: 0;
-  transition: opacity 0.25s ease 0.05s;
-  pointer-events: none;
-  text-align: left;
-  min-width: 0;
+  transition: opacity 0.2s ease 0.1s;
+  white-space: nowrap;
 }
 
 .sidebar:hover .sidebarBrandText,
 .sidebar.sidebarFrozen .sidebarBrandText {
   opacity: 1;
-  pointer-events: auto;
 }
 
 .brandMark {
@@ -348,7 +325,6 @@
   font-weight: 700;
   font-size: 17px;
   color: #ffffff;
-  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
@@ -356,146 +332,101 @@
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   font-weight: 600;
-  margin-top: 2px;
 }
 
-/* Nav container */
+/* Navigation */
 .nav {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 16px 8px;
+  width: 280px;
+  box-sizing: border-box;
   flex: 1;
 }
 
-/* Nav label: left side, hidden in mini */
+.navLink {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 10px;
+  gap: 12px;
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+  text-decoration: none;
+  width: 264px;
+  /* Fully width - container padding */
+  box-sizing: border-box;
+}
+
+.navIcon {
+  font-size: 20px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .navLabel {
-  flex: 1;
-  text-align: left;
   opacity: 0;
-  overflow: hidden;
-  white-space: nowrap;
   transition: opacity 0.2s ease 0.1s;
-  pointer-events: none;
+  white-space: nowrap;
 }
 
 .sidebar:hover .navLabel,
 .sidebar.sidebarFrozen .navLabel {
   opacity: 1;
-  pointer-events: auto;
-}
-
-/* Nav link: label on left, icon on right */
-.navLink {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
-  /* Icon pushes to right = visible in peek */
-  width: 100%;
-  height: 48px;
-  padding: 0 12px;
-  /* Icon sits in 12px + 24px icon + 12px = 48px from right */
-  gap: 12px;
-  border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-  font-weight: 500;
-  transition: background var(--transition), color var(--transition), transform var(--transition);
-  border: 1px solid transparent;
-  white-space: nowrap;
-  overflow: hidden;
-  text-decoration: none;
-  cursor: pointer;
-  box-sizing: border-box;
 }
 
 .navLink:hover {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.95);
-}
-
-.sidebar:hover .navLink:hover,
-.sidebar.sidebarFrozen .navLink:hover {
-  transform: translateX(2px);
+  transform: translateX(4px);
 }
 
 .navLinkActive {
-  background: rgba(220, 38, 38, 0.2) !important;
+  background: rgba(220, 38, 38, 0.15) !important;
   color: #ffffff !important;
   font-weight: 600;
-  border: 1px solid rgba(220, 38, 38, 0.35) !important;
+  border: 1px solid rgba(220, 38, 38, 0.3) !important;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
 }
 
-/* Icon — always visible, right-most item */
-.navIcon {
-  font-size: 20px;
-  width: 28px;
-  height: 28px;
-  text-align: center;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sidebar footer */
+/* Sidebar Footer */
 .sidebarFooter {
   margin-top: auto;
   padding: 12px 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  width: 280px;
+  box-sizing: border-box;
   background: rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  white-space: nowrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-
-
-.sidebar:hover .sidebarUserInfo,
-.sidebar:hover .sidebarLogoutBtn,
-.sidebar:hover .autoHideToggle .toggleText,
-.sidebar.sidebarFrozen .sidebarUserInfo,
-.sidebar.sidebarFrozen .sidebarLogoutBtn,
-.sidebar.sidebarFrozen .autoHideToggle .toggleText {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* ===== CONTENT AREA OFFSET ===== */
 .sidebarUserWrapper {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 12px;
-  padding: 0 4px;
+  margin-bottom: 8px;
 }
 
-/* User button: avatar on RIGHT (visible in 64px peek), info hidden in mini */
 .sidebarUserButton {
   display: flex;
-  flex-direction: row;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px;
+  padding: 8px;
+  width: 264px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: inherit;
   cursor: pointer;
-  width: 100%;
-  transition: all var(--transition);
-  text-align: left;
-  overflow: hidden;
-  justify-content: flex-end;
-  /* Avatar on right */
-}
-
-.sidebarUserButton:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .sidebarUserAvatar {
@@ -513,21 +444,17 @@
 }
 
 .sidebarUserInfo {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
   opacity: 0;
-  transition: opacity 0.2s ease 0.05s;
-  pointer-events: none;
+  transition: opacity 0.2s ease 0.1s;
+  min-width: 0;
 }
 
 .sidebar:hover .sidebarUserInfo,
 .sidebar.sidebarFrozen .sidebarUserInfo {
   opacity: 1;
-  pointer-events: auto;
 }
 
 .sidebarUserName {
@@ -540,41 +467,57 @@
   width: 100%;
 }
 
-/* Logout and auto-hide: hidden in mini, shown in expanded */
-.sidebarLogoutBtnHidden,
-.autoHideToggleHidden {
-  display: none;
-}
-
-.sidebar:hover .sidebarLogoutBtnHidden,
-.sidebar.sidebarFrozen .sidebarLogoutBtnHidden,
-.sidebar:hover .autoHideToggleHidden,
-.sidebar.sidebarFrozen .autoHideToggleHidden {
-  display: block;
-}
-
 .sidebarLogoutBtn {
   width: 100%;
   background: rgba(220, 38, 38, 0.1);
   border: 1px solid rgba(220, 38, 38, 0.2);
   color: #f87171;
-  cursor: pointer;
   padding: 8px;
   border-radius: var(--radius-sm);
-  transition: all var(--transition);
+  transition: all 0.2s;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .sidebarLogoutBtn:hover {
   background: var(--brand);
   color: white;
-  border-color: var(--brand);
 }
 
-/* ===== CONTENT AREA ===== */
+/* Hide Logout/Toggle when not expanded */
+.sidebarLogoutBtnHidden,
+.autoHideToggle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.sidebar:hover .sidebarLogoutBtnHidden,
+.sidebar.sidebarFrozen .sidebarLogoutBtnHidden,
+.sidebar:hover .autoHideToggle,
+.sidebar.sidebarFrozen .autoHideToggle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.autoHideToggle {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+
+/* ===== CONTENT AREA OFFSET ===== */
 /* .content styles moved to above */
 
 

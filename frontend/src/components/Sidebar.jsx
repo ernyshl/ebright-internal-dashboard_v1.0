@@ -83,13 +83,13 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
 
   return (
     <>
-      {/* Header: label on left, logo on right (logo visible in mini peek) */}
+      {/* Header: logo on left (visible in 64px mini) */}
       <div className="sidebarHeader">
+        <img src="/OD LOGO.png" alt="OD Logo" className="sidebarLogo" />
         <div className="sidebarBrandText">
           <div className="brandTitle">Ebright</div>
           <div className="brandSubtitle">Internal Dashboard</div>
         </div>
-        <img src="/OD LOGO.png" alt="OD Logo" className="sidebarLogo" />
       </div>
 
       <nav className="nav">
@@ -102,9 +102,9 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
             onClick={handleNavClick}
             title={item.label}
           >
-            {/* Label on left, icon on right — icon visible in mini peek */}
-            <span className="navLabel">{item.label}</span>
+            {/* Icon on left (visible in 64px mini) */}
             <span className="navIcon">{item.icon}</span>
+            <span className="navLabel">{item.label}</span>
           </NavLink>
         ))}
       </nav>
@@ -116,12 +116,12 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
             onClick={() => navigate('/profile')}
             title={user?.fullName || 'Profile'}
           >
+            {/* Avatar on left (visible in 64px mini) */}
+            <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
             <div className="sidebarUserInfo">
               <div className="sidebarUserName" title={user?.fullName}>{user?.fullName || 'User'}</div>
               <span className={`badge ${getRoleBadgeClass(user?.role)}`}>{getRoleLabel(user?.role)}</span>
             </div>
-            {/* Avatar on the right — visible in mini peek */}
-            <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
           </button>
           <button className="sidebarLogoutBtn sidebarLogoutBtnHidden" onClick={handleLogout} title="Logout">
             Logout
