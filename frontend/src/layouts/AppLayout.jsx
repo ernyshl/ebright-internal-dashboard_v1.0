@@ -74,13 +74,13 @@ export function AppLayout() {
         onClick={closeSidebar}
       />
 
-      {/* Sidebar Trigger (hover to show sidebar on desktop) */}
+      {/* Sidebar Trigger for mobile only */}
       <div
         className="sidebarTrigger"
-        onMouseEnter={() => autoHide && setSidebarOpen(true)}
+        onClick={() => setSidebarOpen(true)}
       />
 
-      {/* Sidebar */}
+      {/* Sidebar - always visible in mini mode on desktop */}
       <div
         className={`sidebar ${sidebarOpen ? 'sidebarVisible' : ''} ${!autoHide ? 'sidebarFrozen' : ''}`}
         onMouseLeave={() => autoHide && setSidebarOpen(false)}

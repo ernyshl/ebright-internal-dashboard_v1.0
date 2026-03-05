@@ -171,11 +171,20 @@
   overflow-y: auto;
   height: 100vh;
   width: 100%;
-  transition: margin-left 0.3s ease, background 0.3s ease;
+  /* Always offset by the mini sidebar width */
+  margin-left: 64px;
+  transition: margin-left 0.35s ease, background 0.3s ease;
   z-index: 1;
-  /* Stay above the background orbs */
   position: relative;
 }
+
+/* Mobile: no margin (sidebar overlays) */
+@media (max-width: 768px) {
+  .content {
+    margin-left: 0 !important;
+  }
+}
+
 
 /* ===== TOPBAR ===== */
 .topbar {
@@ -195,13 +204,11 @@
   transition: all 0.3s ease;
 }
 
-/* ===== SIDEBAR ===== */
+/* ===== SIDEBAR — MINI (icon-only) by default, expands on hover ===== */
 .sidebar {
-  background: rgba(15, 23, 42, 0.85);
-  /* Glassmorphism background */
-  backdrop-filter: blur(12px);
-  /* Blur effect */
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -209,51 +216,101 @@
   left: 0;
   top: 0;
   height: 100vh;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
-  /* Slightly stronger shadow */
-  width: 280px;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  /* Mini width — always visible */
+  width: 64px;
   z-index: 1000;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
-  transform: translateX(-100%);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
+  overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  /* Subtle border */
 }
 
-.sidebar:hover,
-.sidebar.sidebarVisible {
-  transform: translateX(0);
+/* Expand on hover */
+.sidebar:hover {
+  width: 280px;
 }
 
+/* Frozen = always fully expanded */
 .sidebar.sidebarFrozen {
-  transform: translateX(0) !important;
+  width: 280px !important;
 }
 
-.sidebar.sidebarFrozen:hover {
-  transform: translateX(0);
+/* Mobile: slide in on .sidebarVisible */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sidebar:hover {
+    width: 280px;
+    transform: translateX(0);
+  }
+
+  .sidebar.sidebarVisible {
+    transform: translateX(0);
+  }
+
+  .sidebar.sidebarFrozen {
+    width: 280px !important;
+    transform: translateX(0) !important;
+  }
 }
 
-/* Hover trigger area on left edge */
+/* Sidebar trigger (mobile only — desktop no longer needs it) */
 .sidebarTrigger {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 20px;
-  height: 100vh;
-  z-index: 999;
-  cursor: pointer;
+  display: none;
 }
 
-.sidebarTrigger:hover~.sidebar {
-  transform: translateX(0);
+@media (max-width: 768px) {
+  .sidebarTrigger {
+    display: block;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 100vh;
+    z-index: 999;
+    cursor: pointer;
+  }
 }
 
+
+/* Sidebar Header */
 .sidebarHeader {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  padding: 28px 24px 24px;
+  padding: 20px 10px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Logo always visible (fixed size) */
+.sidebarLogo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+}
+
+/* Brand text: hidden in mini, show on expand */
+.sidebarBrandText {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 0.25s ease 0.05s, transform 0.25s ease 0.05s;
+  pointer-events: none;
+}
+
+.sidebar:hover .sidebarBrandText,
+.sidebar.sidebarFrozen .sidebarBrandText {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
 }
 
 .brandMark {
@@ -303,8 +360,23 @@
   flex: 1;
 }
 
+/* Nav labels hidden in mini, revealed on expand */
+.navLabel {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.2s ease 0.05s, max-width 0.2s ease 0.05s;
+}
+
+.sidebar:hover .navLabel,
+.sidebar.sidebarFrozen .navLabel {
+  opacity: 1;
+  max-width: 200px;
+}
+
 .navLink {
-  padding: 13px 16px;
+  padding: 13px 20px;
   border-radius: var(--radius-md);
   color: rgba(255, 255, 255, 0.65);
   font-size: 14px;
@@ -314,11 +386,17 @@
   align-items: center;
   gap: 12px;
   border: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 100%;
 }
 
 .navLink:hover {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.95);
+}
+
+.sidebar:hover .navLink:hover {
   transform: translateX(4px);
 }
 
@@ -337,22 +415,36 @@
   flex-shrink: 0;
 }
 
+/* Sidebar footer: compact in mini, expand on hover */
 .sidebarFooter {
   margin-top: auto;
-  padding: 20px 24px;
+  padding: 12px 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.sidebarUser {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-md);
+/* User info, logout, auto-hide: hidden in mini, shown on expand */
+.sidebarUserInfo,
+.sidebarLogoutBtn,
+.autoHideToggle .toggleText {
+  opacity: 0;
+  transition: opacity 0.2s ease 0.05s;
+  pointer-events: none;
 }
 
+.sidebar:hover .sidebarUserInfo,
+.sidebar:hover .sidebarLogoutBtn,
+.sidebar:hover .autoHideToggle .toggleText,
+.sidebar.sidebarFrozen .sidebarUserInfo,
+.sidebar.sidebarFrozen .sidebarLogoutBtn,
+.sidebar.sidebarFrozen .autoHideToggle .toggleText {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ===== CONTENT AREA OFFSET ===== */
 .sidebarUserWrapper {
   display: flex;
   flex-direction: column;
@@ -401,7 +493,9 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  /* Align badge to left by default but content-sized */
+  gap: 4px;
 }
 
 .sidebarUserName {
@@ -1066,18 +1160,19 @@
 
 /* ===== BADGES ===== */
 .badge {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  /* Center text */
+  /* Center text inside */
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  /* Professional look for short forms */
   min-width: 60px;
-  /* Minimum width for short form consistency */
+  width: fit-content !important;
+  /* Prevent stretching */
+  text-align: center !important;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }

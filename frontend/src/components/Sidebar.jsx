@@ -90,8 +90,8 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   return (
     <>
       <div className="sidebarHeader">
-        <img src="/OD LOGO.png" alt="OD Logo" style={{ width: 48, height: 48, objectFit: 'contain' }} />
-        <div>
+        <img src="/OD LOGO.png" alt="OD Logo" className="sidebarLogo" />
+        <div className="sidebarBrandText">
           <div className="brandTitle">Ebright</div>
           <div className="brandSubtitle">Internal Dashboard</div>
         </div>
@@ -105,9 +105,10 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
             end={item.to === '/'}
             className={linkClass}
             onClick={handleNavClick}
+            title={item.label}
           >
             <span className="navIcon">{item.icon}</span>
-            {item.label}
+            <span className="navLabel">{item.label}</span>
           </NavLink>
         ))}
       </nav>
@@ -117,7 +118,7 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
           <button
             className="sidebarUserButton"
             onClick={() => navigate('/profile')}
-            title="Edit profile"
+            title={user?.fullName || 'Profile'}
           >
             <div className="sidebarUserAvatar">{getInitials(user?.fullName)}</div>
             <div className="sidebarUserInfo">
@@ -141,4 +142,3 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
     </>
   );
 }
-
