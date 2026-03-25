@@ -3129,13 +3129,84 @@
 
   .branchTable {
     font-size: 12px;
-    min-width: 600px;
-    /* Ensure table is scrollable on mobile */
+    min-width: 500px;
   }
 
   .branchTable th,
   .branchTable td {
     padding: 8px 10px;
+  }
+
+  .leadsBreakdownPage {
+    padding: 8px;
+  }
+
+  .leadsBreakdownPage .pageHeader {
+    padding-top: 44px;
+  }
+
+  .sectionTitle {
+    font-size: 17px;
+  }
+
+  .sectionSubtitle {
+    font-size: 12px;
+  }
+
+  .section {
+    margin-bottom: 16px;
+  }
+
+  .summaryStats {
+    gap: 8px;
+  }
+
+  .summaryStats .statCard {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    padding: 10px 8px;
+  }
+
+  .leadsBreakdownPage .statCardValue {
+    font-size: 17px;
+  }
+
+  .leadsBreakdownPage .statCardTitle {
+    font-size: 10px;
+  }
+
+  .sourceCardTotalValue {
+    font-size: 22px !important;
+  }
+
+  .regionCard {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sourcesGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .summaryStats .statCard {
+    flex: 1 1 calc(50% - 6px);
+    padding: 8px 6px;
+  }
+
+  .leadsBreakdownPage .statCardValue {
+    font-size: 15px;
+  }
+
+  .branchTable {
+    font-size: 11px;
+    min-width: 420px;
+  }
+
+  .branchTable th,
+  .branchTable td {
+    padding: 6px 8px;
   }
 }
 
