@@ -226,20 +226,20 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
       google: formatGoogleCampaigns(googleCampaigns),
     };
 
-    // Streamlit "Main Marketing" total = FB (Group) + TikTok + Google
-    // NOTE: Google channel's "leads" field actually represents conversions
-    function sumPeriods(fbData, ttData, googleData) {
+    // Main Marketing total = FB (Group) + FB (Mokhir/Online) + TikTok + Google
+    function sumPeriods(fbData, onlineData, ttData, googleData) {
       const out = {};
       for (const k of ['today', 'yesterday', 'd7', 'd30', 'monthly']) {
         const fb = fbData[k];
+        const on = onlineData[k];
         const tt = ttData[k];
         const gg = googleData[k];
 
-        const spend = (fb?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
-        const leads = (fb?.leads || 0) + (tt?.leads || 0); // Google doesn't contribute leads
-        const convs = (fb?.convs || 0) + (gg?.convs || 0); // Google's "convs" are conversions
-        const leadSpend = (fb?.leadSpend || 0) + (tt?.leadSpend || 0);
-        const convSpend = (fb?.convSpend || 0) + (gg?.convSpend || 0); // Google's "convSpend" is conv spend
+        const spend = (fb?.spend || 0) + (on?.spend || 0) + (tt?.spend || 0) + (gg?.spend || 0);
+        const leads = (fb?.leads || 0) + (on?.leads || 0) + (tt?.leads || 0);
+        const convs = (fb?.convs || 0) + (on?.convs || 0) + (gg?.convs || 0);
+        const leadSpend = (fb?.leadSpend || 0) + (on?.leadSpend || 0) + (tt?.leadSpend || 0);
+        const convSpend = (fb?.convSpend || 0) + (on?.convSpend || 0) + (gg?.convSpend || 0);
 
         out[k] = {
           spend,
@@ -255,7 +255,7 @@ router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'mark
     }
 
     const groups = {
-      main_marketing: sumPeriods(channels.fb_group, channels.tiktok, channels.google),
+      main_marketing: sumPeriods(channels.fb_group, channels.online, channels.tiktok, channels.google),
     };
 
     return res.json({ channels, groups, campaigns });
