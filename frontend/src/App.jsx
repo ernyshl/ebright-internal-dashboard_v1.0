@@ -20,6 +20,7 @@ import { AcademyDashboardPage } from './pages/AcademyDashboardPage';
 import { HrRecruitmentFunnelPage } from './pages/HrRecruitmentFunnelPage';
 import { EventDashboardPage } from './pages/EventDashboardPage';
 import { EventEntryPage } from './pages/EventEntryPage';
+import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 
 export default function App() {
   useEffect(() => {
@@ -69,6 +70,10 @@ export default function App() {
           } />
           <Route path="/hr-recruitment-funnel" element={
             <RequirePermission dashboard="hr"><HrRecruitmentFunnelPage /></RequirePermission>
+          } />
+
+          <Route path="/executive-summary" element={
+            <RequirePermission roles={['super_admin', 'ceo']}><ExecutiveSummaryPage /></RequirePermission>
           } />
 
           {/* Super admin only */}
