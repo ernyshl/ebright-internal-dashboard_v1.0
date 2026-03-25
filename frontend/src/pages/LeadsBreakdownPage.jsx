@@ -352,6 +352,34 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Lead counts by branch office (sorted by 30-day total)</p>
             <BranchTable branches={q.data?.branches} />
           </div>
+
+          {/* Others Detail — diagnostic breakdown of unclassified lead sources */}
+          {q.data?.othersDetail && q.data.othersDetail.length > 0 && (
+            <div className="section">
+              <h3 className="sectionTitle">📋 Others — Raw Lead Source Breakdown</h3>
+              <p className="sectionSubtitle">Unclassified lead_source values falling into "Others" category</p>
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="tableWrap" style={{ border: 'none', borderRadius: 0 }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Raw Lead Source (from DB)</th>
+                        <th style={{ textAlign: 'right' }}>Total Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {q.data.othersDetail.map((row, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{row.raw_lead_source || '(empty)'}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatNumber(parseInt(row.count_total))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -112,12 +112,32 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       FROM master_leads_powerbi;
     `;
 
-    const [resTotal, resRegion, resBranch, resRoadshow, resGrandTotal] = await Promise.all([
+    // F) Others breakdown — show distinct raw lead_source values that fall into 'Others'
+    const queryOthersDetail = `
+      SELECT
+        TRIM(lead_source) AS raw_lead_source,
+        COUNT(*) AS count_total
+      FROM master_leads_powerbi
+      WHERE LOWER(TRIM(lead_source)) NOT IN (
+        'meta', 'tiktok', 'trial class form', 'roadshow',
+        'self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l',
+        'walk in','walk-in','walkin','walk_in',
+        'website'
+      )
+      AND lead_source IS NOT NULL
+      AND TRIM(lead_source) != ''
+      GROUP BY TRIM(lead_source)
+      ORDER BY count_total DESC
+      LIMIT 20;
+    `;
+
+    const [resTotal, resRegion, resBranch, resRoadshow, resGrandTotal, resOthersDetail] = await Promise.all([
       pool.query(queryTotal),
       pool.query(queryRegion),
       pool.query(queryBranch),
       pool.query(queryRoadshow),
       pool.query(queryGrandTotal),
+      pool.query(queryOthersDetail),
     ]);
 
     return res.json({
@@ -126,6 +146,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       branches: resBranch.rows,
       roadshow: resRoadshow.rows[0],
       grandTotal: resGrandTotal.rows[0],
+      othersDetail: resOthersDetail.rows,
     });
   } catch (err) {
     return next(err);
