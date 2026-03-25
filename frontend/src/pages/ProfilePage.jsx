@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { getUser } from '../lib/auth';
@@ -42,13 +42,12 @@ export function ProfilePage() {
     },
   });
 
-  // Initialize form with user data
-  if (data && formData.fullName === '') {
-    setFormData(prev => ({
-      ...prev,
-      fullName: data.user?.fullName || '',
-    }));
-  }
+  // Initialize form with user data once loaded
+  useEffect(() => {
+    if (data?.user?.fullName) {
+      setFormData(prev => ({ ...prev, fullName: data.user.fullName }));
+    }
+  }, [data]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
