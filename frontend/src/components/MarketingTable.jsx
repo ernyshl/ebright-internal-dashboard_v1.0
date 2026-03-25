@@ -11,8 +11,8 @@ function fmtNum(n) {
 function cell(d, isGoogleChannel = false, label = '') {
   if (!d) return <span className="muted">—</span>;
   
-  // For Online channel and Google, we only show Conversions
-  const isOnlineOrGoogle = isGoogleChannel || label.toLowerCase().includes('online');
+  // For Google, we only show Conversions
+  const isOnlineOrGoogle = isGoogleChannel;
 
   if (isOnlineOrGoogle) {
     return (
