@@ -13,7 +13,11 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
           WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
           WHEN LOWER(TRIM(lead_source)) = 'trial class form' THEN 'Trial Class Form'
-          ELSE 'Roadshow'
+          WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
+          WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','sgl','s.g.l') THEN 'Self Generated Lead'
+          WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
+          WHEN LOWER(TRIM(lead_source)) = 'website' THEN 'Website'
+          ELSE 'Others'
         END as lead_source,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,

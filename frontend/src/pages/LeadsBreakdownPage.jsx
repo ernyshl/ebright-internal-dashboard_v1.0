@@ -303,21 +303,16 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
             <div className="sourcesGrid">
               {[
-                { key: 'Meta',            icon: null, img: '/meta_logo.svg',    color: '#1877f2' },
-                { key: 'TikTok',          icon: null, img: '/tiktok_logo.svg',  color: '#010101' },
-                { key: 'Trial Class Form',icon: '🌐', img: null,               color: '#3b82f6' },
-                { key: 'Roadshow',        icon: '🎪', img: null,               color: '#f97316' },
+                { key: 'Meta',               icon: null, img: '/meta_logo.svg',   color: '#1877f2' },
+                { key: 'TikTok',             icon: null, img: '/tiktok_logo.svg', color: '#010101' },
+                { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6' },
+                { key: 'Roadshow',           icon: '🎪', img: null,              color: '#f97316' },
+                { key: 'Self Generated Lead',icon: '🤝', img: null,              color: '#10b981' },
+                { key: 'Walk In',            icon: '🚶', img: null,              color: '#6366f1' },
+                { key: 'Website',            icon: '💻', img: null,              color: '#8b5cf6' },
+                { key: 'Others',             icon: '📋', img: null,              color: '#64748b' },
               ].map(card => {
-                const ROADSHOW_SOURCES = ['roadshow','self generated lead','self-generated lead','sgl','others','other','walk in','walk-in','walkin','website'];
-                const match = card.key === 'Roadshow'
-                  ? q.data?.total?.filter(s => ROADSHOW_SOURCES.includes(s.lead_source?.toLowerCase()))
-                      .reduce((acc, s) => ({
-                        count_today:     (parseInt(acc.count_today)     || 0) + (parseInt(s.count_today)     || 0),
-                        count_yesterday: (parseInt(acc.count_yesterday) || 0) + (parseInt(s.count_yesterday) || 0),
-                        count_7_days:    (parseInt(acc.count_7_days)    || 0) + (parseInt(s.count_7_days)    || 0),
-                        count_30_days:   (parseInt(acc.count_30_days)   || 0) + (parseInt(s.count_30_days)   || 0),
-                      }), {})
-                  : q.data?.total?.find(s => s.lead_source === card.key);
+                const match = q.data?.total?.find(s => s.lead_source === card.key);
                 return (
                   <SourceCard
                     key={card.key}

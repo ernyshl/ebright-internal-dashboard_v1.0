@@ -2719,9 +2719,8 @@
 
 /* Lead Sources Grid */
 .sourcesGrid {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   max-width: 1600px;
   margin: 0 auto 24px;
@@ -2752,9 +2751,6 @@
   border: 1px solid var(--border);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-align: center;
-  flex: 1 1 0;
-  min-width: 240px;
-  max-width: 340px;
 }
 
 .sourceCard:hover {
@@ -3109,14 +3105,17 @@
     padding: 10px;
   }
 
-  .sourcesGrid,
+  .sourcesGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
   .regionsGrid,
   .campaignGrid {
     flex-wrap: wrap;
     gap: 12px;
   }
 
-  .sourceCard,
   .regionCard,
   .campaignGrid>.card {
     flex: 1 1 100%;
