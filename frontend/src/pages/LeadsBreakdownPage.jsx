@@ -303,7 +303,7 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
             <div className="sourcesGrid">
               {[
-                { key: 'Meta',               icon: null, img: '/meta_logo.svg',   color: '#1877f2' },
+                { key: 'Meta',               icon: null, img: '/facebook_logo.svg', color: '#1877f2' },
                 { key: 'TikTok',             icon: null, img: '/tiktok_logo.svg', color: '#010101' },
                 { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6' },
                 { key: 'Roadshow',           icon: '🎪', img: null,              color: '#f97316' },
