@@ -77,7 +77,29 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       ORDER BY count_30_days DESC;
     `;
 
-    // D) Grand total - count ALL leads in the database
+    // D) Roadshow counts — lead_source = 'Roadshow' from CMS
+    const queryRoadshow = `
+      SELECT
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+      FROM master_leads_powerbi
+      WHERE LOWER(TRIM(lead_source)) = 'roadshow';
+    `;
+
+    // D2) SGL counts — lead_source = 'SGL' in the DB
+    const querySGL = `
+      SELECT
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
+        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
+        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
+      FROM master_leads_powerbi
+      WHERE LOWER(TRIM(lead_source)) = 'sgl';
+    `;
+
+    // E) Grand total - count ALL leads in the database
     const queryGrandTotal = `
       SELECT
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
@@ -87,10 +109,12 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       FROM master_leads_powerbi;
     `;
 
-    const [resTotal, resRegion, resBranch, resGrandTotal] = await Promise.all([
+    const [resTotal, resRegion, resBranch, resRoadshow, resSGL, resGrandTotal] = await Promise.all([
       pool.query(queryTotal),
       pool.query(queryRegion),
       pool.query(queryBranch),
+      pool.query(queryRoadshow),
+      pool.query(querySGL),
       pool.query(queryGrandTotal),
     ]);
 
@@ -98,6 +122,8 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       total: resTotal.rows,
       regions: resRegion.rows,
       branches: resBranch.rows,
+      roadshow: resRoadshow.rows[0],
+      sgl: resSGL.rows[0],
       grandTotal: resGrandTotal.rows[0],
     });
   } catch (err) {

@@ -219,6 +219,7 @@ export function LeadsBreakdownPage() {
     { id: 'referral', name: 'Referral', icon: '🤝' },
     { id: 'walkin', name: 'Walk-in', icon: '🚶' },
     { id: 'phone', name: 'Phone', icon: '📞' },
+    { id: 'roadshow', name: 'Roadshow', icon: '🎪' },
     { id: 'other', name: 'Other', icon: '📋' },
   ];
 
@@ -295,7 +296,7 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
             <div className="sourcesGrid">
               {q.data?.total?.map((source, idx) => (
-                <SourceCard 
+                <SourceCard
                   key={source.lead_source || idx}
                   source={{
                     name: source.lead_source || 'Unknown',
@@ -307,7 +308,7 @@ export function LeadsBreakdownPage() {
                     count_7_days: source.count_7_days,
                     count_30_days: source.count_30_days
                   }}
-                  color={leadSources[idx % leadSources.length]?.id === 'website' ? '#3b82f6' : 
+                  color={leadSources[idx % leadSources.length]?.id === 'website' ? '#3b82f6' :
                          leadSources[idx % leadSources.length]?.id === 'facebook' ? '#1877f2' :
                          leadSources[idx % leadSources.length]?.id === 'instagram' ? '#e4405f' :
                          leadSources[idx % leadSources.length]?.id === 'google' ? '#ea4335' :
