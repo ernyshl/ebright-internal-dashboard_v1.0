@@ -196,10 +196,8 @@ export function MarketingPerformancePage() {
             />
           </div>
 
-          <div className="grid2">
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <MarketingTable title="Sara Recruitment" rows={[{ label: 'Sara', ...channels.sara }]} />
-            </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <MarketingTable title="Sara Recruitment" rows={[{ label: 'Sara', ...channels.sara }]} />
           </div>
 
           {/* Campaign Performance Section */}
