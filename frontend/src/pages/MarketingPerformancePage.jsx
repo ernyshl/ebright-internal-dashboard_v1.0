@@ -188,6 +188,7 @@ export function MarketingPerformancePage() {
               title="Main Marketing"
               rows={[
                 { label: 'FB (Group)', ...channels.fb_group },
+                { label: 'FB (Mokhir)', ...channels.online },
                 { label: 'TikTok', ...channels.tiktok },
                 { label: 'Google Ads', ...channels.google, isGoogle: true },
                 { label: 'TOTAL', ...groups?.main_marketing, isTotal: true },
@@ -198,9 +199,6 @@ export function MarketingPerformancePage() {
           <div className="grid2">
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <MarketingTable title="Sara Recruitment" rows={[{ label: 'Sara', ...channels.sara }]} />
-            </div>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <MarketingTable title="Ebright Online By MOKHIR" rows={[{ label: 'Online', ...channels.online }]} />
             </div>
           </div>
 
