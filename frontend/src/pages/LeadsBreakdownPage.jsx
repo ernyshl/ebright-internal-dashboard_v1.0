@@ -39,7 +39,11 @@ function SourceCard({ source, counts, color }) {
   return (
     <div className="sourceCard" style={{ '--source-color': color }}>
       <div className="sourceCardHeader">
-        <span className="sourceCardIcon">{source.icon}</span>
+        <span className="sourceCardIcon">
+          {source.img
+            ? <img src={source.img} alt={source.name} style={{ width: '32px', height: '22px', objectFit: 'contain' }} />
+            : source.icon}
+        </span>
         <span className="sourceCardName">{source.name}</span>
       </div>
       <div className="sourceCardTotal">
@@ -213,8 +217,11 @@ export function LeadsBreakdownPage() {
 
   const leadSources = [
     { id: 'website', name: 'Website', icon: '🌐' },
+    { id: 'trial class form', name: 'Trial Class Form', icon: '🌐' },
+    { id: 'meta', name: 'Meta', img: '/meta_logo.svg' },
     { id: 'facebook', name: 'Facebook', icon: '📘' },
     { id: 'instagram', name: 'Instagram', icon: '📷' },
+    { id: 'tiktok', name: 'TikTok', img: '/tiktok_logo.svg' },
     { id: 'google', name: 'Google', icon: '🔍' },
     { id: 'referral', name: 'Referral', icon: '🤝' },
     { id: 'walkin', name: 'Walk-in', icon: '🚶' },
@@ -290,33 +297,36 @@ export function LeadsBreakdownPage() {
             />
           </div>
 
-          {/* Lead Sources */}
+          {/* Lead Sources — 4 fixed cards */}
           <div className="section">
             <h3 className="sectionTitle">📊 Lead Sources</h3>
             <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
             <div className="sourcesGrid">
-              {q.data?.total?.map((source, idx) => (
-                <SourceCard
-                  key={source.lead_source || idx}
-                  source={{
-                    name: source.lead_source || 'Unknown',
-                    icon: leadSources.find(s => s.id === source.lead_source?.toLowerCase())?.icon || '📋'
-                  }}
-                  counts={{
-                    count_today: source.count_today,
-                    count_yesterday: source.count_yesterday,
-                    count_7_days: source.count_7_days,
-                    count_30_days: source.count_30_days
-                  }}
-                  color={leadSources[idx % leadSources.length]?.id === 'website' ? '#3b82f6' :
-                         leadSources[idx % leadSources.length]?.id === 'facebook' ? '#1877f2' :
-                         leadSources[idx % leadSources.length]?.id === 'instagram' ? '#e4405f' :
-                         leadSources[idx % leadSources.length]?.id === 'google' ? '#ea4335' :
-                         leadSources[idx % leadSources.length]?.id === 'referral' ? '#10b981' :
-                         leadSources[idx % leadSources.length]?.id === 'walkin' ? '#f59e0b' :
-                         leadSources[idx % leadSources.length]?.id === 'phone' ? '#6366f1' : '#8b5cf6'}
-                />
-              ))}
+              {[
+                { key: 'Meta',            icon: null, img: '/meta_logo.svg',    color: '#1877f2' },
+                { key: 'TikTok',          icon: null, img: '/tiktok_logo.svg',  color: '#010101' },
+                { key: 'Trial Class Form',icon: '🌐', img: null,               color: '#3b82f6' },
+                { key: 'Roadshow',        icon: '🎪', img: null,               color: '#f97316' },
+              ].map(card => {
+                const ROADSHOW_SOURCES = ['roadshow','self generated lead','self-generated lead','sgl','others','other','walk in','walk-in','walkin','website'];
+                const match = card.key === 'Roadshow'
+                  ? q.data?.total?.filter(s => ROADSHOW_SOURCES.includes(s.lead_source?.toLowerCase()))
+                      .reduce((acc, s) => ({
+                        count_today:     (parseInt(acc.count_today)     || 0) + (parseInt(s.count_today)     || 0),
+                        count_yesterday: (parseInt(acc.count_yesterday) || 0) + (parseInt(s.count_yesterday) || 0),
+                        count_7_days:    (parseInt(acc.count_7_days)    || 0) + (parseInt(s.count_7_days)    || 0),
+                        count_30_days:   (parseInt(acc.count_30_days)   || 0) + (parseInt(s.count_30_days)   || 0),
+                      }), {})
+                  : q.data?.total?.find(s => s.lead_source === card.key);
+                return (
+                  <SourceCard
+                    key={card.key}
+                    source={{ name: card.key, icon: card.icon, img: card.img }}
+                    counts={match || { count_today: 0, count_yesterday: 0, count_7_days: 0, count_30_days: 0 }}
+                    color={card.color}
+                  />
+                );
+              })}
             </div>
           </div>
 

@@ -6,13 +6,14 @@ const router = express.Router();
 
 router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing']), async (_req, res, next) => {
   try {
-    // A) Summary headers (total counts by lead_source)
+    // A) Summary headers — exactly 4 cards: Meta, TikTok, Trial Class Form, Roadshow
     const queryTotal = `
       SELECT
-        CASE 
-          WHEN LOWER(TRIM(lead_source)) LIKE '%online%' THEN 'Online'
-          WHEN LOWER(TRIM(lead_source)) = '' THEN 'Unknown'
-          ELSE TRIM(lead_source)
+        CASE
+          WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
+          WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
+          WHEN LOWER(TRIM(lead_source)) = 'trial class form' THEN 'Trial Class Form'
+          ELSE 'Roadshow'
         END as lead_source,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
@@ -20,7 +21,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
       GROUP BY 1
-      ORDER BY lead_source;
+      ORDER BY count_30_days DESC;
     `;
 
     // B) Regions table - include ALL regions (Region 2, Region 3, and any others)
@@ -77,7 +78,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       ORDER BY count_30_days DESC;
     `;
 
-    // D) Roadshow counts — lead_source = 'Roadshow' from CMS
+    // D) Roadshow group counts — aggregates all 5 non-Trial Class sources
     const queryRoadshow = `
       SELECT
         COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
@@ -85,18 +86,13 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
         COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
-      WHERE LOWER(TRIM(lead_source)) = 'roadshow';
-    `;
-
-    // D2) SGL counts — lead_source = 'SGL' in the DB
-    const querySGL = `
-      SELECT
-        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE) AS count_today,
-        COUNT(*) FILTER (WHERE submitted_at::date = CURRENT_DATE - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE submitted_at::date >= CURRENT_DATE - INTERVAL '30 days') AS count_30_days
-      FROM master_leads_powerbi
-      WHERE LOWER(TRIM(lead_source)) = 'sgl';
+      WHERE LOWER(TRIM(lead_source)) IN (
+        'roadshow',
+        'self generated lead', 'self-generated lead', 'selfgenerated lead',
+        'sgl', 's.g.l',
+        'others', 'other',
+        'walk in', 'walk-in', 'walkin', 'walk_in'
+      );
     `;
 
     // E) Grand total - count ALL leads in the database
@@ -109,12 +105,11 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       FROM master_leads_powerbi;
     `;
 
-    const [resTotal, resRegion, resBranch, resRoadshow, resSGL, resGrandTotal] = await Promise.all([
+    const [resTotal, resRegion, resBranch, resRoadshow, resGrandTotal] = await Promise.all([
       pool.query(queryTotal),
       pool.query(queryRegion),
       pool.query(queryBranch),
       pool.query(queryRoadshow),
-      pool.query(querySGL),
       pool.query(queryGrandTotal),
     ]);
 
@@ -123,7 +118,6 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       regions: resRegion.rows,
       branches: resBranch.rows,
       roadshow: resRoadshow.rows[0],
-      sgl: resSGL.rows[0],
       grandTotal: resGrandTotal.rows[0],
     });
   } catch (err) {
