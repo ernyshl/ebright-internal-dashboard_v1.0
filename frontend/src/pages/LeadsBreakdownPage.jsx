@@ -45,7 +45,7 @@ function SourceCard({ source, counts, color }) {
             : source.icon}
         </span>
         <span className="sourceCardName">
-          {source.name}
+          {source.displayName || source.name}
           {source.sublabel && <span className="sourceCardSublabel">{source.sublabel}</span>}
         </span>
       </div>
@@ -308,7 +308,7 @@ export function LeadsBreakdownPage() {
               {[
                 { key: 'Meta',               icon: null, img: '/facebook_logo.svg', color: '#1877f2' },
                 { key: 'TikTok',             icon: null, img: '/tiktok_logo.svg', color: '#010101' },
-                { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6',  sublabel: '(Conversion)' },
+                { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6',  sublabel: '(Conversion)', displayName: 'Website' },
                 { key: 'Roadshow',           icon: '🎪', img: null,              color: '#f97316' },
                 { key: 'Self Generated Lead',icon: '🤝', img: null,              color: '#10b981' },
                 { key: 'Walk In',            icon: '🚶', img: null,              color: '#6366f1' },
@@ -319,7 +319,7 @@ export function LeadsBreakdownPage() {
                 return (
                   <SourceCard
                     key={card.key}
-                    source={{ name: card.key, icon: card.icon, img: card.img, sublabel: card.sublabel }}
+                    source={{ name: card.key, icon: card.icon, img: card.img, sublabel: card.sublabel, displayName: card.displayName }}
                     counts={match || { count_today: 0, count_yesterday: 0, count_7_days: 0, count_30_days: 0 }}
                     color={card.color}
                   />
