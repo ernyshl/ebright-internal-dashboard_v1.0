@@ -116,6 +116,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
     const queryOthersDetail = `
       SELECT
         TRIM(lead_source) AS raw_lead_source,
+        COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
         COUNT(*) AS count_total
       FROM master_leads_powerbi
       WHERE LOWER(TRIM(lead_source)) NOT IN (
@@ -127,7 +128,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       AND lead_source IS NOT NULL
       AND TRIM(lead_source) != ''
       GROUP BY TRIM(lead_source)
-      ORDER BY count_total DESC
+      ORDER BY count_today DESC, count_total DESC
       LIMIT 20;
     `;
 

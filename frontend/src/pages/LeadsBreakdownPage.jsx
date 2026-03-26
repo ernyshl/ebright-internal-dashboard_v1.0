@@ -44,7 +44,10 @@ function SourceCard({ source, counts, color }) {
             ? <img src={source.img} alt={source.name} style={{ width: '32px', height: '22px', objectFit: 'contain' }} />
             : source.icon}
         </span>
-        <span className="sourceCardName">{source.name}</span>
+        <span className="sourceCardName">
+          {source.name}
+          {source.sublabel && <span className="sourceCardSublabel">{source.sublabel}</span>}
+        </span>
       </div>
       <div className="sourceCardTotal">
         <span className="sourceCardTotalValue">{formatNumber(today)}</span>
@@ -305,18 +308,18 @@ export function LeadsBreakdownPage() {
               {[
                 { key: 'Meta',               icon: null, img: '/facebook_logo.svg', color: '#1877f2' },
                 { key: 'TikTok',             icon: null, img: '/tiktok_logo.svg', color: '#010101' },
-                { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6' },
+                { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6',  sublabel: '(Conversion)' },
                 { key: 'Roadshow',           icon: '🎪', img: null,              color: '#f97316' },
                 { key: 'Self Generated Lead',icon: '🤝', img: null,              color: '#10b981' },
                 { key: 'Walk In',            icon: '🚶', img: null,              color: '#6366f1' },
-                { key: 'Website',            icon: '💻', img: null,              color: '#8b5cf6' },
+                { key: 'Website',            icon: '💻', img: null,              color: '#8b5cf6',  sublabel: '(Organic)' },
                 { key: 'Others',             icon: '📋', img: null,              color: '#64748b' },
               ].map(card => {
                 const match = q.data?.total?.find(s => s.lead_source === card.key);
                 return (
                   <SourceCard
                     key={card.key}
-                    source={{ name: card.key, icon: card.icon, img: card.img }}
+                    source={{ name: card.key, icon: card.icon, img: card.img, sublabel: card.sublabel }}
                     counts={match || { count_today: 0, count_yesterday: 0, count_7_days: 0, count_30_days: 0 }}
                     color={card.color}
                   />
@@ -364,14 +367,16 @@ export function LeadsBreakdownPage() {
                     <thead>
                       <tr>
                         <th>Raw Lead Source (from DB)</th>
-                        <th style={{ textAlign: 'right' }}>Total Count</th>
+                        <th style={{ textAlign: 'right' }}>Today</th>
+                        <th style={{ textAlign: 'right' }}>All Time</th>
                       </tr>
                     </thead>
                     <tbody>
                       {q.data.othersDetail.map((row, idx) => (
                         <tr key={idx}>
                           <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{row.raw_lead_source || '(empty)'}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatNumber(parseInt(row.count_total))}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: parseInt(row.count_today) > 0 ? '#f97316' : undefined }}>{formatNumber(parseInt(row.count_today))}</td>
+                          <td style={{ textAlign: 'right' }}>{formatNumber(parseInt(row.count_total))}</td>
                         </tr>
                       ))}
                     </tbody>
