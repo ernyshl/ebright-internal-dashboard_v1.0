@@ -19,7 +19,8 @@ function getLeadCentreUrl(leadSourceKey, period) {
     '30days':  { date_from: days30,    date_to: today },
   };
   const { date_from, date_to } = ranges[period] || {};
-  const params = new URLSearchParams({ lead_source: leadSourceKey, date_from, date_to });
+  const params = new URLSearchParams({ date_from, date_to });
+  if (leadSourceKey) params.set('lead_source', leadSourceKey);
   return `/leads-centre?${params}`;
 }
 
@@ -31,11 +32,11 @@ function formatNumber(num) {
   return new Intl.NumberFormat('en-MY').format(n);
 }
 
-function StatCard({ title, value, icon, color, subtitle }) {
+function StatCard({ title, value, icon, color, subtitle, to }) {
   // Ensure value is a number
   const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
-  
-  return (
+
+  const inner = (
     <div className="statCard" style={{ '--stat-color': color }}>
       <div className="statCardIcon">{icon}</div>
       <div className="statCardContent">
@@ -45,6 +46,8 @@ function StatCard({ title, value, icon, color, subtitle }) {
       </div>
     </div>
   );
+
+  return to ? <Link to={to} className="statCardLink">{inner}</Link> : inner;
 }
 
 function InfoTooltip({ tooltip }) {
@@ -314,26 +317,29 @@ export function LeadsBreakdownPage() {
         <>
           {/* Summary Stats */}
           <div className="summaryStats">
-            <StatCard 
-              title="Total Leads (30d)" 
-              value={totalLeads} 
-              icon="📈" 
+            <StatCard
+              title="Total Leads (30d)"
+              value={totalLeads}
+              icon="📈"
               color="#3b82f6"
               subtitle="All sources combined"
+              to={getLeadCentreUrl('', '30days')}
             />
-            <StatCard 
-              title="Today's Leads" 
-              value={todayTotal} 
-              icon="📅" 
+            <StatCard
+              title="Today's Leads"
+              value={todayTotal}
+              icon="📅"
               color="#10b981"
               subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`}
+              to={getLeadCentreUrl('', 'today')}
             />
-            <StatCard 
-              title="Yesterday's Leads" 
-              value={yesterdayTotal} 
-              icon="📆" 
+            <StatCard
+              title="Yesterday's Leads"
+              value={yesterdayTotal}
+              icon="📆"
               color="#f59e0b"
               subtitle={`${todayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% change today`}
+              to={getLeadCentreUrl('', 'yesterday')}
             />
             <StatCard 
               title="Active Regions" 

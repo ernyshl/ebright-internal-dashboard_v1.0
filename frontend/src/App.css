@@ -2789,6 +2789,22 @@
   letter-spacing: 0.02em;
 }
 
+.statCardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.statCardLink:hover .statCard {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.statCardLink:hover .statCardValue {
+  text-decoration: underline;
+  color: var(--stat-color);
+}
+
 .sourceCardTotalLink {
   text-decoration: none;
   color: inherit;
