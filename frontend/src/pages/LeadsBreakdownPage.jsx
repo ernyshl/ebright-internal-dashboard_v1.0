@@ -41,7 +41,7 @@ function InfoTooltip({ tooltip }) {
         <div className="infoTooltip" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
           <div className="infoTooltipTitle">{tooltip.title}</div>
           <div className="infoTooltipDesc">{tooltip.desc}</div>
-          <a href={tooltip.url} target="_blank" rel="noopener noreferrer" className="infoTooltipUrl">{tooltip.url}</a>
+          {tooltip.url && <a href={tooltip.url} target="_blank" rel="noopener noreferrer" className="infoTooltipUrl">{tooltip.url}</a>}
         </div>
       )}
     </span>
@@ -330,9 +330,9 @@ export function LeadsBreakdownPage() {
             <div className="sourcesGrid">
               {[
                 { key: 'Meta', icon: null, img: '/facebook_logo.svg', color: '#1877f2',
-                  tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.', url: 'https://www.ebright.my/trial-classes' } },
+                  tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.' } },
                 { key: 'TikTok', icon: null, img: '/tiktok_logo.svg', color: '#010101',
-                  tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.', url: 'https://www.ebright.my/trial-classes' } },
+                  tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.' } },
                 { key: 'Trial Class Form', icon: '🌐', img: null, color: '#3b82f6', sublabel: '(Conversion)', displayName: 'Website',
                   tooltip: { title: 'Website (Conversion)', desc: 'Leads from conversion campaigns (Meta/TikTok) where the lead filled in the form on the website.', url: 'https://www.ebright.my/trial-classes' } },
                 { key: 'Roadshow', icon: '🎪', img: null, color: '#f97316',
