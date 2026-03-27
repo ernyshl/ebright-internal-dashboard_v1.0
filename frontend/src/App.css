@@ -2789,6 +2789,28 @@
   letter-spacing: 0.02em;
 }
 
+.sourceCardTotalLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.sourceCardTotalLink:hover .sourceCardTotalValue {
+  color: var(--source-color, var(--brand));
+  text-decoration: underline;
+}
+
+.sourceStatLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.sourceStatLink:hover .sourceStatValue {
+  color: var(--source-color, var(--brand));
+  text-decoration: underline;
+}
+
 .infoIconWrap {
   position: relative;
   display: inline-flex;

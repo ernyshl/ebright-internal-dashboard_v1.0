@@ -1,7 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
+
+function getLeadCentreUrl(leadSourceKey, period) {
+  const now = new Date();
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const today = fmt(now);
+  const yesterday = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const days7 = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+  const days30 = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29));
+
+  const ranges = {
+    today:     { date_from: today,     date_to: today },
+    yesterday: { date_from: yesterday, date_to: yesterday },
+    '7days':   { date_from: days7,     date_to: today },
+    '30days':  { date_from: days30,    date_to: today },
+  };
+  const { date_from, date_to } = ranges[period] || {};
+  const params = new URLSearchParams({ lead_source: leadSourceKey, date_from, date_to });
+  return `/leads-centre?${params}`;
+}
 
 function formatNumber(num) {
   if (num === null || num === undefined) return '—';
@@ -73,20 +93,28 @@ function SourceCard({ source, counts, color }) {
         </span>
       </div>
       <div className="sourceCardTotal">
-        <span className="sourceCardTotalValue">{formatNumber(today)}</span>
+        <Link to={getLeadCentreUrl(source.name, 'today')} className="sourceCardTotalLink">
+          <span className="sourceCardTotalValue">{formatNumber(today)}</span>
+        </Link>
         <span className="sourceCardTotalLabel">Today's Leads</span>
       </div>
       <div className="sourceCardStats">
         <div className="sourceStat">
-          <span className="sourceStatValue">{formatNumber(yesterday)}</span>
+          <Link to={getLeadCentreUrl(source.name, 'yesterday')} className="sourceStatLink">
+            <span className="sourceStatValue">{formatNumber(yesterday)}</span>
+          </Link>
           <span className="sourceStatLabel">Yesterday</span>
         </div>
         <div className="sourceStat">
-          <span className="sourceStatValue">{formatNumber(days7)}</span>
+          <Link to={getLeadCentreUrl(source.name, '7days')} className="sourceStatLink">
+            <span className="sourceStatValue">{formatNumber(days7)}</span>
+          </Link>
           <span className="sourceStatLabel">7 Days</span>
         </div>
         <div className="sourceStat">
-          <span className="sourceStatValue">{formatNumber(days30)}</span>
+          <Link to={getLeadCentreUrl(source.name, '30days')} className="sourceStatLink">
+            <span className="sourceStatValue">{formatNumber(days30)}</span>
+          </Link>
           <span className="sourceStatLabel">30 Days</span>
         </div>
       </div>

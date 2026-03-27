@@ -1,16 +1,18 @@
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
 export function LeadsCentrePage() {
+  const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState({
-    search: '',
-    lead_source: '',
-    region: '',
-    branch: '',
-    date_from: '',
-    date_to: '',
+    search: searchParams.get('search') || '',
+    lead_source: searchParams.get('lead_source') || '',
+    region: searchParams.get('region') || '',
+    branch: searchParams.get('branch') || '',
+    date_from: searchParams.get('date_from') || '',
+    date_to: searchParams.get('date_to') || '',
   });
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
