@@ -2789,6 +2789,74 @@
   letter-spacing: 0.02em;
 }
 
+.infoIconWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+}
+
+.infoIcon {
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--muted);
+  cursor: help;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+  line-height: 1;
+  user-select: none;
+}
+
+.infoIconWrap:hover .infoIcon {
+  opacity: 1;
+  color: var(--info);
+}
+
+.infoTooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: #1e293b;
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+  text-align: left;
+  white-space: normal;
+  pointer-events: auto;
+}
+
+.infoTooltipTitle {
+  font-weight: 700;
+  font-size: 13px;
+  color: #ffffff;
+  margin-bottom: 5px;
+}
+
+.infoTooltipDesc {
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.infoTooltipUrl {
+  display: block;
+  color: #60a5fa;
+  font-size: 11px;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.infoTooltipUrl:hover {
+  text-decoration: underline;
+}
+
 .sourceCardTotal {
   text-align: center;
   padding: 12px;

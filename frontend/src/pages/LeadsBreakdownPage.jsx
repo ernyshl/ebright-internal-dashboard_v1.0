@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState, useRef } from 'react';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
@@ -26,6 +27,27 @@ function StatCard({ title, value, icon, color, subtitle }) {
   );
 }
 
+function InfoTooltip({ tooltip }) {
+  const [show, setShow] = useState(false);
+  const timer = useRef(null);
+
+  const handleEnter = () => { clearTimeout(timer.current); setShow(true); };
+  const handleLeave = () => { timer.current = setTimeout(() => setShow(false), 120); };
+
+  return (
+    <span className="infoIconWrap" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      <span className="infoIcon">ℹ</span>
+      {show && (
+        <div className="infoTooltip" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+          <div className="infoTooltipTitle">{tooltip.title}</div>
+          <div className="infoTooltipDesc">{tooltip.desc}</div>
+          <a href={tooltip.url} target="_blank" rel="noopener noreferrer" className="infoTooltipUrl">{tooltip.url}</a>
+        </div>
+      )}
+    </span>
+  );
+}
+
 function SourceCard({ source, counts, color }) {
   // Ensure all counts are numbers
   const today = typeof counts?.count_today === 'string' ? parseInt(counts.count_today, 10) : (counts?.count_today || 0);
@@ -47,6 +69,7 @@ function SourceCard({ source, counts, color }) {
         <span className="sourceCardName">
           {source.displayName || source.name}
           {source.sublabel && <span className="sourceCardSublabel">{source.sublabel}</span>}
+          {source.tooltip && <InfoTooltip tooltip={source.tooltip} />}
         </span>
       </div>
       <div className="sourceCardTotal">
@@ -306,20 +329,28 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
             <div className="sourcesGrid">
               {[
-                { key: 'Meta',               icon: null, img: '/facebook_logo.svg', color: '#1877f2' },
-                { key: 'TikTok',             icon: null, img: '/tiktok_logo.svg', color: '#010101' },
-                { key: 'Trial Class Form',   icon: '🌐', img: null,              color: '#3b82f6',  sublabel: '(Conversion)', displayName: 'Website' },
-                { key: 'Roadshow',           icon: '🎪', img: null,              color: '#f97316' },
-                { key: 'Self Generated Lead',icon: '🤝', img: null,              color: '#10b981' },
-                { key: 'Walk In',            icon: '🚶', img: null,              color: '#6366f1' },
-                { key: 'Website',            icon: '💻', img: null,              color: '#8b5cf6',  sublabel: '(Organic)' },
-                { key: 'Others',             icon: '📋', img: null,              color: '#64748b' },
+                { key: 'Meta', icon: null, img: '/facebook_logo.svg', color: '#1877f2',
+                  tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.', url: 'https://www.ebright.my/trial-classes' } },
+                { key: 'TikTok', icon: null, img: '/tiktok_logo.svg', color: '#010101',
+                  tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.', url: 'https://www.ebright.my/trial-classes' } },
+                { key: 'Trial Class Form', icon: '🌐', img: null, color: '#3b82f6', sublabel: '(Conversion)', displayName: 'Website',
+                  tooltip: { title: 'Website (Conversion)', desc: 'Leads from conversion campaigns (Meta/TikTok) where the lead filled in the form on the website.', url: 'https://www.ebright.my/trial-classes' } },
+                { key: 'Roadshow', icon: '🎪', img: null, color: '#f97316',
+                  tooltip: { title: 'Roadshow', desc: 'Leads from contacts collected during showcase, festival roadshows, and/or promotional events.', url: 'https://www.ebright.my/trial-class-roadshow' } },
+                { key: 'Self Generated Lead', icon: '🤝', img: null, color: '#10b981',
+                  tooltip: { title: 'Self Generated Lead', desc: 'Leads generated directly by staff through personal or direct contact. Staff can claim these leads when the lead enrolls.', url: 'https://www.ebright.my/trial-class-self-generated' } },
+                { key: 'Walk In', icon: '🚶', img: null, color: '#6366f1',
+                  tooltip: { title: 'Walk In', desc: 'Leads who visited the centre directly to inquire or attend a trial session by walking in.', url: 'https://www.ebright.my/trial-class-walk-in' } },
+                { key: 'Website', icon: '💻', img: null, color: '#8b5cf6', sublabel: '(Organic)',
+                  tooltip: { title: 'Website (Organic)', desc: 'Leads who found the website organically and clicked the trial class form on the website.', url: 'https://www.ebright.my/trial-class-website' } },
+                { key: 'Others', icon: '📋', img: null, color: '#64748b',
+                  tooltip: { title: 'Others', desc: 'Leads that do not fall under any other category (e.g. parent referrals).', url: 'https://www.ebright.my/trial-class-others' } },
               ].map(card => {
                 const match = q.data?.total?.find(s => s.lead_source === card.key);
                 return (
                   <SourceCard
                     key={card.key}
-                    source={{ name: card.key, icon: card.icon, img: card.img, sublabel: card.sublabel, displayName: card.displayName }}
+                    source={{ name: card.key, icon: card.icon, img: card.img, sublabel: card.sublabel, displayName: card.displayName, tooltip: card.tooltip }}
                     counts={match || { count_today: 0, count_yesterday: 0, count_7_days: 0, count_30_days: 0 }}
                     color={card.color}
                   />
