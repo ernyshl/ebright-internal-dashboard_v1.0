@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 
 export function FinanceDashboardPage() {
@@ -9,6 +10,9 @@ export function FinanceDashboardPage() {
           <h1 className="pageHeaderTitle">Finance Dashboard</h1>
           <p className="pageHeaderSub">Financial metrics and insights</p>
         </div>
+        <Link to="/branch-ranking" className="btn btnSmall" style={{ alignSelf: 'center' }}>
+          🏆 Branch Ranking
+        </Link>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden', height: 'calc(100vh - 180px)' }}>

@@ -2607,13 +2607,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 14px 18px;
+  align-items: flex-end;
 }
 
 .brRankFilterGroup {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 150px;
+  min-width: 140px;
 }
 
 .brRankLabel {
@@ -2622,6 +2623,36 @@
   color: var(--textSecondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.brRankPresets {
+  display: flex;
+  gap: 6px;
+}
+
+.brRankPresetBtn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--textSecondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.brRankPresetBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.brRankPresetBtn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
 }
 
 .brRankTopRow {
@@ -2690,46 +2721,148 @@
 .brRankTierReward { font-size: 15px; font-weight: 800; color: var(--text); }
 .brRankTierMin { font-size: 10px; color: var(--muted); }
 
+/* ── Bar Chart Table ── */
 .brRankChartCard {
-  padding: 20px 16px 20px 0;
+  padding: 8px 16px 16px;
   overflow-x: auto;
 }
 
-.brRankTooltip {
-  background: #1e293b;
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: #f1f5f9;
+.brRankBarTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.brRankTierSepRow td {
+  padding: 16px 8px 4px;
   font-size: 12px;
-  min-width: 200px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-}
-
-.brRankTooltipTitle {
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border);
+}
+
+.brRankTierSepRow.first td {
+  padding-top: 4px;
+}
+
+.brRankDataRow {
+  border-bottom: 1px solid var(--border);
+}
+
+.brRankDataRow:hover {
+  background: var(--hoverBg, rgba(0,0,0,0.03));
+}
+
+.brRankRankCell {
+  width: 40px;
+  text-align: right;
+  padding: 8px 10px 8px 4px;
+  white-space: nowrap;
+}
+
+.brRankRankNum {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.brRankRankNum.top3 {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.brRankNameCell {
+  width: 180px;
+  padding: 8px 12px 8px 4px;
   font-size: 13px;
-  margin-bottom: 6px;
-  color: #ffffff;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
 }
 
-.brRankTooltipRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 3px;
-  color: #cbd5e1;
+.brRankBarCell {
+  padding: 8px 8px;
 }
 
-.brRankTooltipRow strong { color: #ffffff; }
+.brRankBarWrap {
+  position: relative;
+  height: 26px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: visible;
+  min-width: 120px;
+}
 
-.brRankTierTag {
-  display: inline-block;
-  background: color-mix(in srgb, var(--tier-color) 15%, transparent);
-  color: var(--tier-color);
-  border-radius: 5px;
-  padding: 2px 8px;
+.brRankBarFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.brRankJackpotLine {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: #d97706;
+  border-radius: 2px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.brRankRevenueCell {
+  width: 160px;
+  padding: 8px 16px 8px 12px;
   font-size: 12px;
   font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.brRankJackpotVal {
+  color: #d97706;
+}
+
+/* Tier badge column (rowspanned) */
+.brRankTierBadgeCell {
+  width: 88px;
+  vertical-align: middle;
+  text-align: center;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--tier-color) 10%, transparent);
+  border-left: 3px solid var(--tier-color);
+}
+
+.brRankTierBadgeInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.brRankTierBadgeEmoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.brRankTierBadgeName {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tier-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.brRankTierBadgeReward {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
 }
 
 /* ===== LEADS BREAKDOWN PAGE ===== */

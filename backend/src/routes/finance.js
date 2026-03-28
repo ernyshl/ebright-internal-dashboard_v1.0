@@ -15,6 +15,7 @@ financeRouter.get('/branch-ranking', async (req, res) => {
     const conditions = [
       `branches IS NOT NULL`,
       `branches != ''`,
+      `branches != 'HQ / Others'`,
       `total_amount IS NOT NULL`,
     ];
     const params = [];
@@ -44,6 +45,7 @@ financeRouter.get('/branch-ranking', async (req, res) => {
       ${where}
       GROUP BY branches
       ORDER BY total_revenue DESC
+      LIMIT 20
     `, params);
 
     const branchList = await pool.query(`
