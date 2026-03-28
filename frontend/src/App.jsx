@@ -21,6 +21,7 @@ import { HrRecruitmentFunnelPage } from './pages/HrRecruitmentFunnelPage';
 import { EventDashboardPage } from './pages/EventDashboardPage';
 import { EventEntryPage } from './pages/EventEntryPage';
 import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
+import { BranchRankingPage } from './pages/BranchRankingPage';
 
 export default function App() {
   useEffect(() => {
@@ -74,6 +75,9 @@ export default function App() {
 
           <Route path="/executive-summary" element={
             <RequirePermission roles={['super_admin', 'ceo']}><ExecutiveSummaryPage /></RequirePermission>
+          } />
+          <Route path="/branch-ranking" element={
+            <RequirePermission roles={['super_admin', 'ceo', 'finance', 'od', 'rm']}><BranchRankingPage /></RequirePermission>
           } />
 
           {/* Super admin only */}

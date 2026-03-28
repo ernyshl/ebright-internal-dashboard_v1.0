@@ -2580,6 +2580,158 @@
   margin: 0;
 }
 
+/* ===== BRANCH RANKING PAGE ===== */
+.branchRankingPage {
+  padding: 0 32px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.branchRankingPage .pageHeader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0 16px;
+}
+
+.branchRankingPage .pageHeader .backButtonContainer { position: absolute; left: 0; top: 24px; }
+.branchRankingPage .pageHeader .refreshButtonContainer { position: absolute; right: 0; top: 24px; }
+
+.brRankFilters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+}
+
+.brRankFilterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.brRankLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.brRankTopRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.brRankTotalCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 28px;
+  flex: 0 0 auto;
+  min-width: 240px;
+}
+
+.brRankTotalLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.brRankTotalValue {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.brRankTotalSub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.brRankTierLegend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.brRankTierBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--tier-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tier-color) 40%, transparent);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+.brRankTierEmoji { font-size: 18px; }
+.brRankTierName { font-size: 13px; font-weight: 700; color: var(--tier-color); }
+.brRankTierReward { font-size: 15px; font-weight: 800; color: var(--text); }
+.brRankTierMin { font-size: 10px; color: var(--muted); }
+
+.brRankChartCard {
+  padding: 20px 16px 20px 0;
+  overflow-x: auto;
+}
+
+.brRankTooltip {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f1f5f9;
+  font-size: 12px;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.brRankTooltipTitle {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #ffffff;
+}
+
+.brRankTooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 3px;
+  color: #cbd5e1;
+}
+
+.brRankTooltipRow strong { color: #ffffff; }
+
+.brRankTierTag {
+  display: inline-block;
+  background: color-mix(in srgb, var(--tier-color) 15%, transparent);
+  color: var(--tier-color);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* ===== LEADS BREAKDOWN PAGE ===== */
 .leadsBreakdownPage {
   padding: 0 32px 32px;
