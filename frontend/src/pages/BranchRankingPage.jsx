@@ -117,7 +117,7 @@ export function BranchRankingPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters + Total Revenue inline */}
       <div className="brRankFilters">
         <div className="brRankFilterGroup">
           <label className="brRankLabel">Month</label>
@@ -157,33 +157,9 @@ export function BranchRankingPage() {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Summary + Legend */}
-      <div className="brRankTopRow">
-        <div className="brRankTotalCard">
-          <div className="brRankTotalLabel">Total Revenue</div>
-          <div className="brRankTotalValue">{formatRM(grandTotal)}</div>
-          <div className="brRankTotalSub">{branches.length} branches · {periodLabel}</div>
-        </div>
-        <div className="brRankTierLegend">
-          <div className="brRankTierBadge" style={{ '--tier-color': '#d97706' }}>
-            <span className="brRankTierEmoji">🏆</span>
-            <div>
-              <div className="brRankTierName">Jackpot</div>
-              <div className="brRankTierMin">≥ {formatRM(JACKPOT)}</div>
-            </div>
-          </div>
-          {TIER_DEFS.map(t => (
-            <div key={t.label} className="brRankTierBadge" style={{ '--tier-color': t.color }}>
-              <span className="brRankTierEmoji">{t.emoji}</span>
-              <div>
-                <div className="brRankTierName">{t.label}</div>
-                <div className="brRankTierReward">{t.reward}</div>
-                <div className="brRankTierMin">Top {t.size}</div>
-              </div>
-            </div>
-          ))}
+        <div className="brRankFilterGroup brRankTotalInline">
+          <label className="brRankLabel">Total Revenue</label>
+          <div className="brRankTotalValue">{isLoading ? '—' : formatRM(grandTotal)}</div>
         </div>
       </div>
 
