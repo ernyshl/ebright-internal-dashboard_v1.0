@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
@@ -49,6 +50,27 @@ export function BranchRankingPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [branch, setBranch] = useState('');
   const [activePreset, setActivePreset] = useState('this_month');
+  const [isCapturing, setIsCapturing] = useState(false);
+  const screenshotRef = useRef(null);
+
+  const handleScreenshot = async () => {
+    if (!screenshotRef.current) return;
+    setIsCapturing(true);
+    try {
+      const canvas = await html2canvas(screenshotRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement('a');
+      link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const applyPreset = (preset) => {
     if (preset === 'this_month') {
@@ -161,6 +183,14 @@ export function BranchRankingPage() {
           <label className="brRankLabel">Total Revenue</label>
           <div className="brRankTotalValue">{isLoading ? '—' : formatRM(grandTotal)}</div>
         </div>
+        <button
+          className="brRankPresetBtn brRankScreenshotBtn"
+          onClick={handleScreenshot}
+          disabled={isCapturing || isLoading || isFetching}
+          title="Save as image"
+        >
+          {isCapturing ? '⏳' : '📷'}
+        </button>
       </div>
 
       {/* Chart Table */}
@@ -169,6 +199,19 @@ export function BranchRankingPage() {
       ) : isError ? (
         <div className="errorText">Failed to load branch ranking data.</div>
       ) : (
+        <div ref={screenshotRef} className="brRankScreenshotTarget">
+          <div className="brRankScreenshotHeader">
+            <div>
+              <div className="brRankScreenshotTitle">🏆 Branch Ranking</div>
+              <div className="brRankScreenshotPeriod">
+                {periodLabel}{branch ? ` · ${branch}` : ' · All Branches'}
+              </div>
+            </div>
+            <div className="brRankScreenshotTotalWrap">
+              <div className="brRankScreenshotTotalLabel">Total Revenue</div>
+              <div className="brRankScreenshotTotalValue">{formatRM(grandTotal)}</div>
+            </div>
+          </div>
         <div className="card brRankChartCard">
           <table className="brRankBarTable">
             <tbody>
@@ -224,6 +267,7 @@ export function BranchRankingPage() {
               )}
             </tbody>
           </table>
+        </div>
         </div>
       )}
     </div>
