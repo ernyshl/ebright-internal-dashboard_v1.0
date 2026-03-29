@@ -2778,7 +2778,13 @@
 }
 
 .brRankBarCell {
-  padding: 6px 6px;
+  padding: 6px 8px;
+}
+
+.brRankBarRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .brRankBarWrap {
@@ -2787,7 +2793,8 @@
   background: var(--border);
   border-radius: 4px;
   overflow: visible;
-  min-width: 120px;
+  flex: 1;
+  min-width: 80px;
 }
 
 .brRankBarFill {
@@ -2812,13 +2819,12 @@
   opacity: 0.8;
 }
 
-.brRankRevenueCell {
-  width: 150px;
-  padding: 6px 12px 6px 8px;
+.brRankRevenueInline {
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
+  min-width: 110px;
   text-align: right;
 }
 

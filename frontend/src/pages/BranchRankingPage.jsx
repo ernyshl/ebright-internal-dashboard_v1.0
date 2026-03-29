@@ -63,11 +63,22 @@ export function BranchRankingPage() {
         useCORS: true,
         logging: false,
       });
-      const link = document.createElement('a');
-      link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } finally {
+      canvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob }),
+          ]);
+        } catch {
+          // Fallback: download if clipboard not supported
+          const link = document.createElement('a');
+          link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } finally {
+          setIsCapturing(false);
+        }
+      });
+    } catch {
       setIsCapturing(false);
     }
   };
@@ -230,23 +241,23 @@ export function BranchRankingPage() {
                       </td>
                       <td className="brRankNameCell">{b.branch}</td>
                       <td className="brRankBarCell">
-                        <div className="brRankBarWrap">
-                          {b.total > 0 && (
-                            <div
-                              className="brRankBarFill"
-                              style={{
-                                width: `${barPct}%`,
-                                background: getBarColor(rank, branches.length),
-                              }}
-                            />
-                          )}
-                          <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                        <div className="brRankBarRow">
+                          <div className="brRankBarWrap">
+                            {b.total > 0 && (
+                              <div
+                                className="brRankBarFill"
+                                style={{
+                                  width: `${barPct}%`,
+                                  background: getBarColor(rank, branches.length),
+                                }}
+                              />
+                            )}
+                            <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                          </div>
+                          <span className={`brRankRevenueInline${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}>
+                            {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
+                          </span>
                         </div>
-                      </td>
-                      <td className="brRankRevenueCell">
-                        <span className={isJackpot ? 'brRankJackpotVal' : b.total === 0 ? 'brRankZeroVal' : ''}>
-                          {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
-                        </span>
                       </td>
                       {i === 0 && (
                         <td
