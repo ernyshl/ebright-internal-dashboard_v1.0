@@ -7,51 +7,70 @@ const financeRouter = express.Router();
 financeRouter.use(requireAuth);
 financeRouter.use(requireRole(['super_admin', 'ceo', 'finance', 'od', 'rm']));
 
-// Branch Ranking — sum invoices by branch, filtered by date range
+// Branch Ranking — always returns top 20 branches (RM0 for those with no data in period)
 financeRouter.get('/branch-ranking', async (req, res) => {
   try {
     const { date_from, date_to, branch } = req.query;
 
-    const conditions = [
-      `branches IS NOT NULL`,
-      `branches != ''`,
-      `branches != 'HQ / Others'`,
-      `total_amount IS NOT NULL`,
-    ];
+    const dateConditions = [];
     const params = [];
     let idx = 1;
 
     if (date_from) {
-      conditions.push(`DATE(doc_date + INTERVAL '8 hours') >= $${idx++}`);
+      dateConditions.push(`DATE(doc_date + INTERVAL '8 hours') >= $${idx++}`);
       params.push(date_from);
     }
     if (date_to) {
-      conditions.push(`DATE(doc_date + INTERVAL '8 hours') <= $${idx++}`);
+      dateConditions.push(`DATE(doc_date + INTERVAL '8 hours') <= $${idx++}`);
       params.push(date_to);
     }
     if (branch) {
-      conditions.push(`branches = $${idx++}`);
+      dateConditions.push(`branches = $${idx++}`);
       params.push(branch);
     }
 
-    const where = `WHERE ${conditions.join(' AND ')}`;
+    const dateWhere = dateConditions.length
+      ? `AND ${dateConditions.join(' AND ')}`
+      : '';
 
+    // Get all 20 branches (by all-time revenue), LEFT JOIN filtered period
     const result = await pool.query(`
+      WITH all_branches AS (
+        SELECT branches
+        FROM view_ebright_invoices
+        WHERE branches IS NOT NULL
+          AND branches != ''
+          AND branches != 'HQ / Others'
+          AND total_amount IS NOT NULL
+        GROUP BY branches
+        ORDER BY SUM(total_amount) DESC
+        LIMIT 20
+      ),
+      filtered AS (
+        SELECT branches, SUM(total_amount) AS total_revenue, COUNT(*) AS invoice_count
+        FROM view_ebright_invoices
+        WHERE branches IS NOT NULL
+          AND branches != ''
+          AND branches != 'HQ / Others'
+          AND total_amount IS NOT NULL
+          ${dateWhere}
+        GROUP BY branches
+      )
       SELECT
-        branches,
-        SUM(total_amount) AS total_revenue,
-        COUNT(*) AS invoice_count
-      FROM view_ebright_invoices
-      ${where}
-      GROUP BY branches
-      ORDER BY total_revenue DESC
-      LIMIT 20
+        ab.branches,
+        COALESCE(f.total_revenue, 0) AS total_revenue,
+        COALESCE(f.invoice_count, 0) AS invoice_count
+      FROM all_branches ab
+      LEFT JOIN filtered f ON f.branches = ab.branches
+      ORDER BY total_revenue DESC, ab.branches ASC
     `, params);
 
     const branchList = await pool.query(`
       SELECT DISTINCT branches
       FROM view_ebright_invoices
-      WHERE branches IS NOT NULL AND branches != ''
+      WHERE branches IS NOT NULL
+        AND branches != ''
+        AND branches != 'HQ / Others'
       ORDER BY branches
     `);
 

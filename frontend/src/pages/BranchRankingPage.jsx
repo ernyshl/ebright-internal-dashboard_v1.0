@@ -6,10 +6,13 @@ import { BackButton } from '../components/BackButton';
 const JACKPOT = 80000;
 
 const TIER_DEFS = [
-  { label: 'Tier A', emoji: '🥇', reward: 'RM500', color: '#22c55e', size: 6 },
-  { label: 'Tier B', emoji: '🥈', reward: 'RM300', color: '#f59e0b', size: 6 },
-  { label: 'Tier C', emoji: '🥉', reward: 'RM100', color: '#f97316', size: Infinity },
+  { label: 'Tier A', emoji: '🥇', reward: 'RM500', color: '#22c55e', size: 7 },
+  { label: 'Tier B', emoji: '🥈', reward: 'RM300', color: '#f59e0b', size: 7 },
+  { label: 'Tier C', emoji: '🥉', reward: 'RM100', color: '#f97316', size: 6 },
 ];
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function formatRM(val) {
   if (val === null || val === undefined) return '—';
@@ -24,52 +27,57 @@ function getBarColor(rank, total) {
   return `hsl(${hue}, ${sat}%, ${lig}%)`;
 }
 
-function getPresetDates(preset) {
-  const now = new Date();
-  const fmt = d => d.toISOString().split('T')[0];
-  const today = fmt(now);
-  if (preset === 'this_week') {
-    const day = now.getDay();
-    const daysFromMon = day === 0 ? 6 : day - 1;
-    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysFromMon);
-    return { date_from: fmt(monday), date_to: today };
-  }
-  if (preset === 'this_month') {
-    const first = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { date_from: fmt(first), date_to: today };
-  }
-  if (preset === 'last_month') {
-    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const last = new Date(now.getFullYear(), now.getMonth(), 0);
-    return { date_from: fmt(first), date_to: fmt(last) };
-  }
-  return { date_from: '', date_to: '' };
+function monthYearToDates(month, year) {
+  const mm = String(month).padStart(2, '0');
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    date_from: `${year}-${mm}-01`,
+    date_to: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
+
+function getYears() {
+  const cur = new Date().getFullYear();
+  const arr = [];
+  for (let y = cur - 2; y <= cur + 1; y++) arr.push(y);
+  return arr;
 }
 
 export function BranchRankingPage() {
-  const defaults = getPresetDates('this_month');
-  const [dateFrom, setDateFrom] = useState(defaults.date_from);
-  const [dateTo, setDateTo] = useState(defaults.date_to);
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [branch, setBranch] = useState('');
   const [activePreset, setActivePreset] = useState('this_month');
 
   const applyPreset = (preset) => {
-    const { date_from, date_to } = getPresetDates(preset);
-    setDateFrom(date_from);
-    setDateTo(date_to);
+    if (preset === 'this_month') {
+      setSelectedMonth(now.getMonth() + 1);
+      setSelectedYear(now.getFullYear());
+    } else if (preset === 'last_month') {
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      setSelectedMonth(d.getMonth() + 1);
+      setSelectedYear(d.getFullYear());
+    }
     setActivePreset(preset);
   };
 
-  const handleDateChange = (setter) => (e) => {
-    setter(e.target.value);
+  const handleMonthChange = (e) => {
+    setSelectedMonth(Number(e.target.value));
     setActivePreset(null);
   };
 
-  const params = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+  const handleYearChange = (e) => {
+    setSelectedYear(Number(e.target.value));
+    setActivePreset(null);
+  };
+
+  const { date_from, date_to } = monthYearToDates(selectedMonth, selectedYear);
+  const params = new URLSearchParams({ date_from, date_to });
   if (branch) params.set('branch', branch);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['branch-ranking', dateFrom, dateTo, branch],
+    queryKey: ['branch-ranking', date_from, date_to, branch],
     queryFn: () => apiFetch(`/api/finance/branch-ranking?${params}`),
     staleTime: 60_000,
   });
@@ -83,7 +91,6 @@ export function BranchRankingPage() {
     : JACKPOT * 1.05;
   const jackpotPct = Math.min((JACKPOT / maxTotal) * 100, 97);
 
-  // Build tier groups
   const tierRows = [];
   let idx = 0;
   for (const tier of TIER_DEFS) {
@@ -93,6 +100,8 @@ export function BranchRankingPage() {
     idx += tierBranches.length;
   }
 
+  const periodLabel = `${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`;
+
   return (
     <div className="branchRankingPage">
       <div className="pageHeader">
@@ -100,7 +109,7 @@ export function BranchRankingPage() {
           <BackButton to="/" label="Back to Home" />
         </div>
         <div className="pageHeaderTitle">🏆 Branch Ranking</div>
-        <div className="pageHeaderSub">Revenue by branch · {dateFrom} to {dateTo}</div>
+        <div className="pageHeaderSub">Revenue by branch · {periodLabel}</div>
         <div className="refreshButtonContainer">
           <button className="btn btnSmall" onClick={() => refetch()} disabled={isFetching}>
             {isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
@@ -111,14 +120,18 @@ export function BranchRankingPage() {
       {/* Filters */}
       <div className="brRankFilters">
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">Date From</label>
-          <input type="date" className="filterInput" value={dateFrom}
-            onChange={handleDateChange(setDateFrom)} />
+          <label className="brRankLabel">Month</label>
+          <select className="filterSelect" value={selectedMonth} onChange={handleMonthChange}>
+            {MONTH_SHORT.map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
         </div>
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">Date To</label>
-          <input type="date" className="filterInput" value={dateTo}
-            onChange={handleDateChange(setDateTo)} />
+          <label className="brRankLabel">Year</label>
+          <select className="filterSelect" value={selectedYear} onChange={handleYearChange}>
+            {getYears().map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
         <div className="brRankFilterGroup">
           <label className="brRankLabel">Branch</label>
@@ -131,7 +144,6 @@ export function BranchRankingPage() {
           <label className="brRankLabel">Quick Select</label>
           <div className="brRankPresets">
             {[
-              { key: 'this_week', label: 'This Week' },
               { key: 'this_month', label: 'This Month' },
               { key: 'last_month', label: 'Last Month' },
             ].map(p => (
@@ -152,7 +164,7 @@ export function BranchRankingPage() {
         <div className="brRankTotalCard">
           <div className="brRankTotalLabel">Total Revenue</div>
           <div className="brRankTotalValue">{formatRM(grandTotal)}</div>
-          <div className="brRankTotalSub">{branches.length} branches · {dateFrom} → {dateTo}</div>
+          <div className="brRankTotalSub">{branches.length} branches · {periodLabel}</div>
         </div>
         <div className="brRankTierLegend">
           <div className="brRankTierBadge" style={{ '--tier-color': '#d97706' }}>
@@ -168,7 +180,7 @@ export function BranchRankingPage() {
               <div>
                 <div className="brRankTierName">{t.label}</div>
                 <div className="brRankTierReward">{t.reward}</div>
-                <div className="brRankTierMin">Top {t.size === Infinity ? 'rest' : t.size}</div>
+                <div className="brRankTierMin">Top {t.size}</div>
               </div>
             </div>
           ))}
@@ -180,38 +192,27 @@ export function BranchRankingPage() {
         <div className="card"><div className="loadingCard"><div className="loadingDots"><span /><span /><span /></div> Loading…</div></div>
       ) : isError ? (
         <div className="errorText">Failed to load branch ranking data.</div>
-      ) : branches.length === 0 ? (
-        <div className="card"><div className="muted" style={{ padding: 24, textAlign: 'center' }}>No data for selected period.</div></div>
       ) : (
         <div className="card brRankChartCard">
           <table className="brRankBarTable">
             <tbody>
-              {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) => (
-                <>
-                  {/* Tier separator header row */}
-                  <tr key={`sep-${tier.label}`} className={`brRankTierSepRow${tIdx === 0 ? ' first' : ''}`}>
-                    <td colSpan="5">
-                      <span style={{ color: tier.color }}>
-                        {tier.emoji} {tier.label} — {tier.reward} reward
-                      </span>
-                    </td>
-                  </tr>
-
-                  {/* Branch rows */}
-                  {tierBranches.map((b, i) => {
-                    const rank = startIdx + i;
-                    const barPct = (b.total / maxTotal) * 100;
-                    const isJackpot = b.total >= JACKPOT;
-                    return (
-                      <tr key={b.branch} className="brRankDataRow">
-                        <td className="brRankRankCell">
-                          <span className={`brRankRankNum${rank < 3 ? ' top3' : ''}`}>
-                            #{rank + 1}
-                          </span>
-                        </td>
-                        <td className="brRankNameCell">{b.branch}</td>
-                        <td className="brRankBarCell">
-                          <div className="brRankBarWrap">
+              {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
+                tierBranches.map((b, i) => {
+                  const rank = startIdx + i;
+                  const barPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
+                  const isJackpot = b.total >= JACKPOT;
+                  const isTierFirst = i === 0 && tIdx > 0;
+                  return (
+                    <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
+                      <td className="brRankRankCell">
+                        <span className={`brRankRankNum${rank < 3 ? ' top3' : ''}`}>
+                          #{rank + 1}
+                        </span>
+                      </td>
+                      <td className="brRankNameCell">{b.branch}</td>
+                      <td className="brRankBarCell">
+                        <div className="brRankBarWrap">
+                          {b.total > 0 && (
                             <div
                               className="brRankBarFill"
                               style={{
@@ -219,33 +220,32 @@ export function BranchRankingPage() {
                                 background: getBarColor(rank, branches.length),
                               }}
                             />
-                            <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                          )}
+                          <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                        </div>
+                      </td>
+                      <td className="brRankRevenueCell">
+                        <span className={isJackpot ? 'brRankJackpotVal' : b.total === 0 ? 'brRankZeroVal' : ''}>
+                          {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
+                        </span>
+                      </td>
+                      {i === 0 && (
+                        <td
+                          rowSpan={tierBranches.length}
+                          className="brRankTierBadgeCell"
+                          style={{ '--tier-color': tier.color }}
+                        >
+                          <div className="brRankTierBadgeInner">
+                            <div className="brRankTierBadgeEmoji">{tier.emoji}</div>
+                            <div className="brRankTierBadgeName">{tier.label}</div>
+                            <div className="brRankTierBadgeReward">{tier.reward}</div>
                           </div>
                         </td>
-                        <td className="brRankRevenueCell">
-                          <span className={isJackpot ? 'brRankJackpotVal' : ''}>
-                            {formatRM(b.total)}
-                          </span>
-                        </td>
-                        {/* Tier badge — only on first row, spans all rows in tier */}
-                        {i === 0 && (
-                          <td
-                            rowSpan={tierBranches.length}
-                            className="brRankTierBadgeCell"
-                            style={{ '--tier-color': tier.color }}
-                          >
-                            <div className="brRankTierBadgeInner">
-                              <div className="brRankTierBadgeEmoji">{tier.emoji}</div>
-                              <div className="brRankTierBadgeName">{tier.label}</div>
-                              <div className="brRankTierBadgeReward">{tier.reward}</div>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </>
-              ))}
+                      )}
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

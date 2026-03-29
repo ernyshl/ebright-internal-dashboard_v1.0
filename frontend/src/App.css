@@ -2732,25 +2732,16 @@
   border-collapse: collapse;
 }
 
-.brRankTierSepRow td {
-  padding: 16px 8px 4px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-bottom: 2px solid var(--border);
-}
-
-.brRankTierSepRow.first td {
-  padding-top: 4px;
-}
-
 .brRankDataRow {
   border-bottom: 1px solid var(--border);
 }
 
-.brRankDataRow:hover {
-  background: var(--hoverBg, rgba(0,0,0,0.03));
+.brRankDataRow:hover td {
+  background: rgba(128, 128, 128, 0.06);
+}
+
+.brRankDataRow.tierStart td {
+  border-top: 2px solid var(--border);
 }
 
 .brRankRankCell {
@@ -2827,6 +2818,11 @@
 
 .brRankJackpotVal {
   color: #d97706;
+}
+
+.brRankZeroVal {
+  color: var(--muted);
+  font-weight: 400;
 }
 
 /* Tier badge column (rowspanned) */
