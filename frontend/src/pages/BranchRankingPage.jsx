@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import html2canvas from 'html2canvas';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
@@ -49,6 +50,41 @@ export function BranchRankingPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [branch, setBranch] = useState('');
   const [activePreset, setActivePreset] = useState('this_month');
+  const [toast, setToast] = useState(null);
+  const chartRef = useRef(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const captureToClipboard = useCallback(async () => {
+    if (!chartRef.current) return;
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#161b2b' : '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('📋 Copied to clipboard!');
+    } catch {
+      showToast('⚠️ Copy failed — try on HTTPS');
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        captureToClipboard();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [captureToClipboard]);
 
   const applyPreset = (preset) => {
     if (preset === 'this_month') {
@@ -161,7 +197,17 @@ export function BranchRankingPage() {
           <label className="brRankLabel">Total Revenue</label>
           <div className="brRankTotalValue">{isLoading ? '—' : formatRM(grandTotal)}</div>
         </div>
+        <button
+          className="brRankPresetBtn"
+          onClick={captureToClipboard}
+          disabled={isLoading}
+          title="Copy chart to clipboard (Ctrl+Shift+S)"
+        >
+          📋
+        </button>
       </div>
+
+      {toast && <div className="brRankToast">{toast}</div>}
 
       {/* Chart Table */}
       {isLoading ? (
@@ -169,7 +215,7 @@ export function BranchRankingPage() {
       ) : isError ? (
         <div className="errorText">Failed to load branch ranking data.</div>
       ) : (
-        <div className="card brRankChartCard">
+        <div ref={chartRef} className="card brRankChartCard">
           <table className="brRankBarTable">
             <tbody>
               {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
