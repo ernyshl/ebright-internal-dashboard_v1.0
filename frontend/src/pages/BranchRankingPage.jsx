@@ -54,6 +54,8 @@ export function BranchRankingPage() {
   const [modalImageUrl, setModalImageUrl] = useState(null);
   const screenshotRef = useRef(null);
 
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   const handleScreenshot = async () => {
     if (!screenshotRef.current) return;
     setIsCapturing(true);
@@ -64,8 +66,27 @@ export function BranchRankingPage() {
         useCORS: true,
         logging: false,
       });
-      const url = canvas.toDataURL('image/png');
-      setModalImageUrl(url);
+      if (isMobile) {
+        // Download — saves to camera roll, then share to WhatsApp
+        const link = document.createElement('a');
+        link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } else {
+        // Desktop — copy to clipboard
+        canvas.toBlob(async (blob) => {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            alert('Image copied to clipboard! Paste in WhatsApp Web.');
+          } catch {
+            // Fallback to download if clipboard blocked
+            const link = document.createElement('a');
+            link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+          }
+        });
+      }
     } finally {
       setIsCapturing(false);
     }
@@ -257,10 +278,13 @@ export function BranchRankingPage() {
                               />
                             )}
                             <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                            <span
+                              className={`brRankRevenueLabel${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}
+                              style={{ left: `calc(${barPct}% + 6px)` }}
+                            >
+                              {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
+                            </span>
                           </div>
-                        </td>
-                        <td className={`brRankRevenueCell${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}>
-                          {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
                         </td>
                         {i === 0 && (
                           <td

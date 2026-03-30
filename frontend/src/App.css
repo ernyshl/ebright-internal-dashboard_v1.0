@@ -2848,6 +2848,7 @@
   border-radius: 4px;
   overflow: visible;
   min-width: 80px;
+  margin-right: 130px;
 }
 
 .brRankBarFill {
@@ -2872,15 +2873,15 @@
   opacity: 0.8;
 }
 
-.brRankRevenueCell {
-  width: 140px;
-  min-width: 130px;
-  padding: 6px 10px 6px 12px;
+.brRankRevenueLabel {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
-  text-align: right;
+  pointer-events: none;
 }
 
 .brRankJackpotVal {
