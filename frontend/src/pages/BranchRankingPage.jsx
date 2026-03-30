@@ -67,11 +67,22 @@ export function BranchRankingPage() {
         useCORS: true,
         logging: false,
       });
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showToast('📋 Copied to clipboard!');
+      // Try clipboard first (requires HTTPS)
+      if (navigator.clipboard && window.isSecureContext) {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('📋 Copied to clipboard!');
+      } else {
+        // Fallback: open image directly in new tab
+        const url = canvas.toDataURL('image/png');
+        window.open(url, '_blank');
+        showToast('🖼️ Opened in new tab — right-click → Copy Image');
+      }
     } catch {
-      showToast('⚠️ Copy failed — try on HTTPS');
+      try {
+        const url = chartRef.current && (await html2canvas(chartRef.current)).toDataURL('image/png');
+        if (url) window.open(url, '_blank');
+      } catch { /* silent */ }
     }
   }, []);
 
