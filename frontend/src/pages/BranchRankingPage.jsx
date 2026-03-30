@@ -1,5 +1,4 @@
-import { useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
@@ -50,49 +49,6 @@ export function BranchRankingPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [branch, setBranch] = useState('');
   const [activePreset, setActivePreset] = useState('this_month');
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [modalImageUrl, setModalImageUrl] = useState(null);
-  const screenshotRef = useRef(null);
-
-  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const handleScreenshot = async () => {
-    if (!screenshotRef.current) return;
-    setIsCapturing(true);
-    try {
-      const canvas = await html2canvas(screenshotRef.current, {
-        backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#161b2b' : '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-      if (isMobile) {
-        // Download — saves to camera roll, then share to WhatsApp
-        const link = document.createElement('a');
-        link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } else {
-        // Desktop — copy to clipboard
-        canvas.toBlob(async (blob) => {
-          try {
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            alert('Image copied to clipboard! Paste in WhatsApp Web.');
-          } catch {
-            // Fallback to download if clipboard blocked
-            const link = document.createElement('a');
-            link.download = `branch-ranking-${periodLabel.replace(' ', '-')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-          }
-        });
-      }
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  const closeModal = () => setModalImageUrl(null);
 
   const applyPreset = (preset) => {
     if (preset === 'this_month') {
@@ -148,21 +104,6 @@ export function BranchRankingPage() {
 
   return (
     <div className="branchRankingPage">
-      {/* Image preview modal */}
-      {modalImageUrl && (
-        <div className="brRankModalOverlay" onClick={closeModal}>
-          <div className="brRankModal" onClick={e => e.stopPropagation()}>
-            <div className="brRankModalHeader">
-              <span className="brRankModalHint">
-                📱 Long-press image → Copy Image → paste in WhatsApp
-              </span>
-              <button className="brRankModalClose" onClick={closeModal}>✕</button>
-            </div>
-            <img src={modalImageUrl} alt="Branch Ranking" className="brRankModalImg" />
-          </div>
-        </div>
-      )}
-
       <div className="pageHeader">
         <div className="backButtonContainer">
           <BackButton to="/" label="Back to Home" />
@@ -220,14 +161,6 @@ export function BranchRankingPage() {
           <label className="brRankLabel">Total Revenue</label>
           <div className="brRankTotalValue">{isLoading ? '—' : formatRM(grandTotal)}</div>
         </div>
-        <button
-          className="brRankPresetBtn brRankScreenshotBtn"
-          onClick={handleScreenshot}
-          disabled={isCapturing || isLoading || isFetching}
-          title="Share image"
-        >
-          {isCapturing ? '⏳' : '📷'}
-        </button>
       </div>
 
       {/* Chart Table */}
@@ -236,76 +169,62 @@ export function BranchRankingPage() {
       ) : isError ? (
         <div className="errorText">Failed to load branch ranking data.</div>
       ) : (
-        <div ref={screenshotRef} className="brRankScreenshotTarget">
-          <div className="brRankScreenshotHeader">
-            <div>
-              <div className="brRankScreenshotTitle">🏆 Branch Ranking</div>
-              <div className="brRankScreenshotPeriod">
-                {periodLabel}{branch ? ` · ${branch}` : ' · All Branches'}
-              </div>
-            </div>
-            <div className="brRankScreenshotTotalWrap">
-              <div className="brRankScreenshotTotalLabel">Total Revenue</div>
-              <div className="brRankScreenshotTotalValue">{formatRM(grandTotal)}</div>
-            </div>
-          </div>
-          <div className="card brRankChartCard">
-            <table className="brRankBarTable">
-              <tbody>
-                {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
-                  tierBranches.map((b, i) => {
-                    const rank = startIdx + i;
-                    const barPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
-                    const isJackpot = b.total >= JACKPOT;
-                    const isTierFirst = i === 0 && tIdx > 0;
-                    return (
-                      <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
-                        <td className="brRankRankCell">
-                          <span className={`brRankRankNum${rank < 3 ? ' top3' : ''}`}>
-                            #{rank + 1}
+        <div className="card brRankChartCard">
+          <table className="brRankBarTable">
+            <tbody>
+              {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
+                tierBranches.map((b, i) => {
+                  const rank = startIdx + i;
+                  const barPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
+                  const isJackpot = b.total >= JACKPOT;
+                  const isTierFirst = i === 0 && tIdx > 0;
+                  return (
+                    <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
+                      <td className="brRankRankCell">
+                        <span className={`brRankRankNum${rank < 3 ? ' top3' : ''}`}>
+                          #{rank + 1}
+                        </span>
+                      </td>
+                      <td className="brRankNameCell">{b.branch}</td>
+                      <td className="brRankBarCell">
+                        <div className="brRankBarWrap">
+                          {b.total > 0 && (
+                            <div
+                              className="brRankBarFill"
+                              style={{
+                                width: `${barPct}%`,
+                                background: getBarColor(rank, branches.length),
+                              }}
+                            />
+                          )}
+                          <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                          <span
+                            className={`brRankRevenueLabel${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}
+                            style={{ left: `calc(${barPct}% + 6px)` }}
+                          >
+                            {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
                           </span>
-                        </td>
-                        <td className="brRankNameCell">{b.branch}</td>
-                        <td className="brRankBarCell">
-                          <div className="brRankBarWrap">
-                            {b.total > 0 && (
-                              <div
-                                className="brRankBarFill"
-                                style={{
-                                  width: `${barPct}%`,
-                                  background: getBarColor(rank, branches.length),
-                                }}
-                              />
-                            )}
-                            <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
-                            <span
-                              className={`brRankRevenueLabel${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}
-                              style={{ left: `calc(${barPct}% + 6px)` }}
-                            >
-                              {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
-                            </span>
+                        </div>
+                      </td>
+                      {i === 0 && (
+                        <td
+                          rowSpan={tierBranches.length}
+                          className="brRankTierBadgeCell"
+                          style={{ '--tier-color': tier.color }}
+                        >
+                          <div className="brRankTierBadgeInner">
+                            <div className="brRankTierBadgeEmoji">{tier.emoji}</div>
+                            <div className="brRankTierBadgeName">{tier.label}</div>
+                            <div className="brRankTierBadgeReward">{tier.reward}</div>
                           </div>
                         </td>
-                        {i === 0 && (
-                          <td
-                            rowSpan={tierBranches.length}
-                            className="brRankTierBadgeCell"
-                            style={{ '--tier-color': tier.color }}
-                          >
-                            <div className="brRankTierBadgeInner">
-                              <div className="brRankTierBadgeEmoji">{tier.emoji}</div>
-                              <div className="brRankTierBadgeName">{tier.label}</div>
-                              <div className="brRankTierBadgeReward">{tier.reward}</div>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
