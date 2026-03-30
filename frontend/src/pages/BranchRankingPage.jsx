@@ -59,30 +59,34 @@ export function BranchRankingPage() {
   };
 
   const captureToClipboard = useCallback(async () => {
-    if (!chartRef.current) return;
+    if (!chartRef.current) {
+      showToast('⚠️ Chart not ready');
+      return;
+    }
+    showToast('⏳ Capturing…');
+    let canvas;
     try {
-      const canvas = await html2canvas(chartRef.current, {
+      canvas = await html2canvas(chartRef.current, {
         backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#161b2b' : '#ffffff',
         scale: 2,
         useCORS: true,
         logging: false,
       });
-      // Try clipboard first (requires HTTPS)
-      if (navigator.clipboard && window.isSecureContext) {
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        showToast('📋 Copied to clipboard!');
-      } else {
-        // Fallback: open image directly in new tab
-        const url = canvas.toDataURL('image/png');
-        window.open(url, '_blank');
-        showToast('🖼️ Opened in new tab — right-click → Copy Image');
-      }
-    } catch {
-      try {
-        const url = chartRef.current && (await html2canvas(chartRef.current)).toDataURL('image/png');
-        if (url) window.open(url, '_blank');
-      } catch { /* silent */ }
+    } catch (err) {
+      showToast(`⚠️ Render failed: ${err.message}`);
+      return;
+    }
+    try {
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob returned null')), 'image/png');
+      });
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('📋 Copied to clipboard!');
+    } catch (err) {
+      // Clipboard failed — open in new tab as last resort
+      showToast(`⚠️ Clipboard blocked (${err.message}) — opening in tab`);
+      const url = canvas.toDataURL('image/png');
+      window.open(url, '_blank');
     }
   }, []);
 
