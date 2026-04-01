@@ -18,6 +18,9 @@ const queryClient = new QueryClient({
 // Set the query client for auth module to use on logout
 setQueryClient(queryClient);
 
+// Apply saved theme before first render to avoid flash
+document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

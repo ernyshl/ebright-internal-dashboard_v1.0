@@ -3,11 +3,9 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { VALID_ROLES } = require('../constants');
 
 const router = express.Router();
-
-// Valid roles
-const VALID_ROLES = ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr', 'academy', 'finance'];
 
 // Strong password validation regex
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;

@@ -5,6 +5,7 @@ const { z } = require('zod');
 const { pool } = require('../db');
 const { env } = require('../env');
 const { requireAuth } = require('../middleware/auth');
+const { VALID_ROLES } = require('../constants');
 
 const router = express.Router();
 
@@ -58,18 +59,6 @@ function clearLoginAttempts(email) {
   loginAttempts.delete(email);
 }
 
-// Valid roles for the company
-const VALID_ROLES = [
-  'super_admin',
-  'ceo',
-  'rm',
-  'marketing',
-  'od',
-  'hr',
-  'academy',
-  'finance'
-];
-
 const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -118,8 +107,6 @@ router.post('/login', async (req, res, next) => {
     const ok = await bcrypt.compare(password, user.password_hash);
 
     if (!ok) {
-      // Log failed attempt for security monitoring
-      console.log(`Failed login attempt for email: ${email} at ${new Date().toISOString()}`);
       recordLoginFailure(email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -215,7 +202,14 @@ router.put('/profile', requireAuth, async (req, res, next) => {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }
 
-      // Prevent password reuse (check last 5 passwords)
+      // Prevent reuse of current password
+      if (await bcrypt.compare(newPassword, userRows[0].password_hash)) {
+        return res.status(400).json({
+          error: 'Cannot reuse any of your last 5 passwords'
+        });
+      }
+
+      // Prevent reuse of last 5 historical passwords
       const { rows: passwordHistory } = await pool.query(
         'SELECT password_hash FROM password_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5',
         [req.user.sub]

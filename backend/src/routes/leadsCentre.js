@@ -1,0 +1,124 @@
+const express = require('express');
+const { pool } = require('../db');
+const { requireAuth, requireRole } = require('../middleware/auth');
+
+const router = express.Router();
+
+function sanitizeSearchTerm(term) {
+  // Escape LIKE wildcards to prevent SQL injection via search
+  return term.replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+// GET /api/leads-centre — filtered, paginated leads search
+router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr']), async (req, res, next) => {
+  try {
+    const {
+      search = '',
+      lead_source = '',
+      region = '',
+      branch = '',
+      date_from = '',
+      date_to = '',
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    const offset = (Number(page) - 1) * Number(limit);
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // Search filter (multiple fields)
+    if (search) {
+      const sanitizedSearch = sanitizeSearchTerm(search);
+      conditions.push(`(
+        LOWER(full_name) LIKE $${paramIndex} OR
+        LOWER(email) LIKE $${paramIndex} OR
+        LOWER(phone_number) LIKE $${paramIndex}
+      )`);
+      params.push(`%${sanitizedSearch.toLowerCase()}%`);
+      paramIndex++;
+    }
+
+    // Lead source filter
+    if (lead_source) {
+      conditions.push(`lead_source = $${paramIndex}`);
+      params.push(lead_source);
+      paramIndex++;
+    }
+
+    // Region filter (using actual region field from database)
+    if (region) {
+      if (region === 'Region 2') {
+        conditions.push(`(region = 'Region 2' OR region IS NULL OR TRIM(region) = '')`);
+      } else if (region === 'Region 3') {
+        conditions.push(`region = 'Region 3'`);
+      } else {
+        conditions.push(`region = $${paramIndex}`);
+        params.push(region);
+        paramIndex++;
+      }
+    }
+
+    // Branch filter
+    if (branch) {
+      conditions.push(`clean_branch = $${paramIndex}`);
+      params.push(branch);
+      paramIndex++;
+    }
+
+    // Date range filters
+    if (date_from) {
+      conditions.push(`submitted_at >= $${paramIndex}`);
+      params.push(date_from);
+      paramIndex++;
+    }
+    if (date_to) {
+      conditions.push(`submitted_at <= $${paramIndex}`);
+      params.push(`${date_to} 23:59:59`);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM master_leads_powerbi ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    // Get filtered data — use actual columns from the table
+    const dataResult = await pool.query(
+      `SELECT lead_source, full_name, phone_number, email, submitted_at, raw_branch_text, clean_branch, region
+       FROM master_leads_powerbi ${whereClause}
+       ORDER BY submitted_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, Number(limit), offset]
+    );
+
+    // Get filter options — filter branches by selected region if provided
+    const [sourcesResult, regionsResult, branchesResult] = await Promise.all([
+      pool.query('SELECT DISTINCT lead_source FROM master_leads_powerbi WHERE lead_source IS NOT NULL AND TRIM(lead_source) != \'\' ORDER BY lead_source'),
+      pool.query('SELECT DISTINCT region FROM master_leads_powerbi WHERE region IS NOT NULL AND TRIM(region) != \'\' ORDER BY region'),
+      region
+        ? pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE region = $1 AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`, [region])
+        : pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
+    ]);
+
+    return res.json({
+      leads: dataResult.rows,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit)),
+      filters: {
+        lead_sources: sourcesResult.rows.map(r => r.lead_source),
+        regions: regionsResult.rows.map(r => r.region),
+        branches: branchesResult.rows.map(r => r.clean_branch),
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+module.exports = { leadsCentreRouter: router };

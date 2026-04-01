@@ -1,16 +1,17 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { pool } = require('../db');
+const { env } = require('../env');
 const { getGoogleSpendData, getGoogleCampaignData } = require('../lib/google-ads');
 
 const router = express.Router();
 
-// Ad account IDs — move to env vars (e.g. META_MAIN_FB_ID) for easier config management
+// Ad account IDs — set META_* vars in your .env file
 const ACCOUNTS = {
-  MAIN_FB_ID: process.env.META_MAIN_FB_ID || 'act_1303223119861639',
-  TT_ID: process.env.META_TT_ID || '7158009688364204033',
-  SARA_ID: process.env.META_SARA_ID || 'act_2740903809519822',
-  ONLINE_ID: process.env.META_ONLINE_ID || 'act_1235601843302851',
+  MAIN_FB_ID: env.META_MAIN_FB_ID,
+  TT_ID: env.META_TT_ID,
+  SARA_ID: env.META_SARA_ID,
+  ONLINE_ID: env.META_ONLINE_ID,
 };
 
 // Mirrors the Streamlit logic from `app.py` (meta_spend table) and returns

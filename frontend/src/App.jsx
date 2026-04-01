@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage';
-import { useEffect } from 'react';
 import './App.css';
 import { RequireAuth } from './components/RequireAuth';
 import { RequirePermission } from './components/RequirePermission';
@@ -24,11 +23,6 @@ import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { BranchRankingPage } from './pages/BranchRankingPage';
 
 export default function App() {
-  useEffect(() => {
-    const theme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-  }, []);
-
   return (
     <Routes>
       <Route path="/landing" element={<LandingPage />} />

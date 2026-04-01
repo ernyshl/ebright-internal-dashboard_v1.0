@@ -12,8 +12,6 @@ services:
       - CORS_ORIGIN=https://dashboard.ebright.my
     env_file:
       - ./backend/.env
-    ports:
-      - "4000:4000"
     networks:
       - app-network
 

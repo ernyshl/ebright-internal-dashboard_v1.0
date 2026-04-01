@@ -2,18 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { getUser, clearToken } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess } from '../lib/permissions';
-
-// Role labels for display
-const ROLE_LABELS = {
-  super_admin: 'Super Admin',
-  ceo: 'CEO',
-  rm: 'RM',
-  marketing: 'Marketing',
-  od: 'OD',
-  hr: 'HR',
-  academy: 'Academy',
-  finance: 'Finance',
-};
+import { getRoleLabel, getRoleBadgeClass } from '../lib/roles';
 
 export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   const user = getUser();
@@ -35,28 +24,6 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
-
-  const getRoleBadgeClass = (role) => {
-    switch (role) {
-      case 'super_admin':
-      case 'ceo':
-        return 'badgeExecutive';
-      case 'marketing':
-        return 'badgeMarketing';
-      case 'academy':
-        return 'badgeAcademy';
-      case 'rm':
-      case 'od':
-      case 'finance':
-        return 'badgeFinance';
-      case 'hr':
-        return 'badgeSales';
-      default:
-        return 'badgeExecutive';
-    }
-  };
-
-  const getRoleLabel = (role) => ROLE_LABELS[role] || role;
 
   const linkClass = ({ isActive }) => (isActive ? 'navLink navLinkActive' : 'navLink');
 

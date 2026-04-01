@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { pool } = require('../src/db');
+const { VALID_ROLES } = require('../src/constants');
 require('../src/env'); // loads/validates env
 
 function parseArgs(argv) {
@@ -15,9 +16,6 @@ function parseArgs(argv) {
   }
   return out;
 }
-
-// Valid roles
-const VALID_ROLES = ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr', 'academy', 'finance'];
 
 // Strong password validation regex
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;

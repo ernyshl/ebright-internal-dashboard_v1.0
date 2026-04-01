@@ -34,10 +34,7 @@ export function LeadsCentrePage() {
           Object.entries({ ...filters, search: debouncedSearch }).filter(([, v]) => v)
         ),
       });
-      console.log('Fetching leads with params:', params.toString());
-      const result = await apiFetch(`/api/leads-centre?${params}`);
-      console.log('Leads fetched successfully:', result);
-      return result;
+      return await apiFetch(`/api/leads-centre?${params}`);
     },
     retry: 1,
     staleTime: 0, // Always fetch fresh data when filters change

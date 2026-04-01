@@ -5497,3 +5497,38 @@
   color: #ffffff !important;
   text-shadow: none !important;
 }
+
+/* Event dashboard scroll container */
+.eventScrollContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.eventScrollContainer::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.eventScrollContainer::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.eventScrollContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--textSecondary);
+}
+
+@media (min-width: 640px) {
+  .eventDashboardGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .eventDashboardGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding: 32px;
+  }
+}

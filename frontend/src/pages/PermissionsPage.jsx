@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { useAllPermissions } from '../lib/permissions';
 import { BackButton } from '../components/BackButton';
+import { getRoleLabel, getRoleBadgeClass } from '../lib/roles';
 
 export function PermissionsPage() {
   const queryClient = useQueryClient();
@@ -32,41 +33,6 @@ export function PermissionsPage() {
   const getInitials = (name) => {
     if (!name) return '?';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  // Get role badge color
-  const getRoleBadgeClass = (role) => {
-    switch (role) {
-      case 'super_admin':
-      case 'ceo':
-        return 'badgeExecutive';
-      case 'marketing':
-        return 'badgeMarketing';
-      case 'academy':
-        return 'badgeAcademy';
-      case 'finance':
-        return 'badgeFinance';
-      case 'rm':
-      case 'od':
-      case 'hr':
-        return 'badgeSales';
-      default:
-        return 'badgeExecutive';
-    }
-  };
-
-  const getRoleLabel = (role) => {
-    const labels = {
-      super_admin: 'Super Admin',
-      ceo: 'CEO',
-      rm: 'Regional Manager',
-      marketing: 'Marketing',
-      od: 'Operations Director',
-      hr: 'Human Resources',
-      academy: 'Academy',
-      finance: 'Finance',
-    };
-    return labels[role] || role;
   };
 
   // Get dashboard icon

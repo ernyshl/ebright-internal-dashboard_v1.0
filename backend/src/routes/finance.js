@@ -8,7 +8,7 @@ financeRouter.use(requireAuth);
 financeRouter.use(requireRole(['super_admin', 'ceo', 'finance', 'od', 'rm']));
 
 // Branch Ranking — always returns top 20 branches (RM0 for those with no data in period)
-financeRouter.get('/branch-ranking', async (req, res) => {
+financeRouter.get('/branch-ranking', async (req, res, next) => {
   try {
     const { date_from, date_to, branch } = req.query;
 
@@ -76,7 +76,7 @@ financeRouter.get('/branch-ranking', async (req, res) => {
 
     const grandTotal = result.rows.reduce((sum, r) => sum + parseFloat(r.total_revenue || 0), 0);
 
-    res.json({
+    return res.json({
       branches: result.rows.map(r => ({
         branch: r.branches,
         total: parseFloat(r.total_revenue || 0),
@@ -86,8 +86,7 @@ financeRouter.get('/branch-ranking', async (req, res) => {
       branchList: branchList.rows.map(r => r.branches),
     });
   } catch (err) {
-    console.error('Error fetching branch ranking:', err);
-    res.status(500).json({ error: 'Failed to fetch branch ranking' });
+    return next(err);
   }
 });
 

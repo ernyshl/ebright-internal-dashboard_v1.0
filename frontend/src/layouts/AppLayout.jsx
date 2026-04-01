@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { apiFetch } from '../lib/api';
 import { clearToken } from '../lib/auth';
+import { getRoleLabel } from '../lib/roles';
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -31,20 +32,6 @@ export function AppLayout() {
   const initials = user?.fullName
     ? user.fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
-
-  const getRoleLabel = (role) => {
-    const labels = {
-      super_admin: 'Super Admin',
-      ceo: 'CEO',
-      rm: 'Regional Manager',
-      marketing: 'Marketing',
-      od: 'Optimisation Department',
-      hr: 'Human Resources',
-      academy: 'Academy',
-      finance: 'Finance',
-    };
-    return labels[role] || role;
-  };
 
   function onLogout() {
     clearToken();

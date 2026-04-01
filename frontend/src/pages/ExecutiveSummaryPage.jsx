@@ -26,7 +26,7 @@ export function ExecutiveSummaryPage() {
 
   const channels = marketing.data?.channels;
   const groups = marketing.data?.groups;
-  const totalRow = groups?.ebright_group_expenses;
+  const totalRow = groups?.main_marketing;
 
   // Sum up leads from all sources
   const totalLeadsToday = leads.data?.total?.reduce((s, r) => s + Number(r.count_today || 0), 0) || 0;

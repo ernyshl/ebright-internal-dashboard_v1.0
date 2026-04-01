@@ -151,7 +151,8 @@ export function MarketingPerformancePage() {
     { value: 12, label: 'December' },
   ];
 
-  const years = [2024, 2025, 2026];
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear - 1, currentYear, currentYear + 1];
 
   return (
     <div className="stack">

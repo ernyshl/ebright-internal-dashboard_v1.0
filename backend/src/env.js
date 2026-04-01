@@ -18,6 +18,12 @@ const EnvSchema = z.object({
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
   GOOGLE_LOGIN_CUSTOMER_ID: z.string().optional(),
   GOOGLE_ADS_ID: z.string().optional(),
+
+  // Meta / TikTok ad account IDs
+  META_MAIN_FB_ID: z.string().optional(),
+  META_TT_ID: z.string().optional(),
+  META_SARA_ID: z.string().optional(),
+  META_ONLINE_ID: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
