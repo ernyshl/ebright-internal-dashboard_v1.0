@@ -149,7 +149,6 @@ export function EventDashboardPage() {
           className="eventDashboardGrid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(1, 1fr)',
             gap: '16px',
             backgroundColor: 'var(--bg)',
             padding: '16px',
