@@ -19,17 +19,21 @@ export function EventDashboardPage() {
     return new Date(year, month - 1, day);
   };
 
-  const upcomingEvents = events.filter(event => parseLocalDate(event.date_from) > today);
+  const upcomingEvents = events
+    .filter(event => parseLocalDate(event.date_from) > today)
+    .sort((a, b) => parseLocalDate(a.date_from) - parseLocalDate(b.date_from));
   const ongoingEvents = events.filter(event => {
     const from = parseLocalDate(event.date_from);
     const to = parseLocalDate(event.date_to);
     return from <= today && to >= today;
   });
   const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const completedEvents = events.filter(event => {
-    const dateTo = parseLocalDate(event.date_to);
-    return dateTo < today && dateTo >= firstDayLastMonth;
-  });
+  const completedEvents = events
+    .filter(event => {
+      const dateTo = parseLocalDate(event.date_to);
+      return dateTo < today && dateTo >= firstDayLastMonth;
+    })
+    .sort((a, b) => parseLocalDate(b.date_to) - parseLocalDate(a.date_to));
 
   const SECTION_STYLES = {
     upcoming: { headerBg: 'var(--eventHeaderUpcoming, #1e3a8a)', badgeBg: '#3b82f6' },
