@@ -106,19 +106,19 @@ function SourceCard({ source, counts, color }) {
           <Link to={getLeadCentreUrl(source.name, 'yesterday')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(yesterday)}</span>
           </Link>
-          <span className="sourceStatLabel">Yesterday</span>
+          <span className="sourceStatLabel">-1 day</span>
         </div>
         <div className="sourceStat">
           <Link to={getLeadCentreUrl(source.name, '7days')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(days7)}</span>
           </Link>
-          <span className="sourceStatLabel">7 Days</span>
+          <span className="sourceStatLabel">-7 days</span>
         </div>
         <div className="sourceStat">
           <Link to={getLeadCentreUrl(source.name, '30days')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(days30)}</span>
           </Link>
-          <span className="sourceStatLabel">30 Days</span>
+          <span className="sourceStatLabel">-30 days</span>
         </div>
       </div>
       <div className={`sourceCardTrend ${trend >= 0 ? 'trendUp' : 'trendDown'}`}>
@@ -156,7 +156,7 @@ function RegionCard({ region, counts, color }) {
           <div className="regionBarValue">{formatNumber(today)}</div>
         </div>
         <div className="regionBarItem">
-          <div className="regionBarLabel">Yesterday</div>
+          <div className="regionBarLabel">-1 day</div>
           <div className="regionBarTrack">
             <div 
               className="regionBarFill" 
@@ -166,7 +166,7 @@ function RegionCard({ region, counts, color }) {
           <div className="regionBarValue">{formatNumber(yesterday)}</div>
         </div>
         <div className="regionBarItem">
-          <div className="regionBarLabel">7 Days</div>
+          <div className="regionBarLabel">-7 days</div>
           <div className="regionBarTrack">
             <div 
               className="regionBarFill" 
@@ -176,7 +176,7 @@ function RegionCard({ region, counts, color }) {
           <div className="regionBarValue">{formatNumber(days7)}</div>
         </div>
         <div className="regionBarItem">
-          <div className="regionBarLabel">30 Days</div>
+          <div className="regionBarLabel">-30 days</div>
           <div className="regionBarTrack">
             <div 
               className="regionBarFill" 
@@ -220,9 +220,9 @@ function BranchTable({ branches }) {
           <tr>
             <th>Branch</th>
             <th className="textRight">Today</th>
-            <th className="textRight">Yesterday</th>
-            <th className="textRight">7 Days</th>
-            <th className="textRight">30 Days</th>
+            <th className="textRight">-1 day</th>
+            <th className="textRight">-7 days</th>
+            <th className="textRight">-30 days</th>
           </tr>
         </thead>
         <tbody>
