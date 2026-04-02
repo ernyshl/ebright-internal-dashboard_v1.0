@@ -4,23 +4,35 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
-function getLeadCentreUrl(leadSourceKey, period) {
+const REGION_BRANCHES = {
+  'Region A': ['Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
+  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang TTDI Groove', 'Taman Sri Gombak'],
+  'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
+};
+
+function getLeadCentreUrl(leadSourceKey, period, region = '') {
   const now = new Date();
   const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const today = fmt(now);
   const yesterday = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
   const days7 = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
   const days30 = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29));
+  const dow = now.getDay();
+  const thisWeekStart = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (dow === 0 ? -6 : 1 - dow)));
+  const thisMonthStart = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
 
   const ranges = {
-    today:     { date_from: today,     date_to: today },
-    yesterday: { date_from: yesterday, date_to: yesterday },
-    '7days':   { date_from: days7,     date_to: today },
-    '30days':  { date_from: days30,    date_to: today },
+    today:     { date_from: today,          date_to: today },
+    yesterday: { date_from: yesterday,      date_to: yesterday },
+    '7days':   { date_from: days7,          date_to: today },
+    '30days':  { date_from: days30,         date_to: today },
+    thisweek:  { date_from: thisWeekStart,  date_to: today },
+    thismonth: { date_from: thisMonthStart, date_to: today },
   };
   const { date_from, date_to } = ranges[period] || {};
   const params = new URLSearchParams({ date_from, date_to });
   if (leadSourceKey) params.set('lead_source', leadSourceKey);
+  if (region) params.set('region', region);
   return `/leads-centre?${params}`;
 }
 
@@ -129,62 +141,68 @@ function SourceCard({ source, counts, color }) {
 }
 
 function RegionCard({ region, counts, color }) {
-  // Ensure all counts are numbers
-  const today = typeof counts?.count_today === 'string' ? parseInt(counts.count_today, 10) : (counts?.count_today || 0);
-  const yesterday = typeof counts?.count_yesterday === 'string' ? parseInt(counts.count_yesterday, 10) : (counts?.count_yesterday || 0);
-  const days7 = typeof counts?.count_7_days === 'string' ? parseInt(counts.count_7_days, 10) : (counts?.count_7_days || 0);
-  const days30 = typeof counts?.count_30_days === 'string' ? parseInt(counts.count_30_days, 10) : (counts?.count_30_days || 0);
-  
-  // Total leads = 30 days count (not sum of all periods since they overlap)
-  const total = days30;
-  
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const n = (v) => (typeof v === 'string' ? parseInt(v, 10) : (v || 0));
+  const today     = n(counts?.count_today);
+  const yesterday = n(counts?.count_yesterday);
+  const thisWeek  = n(counts?.count_this_week);
+  const thisMonth = n(counts?.count_this_month);
+
+  const total = thisMonth || 1; // use this month as bar denominator
+  const regionName = region.name;
+  const branches = REGION_BRANCHES[regionName] || [];
+
+  const bars = [
+    { label: 'Today',      value: today,     period: 'today' },
+    { label: 'Yesterday',  value: yesterday, period: 'yesterday' },
+    { label: 'This Week',  value: thisWeek,  period: 'thisweek' },
+    { label: 'This Month', value: thisMonth, period: 'thismonth' },
+  ];
+
   return (
     <div className="regionCard" style={{ '--region-color': color }}>
       <div className="regionCardHeader">
-        <span className="regionCardName">{region.name}</span>
-        <span className="regionCardTotal">{formatNumber(total)}</span>
+        <span
+          className="regionCardName"
+          style={{ position: 'relative', cursor: 'default' }}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          {regionName}
+          {showTooltip && branches.length > 0 && (
+            <div className="regionBranchTooltip">
+              {branches.map(b => <div key={b}>{b}</div>)}
+            </div>
+          )}
+        </span>
+        <Link
+          to={getLeadCentreUrl('', 'today', regionName)}
+          className="regionCardTotalLink"
+        >
+          <span className="regionCardTotal">{formatNumber(today)}</span>
+          <span className="regionCardTotalLabel">Today</span>
+        </Link>
       </div>
       <div className="regionCardBars">
-        <div className="regionBarItem">
-          <div className="regionBarLabel">Today</div>
-          <div className="regionBarTrack">
-            <div 
-              className="regionBarFill" 
-              style={{ width: `${Math.min((today / total) * 100 || 0, 100)}%` }}
-            />
+        {bars.map(({ label, value, period }) => (
+          <div key={label} className="regionBarItem">
+            <div className="regionBarLabel">{label}</div>
+            <div className="regionBarTrack">
+              <div
+                className="regionBarFill"
+                style={{ width: `${Math.min((value / total) * 100 || 0, 100)}%` }}
+              />
+            </div>
+            {label === 'Today' ? (
+              <Link to={getLeadCentreUrl('', period, regionName)} className="regionBarValueLink">
+                {formatNumber(value)}
+              </Link>
+            ) : (
+              <div className="regionBarValue">{formatNumber(value)}</div>
+            )}
           </div>
-          <div className="regionBarValue">{formatNumber(today)}</div>
-        </div>
-        <div className="regionBarItem">
-          <div className="regionBarLabel">-1 day</div>
-          <div className="regionBarTrack">
-            <div 
-              className="regionBarFill" 
-              style={{ width: `${Math.min((yesterday / total) * 100 || 0, 100)}%` }}
-            />
-          </div>
-          <div className="regionBarValue">{formatNumber(yesterday)}</div>
-        </div>
-        <div className="regionBarItem">
-          <div className="regionBarLabel">-7 days</div>
-          <div className="regionBarTrack">
-            <div 
-              className="regionBarFill" 
-              style={{ width: `${Math.min((days7 / total) * 100 || 0, 100)}%` }}
-            />
-          </div>
-          <div className="regionBarValue">{formatNumber(days7)}</div>
-        </div>
-        <div className="regionBarItem">
-          <div className="regionBarLabel">-30 days</div>
-          <div className="regionBarTrack">
-            <div 
-              className="regionBarFill" 
-              style={{ width: `${Math.min((days30 / total) * 100 || 0, 100)}%` }}
-            />
-          </div>
-          <div className="regionBarValue">{formatNumber(days30)}</div>
-        </div>
+        ))}
       </div>
     </div>
   );
