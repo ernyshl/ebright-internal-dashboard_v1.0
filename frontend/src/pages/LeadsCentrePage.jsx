@@ -4,6 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
+const BRANCH_REGION = {
+  'Rimbayu': 'Region A', 'Klang': 'Region A', 'Shah Alam': 'Region A',
+  'Setia Alam': 'Region A', 'Denai Alam': 'Region A', 'Eco Grandeur': 'Region A', 'Subang Taipan': 'Region A',
+  'Danau Kota': 'Region B', 'Kota Damansara': 'Region B', 'Ampang': 'Region B',
+  'Sri Petaling': 'Region B', 'Bandar Tun Hussein Onn': 'Region B', 'Kajang TTDI Groove': 'Region B', 'Taman Sri Gombak': 'Region B',
+  'Putrajaya': 'Region C', 'Kota Warisan': 'Region C', 'Bandar Baru Bangi': 'Region C',
+  'Cyberjaya': 'Region C', 'Bandar Seri Putra': 'Region C', 'Dataran Puchong Utama': 'Region C', 'Online': 'Region C',
+};
+
+function getRegionFromBranch(branch) {
+  if (!branch) return '-';
+  const key = Object.keys(BRANCH_REGION).find(k => branch.toLowerCase().includes(k.toLowerCase()));
+  return key ? BRANCH_REGION[key] : '-';
+}
+
 const DATE_PRESETS = [
   { value: 'today',      label: 'Today' },
   { value: 'yesterday',  label: 'Yesterday' },
@@ -16,7 +31,12 @@ const DATE_PRESETS = [
   { value: 'last_year',  label: 'Last Year' },
 ];
 
-function fmt(d) { return d.toISOString().split('T')[0]; }
+function fmt(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 function getDateRange(preset) {
   const now = new Date();
@@ -356,8 +376,7 @@ export function LeadsCentrePage() {
                       </td>
                       <td>
                         <span className="regionBadge">
-                          {lead.region || (lead.clean_branch?.includes('Online') ? 'Region 3' :
-                            lead.clean_branch ? 'Region 2' : '-')}
+                          {getRegionFromBranch(lead.clean_branch)}
                         </span>
                       </td>
                       <td>
