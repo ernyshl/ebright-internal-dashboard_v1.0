@@ -4,6 +4,12 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+const REGION_BRANCHES = {
+  'Region A': ['Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
+  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang TTDI Groove', 'Taman Sri Gombak'],
+  'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
+};
+
 function sanitizeSearchTerm(term) {
   // Escape LIKE wildcards to prevent SQL injection via search
   return term.replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -47,17 +53,11 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
       paramIndex++;
     }
 
-    // Region filter (using actual region field from database)
-    if (region) {
-      if (region === 'Region 2') {
-        conditions.push(`(region = 'Region 2' OR region IS NULL OR TRIM(region) = '')`);
-      } else if (region === 'Region 3') {
-        conditions.push(`region = 'Region 3'`);
-      } else {
-        conditions.push(`region = $${paramIndex}`);
-        params.push(region);
-        paramIndex++;
-      }
+    // Region filter — mapped from clean_branch to Region A / B / C
+    if (region && REGION_BRANCHES[region]) {
+      conditions.push(`TRIM(clean_branch) ILIKE ANY($${paramIndex})`);
+      params.push(REGION_BRANCHES[region]);
+      paramIndex++;
     }
 
     // Branch filter
@@ -97,11 +97,10 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
     );
 
     // Get filter options — filter branches by selected region if provided
-    const [sourcesResult, regionsResult, branchesResult] = await Promise.all([
+    const [sourcesResult, branchesResult] = await Promise.all([
       pool.query('SELECT DISTINCT lead_source FROM master_leads_powerbi WHERE lead_source IS NOT NULL AND TRIM(lead_source) != \'\' ORDER BY lead_source'),
-      pool.query('SELECT DISTINCT region FROM master_leads_powerbi WHERE region IS NOT NULL AND TRIM(region) != \'\' ORDER BY region'),
-      region
-        ? pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE region = $1 AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`, [region])
+      region && REGION_BRANCHES[region]
+        ? pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE TRIM(clean_branch) ILIKE ANY($1) AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`, [REGION_BRANCHES[region]])
         : pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
     ]);
 
@@ -112,7 +111,7 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
       totalPages: Math.ceil(total / Number(limit)),
       filters: {
         lead_sources: sourcesResult.rows.map(r => r.lead_source),
-        regions: regionsResult.rows.map(r => r.region),
+        regions: Object.keys(REGION_BRANCHES),
         branches: branchesResult.rows.map(r => r.clean_branch),
       },
     });

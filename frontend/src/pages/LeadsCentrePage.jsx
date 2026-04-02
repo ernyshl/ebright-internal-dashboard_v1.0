@@ -4,6 +4,70 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
+const DATE_PRESETS = [
+  { value: 'today',      label: 'Today' },
+  { value: 'yesterday',  label: 'Yesterday' },
+  { value: 'this_week',  label: 'This Week' },
+  { value: 'last_week',  label: 'Last Week' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'last_month', label: 'Last Month' },
+  { value: 'last_30',    label: 'Last 30 Days' },
+  { value: 'this_year',  label: 'This Year' },
+  { value: 'last_year',  label: 'Last Year' },
+];
+
+function fmt(d) { return d.toISOString().split('T')[0]; }
+
+function getDateRange(preset) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayOfWeek = today.getDay(); // 0=Sun
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  switch (preset) {
+    case 'today':
+      return { date_from: fmt(today), date_to: fmt(today) };
+    case 'yesterday': {
+      const d = new Date(today); d.setDate(d.getDate() - 1);
+      return { date_from: fmt(d), date_to: fmt(d) };
+    }
+    case 'this_week': {
+      const mon = new Date(today); mon.setDate(today.getDate() + daysToMonday);
+      return { date_from: fmt(mon), date_to: fmt(today) };
+    }
+    case 'last_week': {
+      const thisMon = new Date(today); thisMon.setDate(today.getDate() + daysToMonday);
+      const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
+      const lastSun = new Date(thisMon); lastSun.setDate(thisMon.getDate() - 1);
+      return { date_from: fmt(lastMon), date_to: fmt(lastSun) };
+    }
+    case 'this_month': {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { date_from: fmt(first), date_to: fmt(today) };
+    }
+    case 'last_month': {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const last  = new Date(today.getFullYear(), today.getMonth(), 0);
+      return { date_from: fmt(first), date_to: fmt(last) };
+    }
+    case 'last_30': {
+      const d = new Date(today); d.setDate(d.getDate() - 30);
+      return { date_from: fmt(d), date_to: fmt(today) };
+    }
+    case 'this_year': {
+      const first = new Date(today.getFullYear(), 0, 1);
+      return { date_from: fmt(first), date_to: fmt(today) };
+    }
+    case 'last_year': {
+      const first = new Date(today.getFullYear() - 1, 0, 1);
+      const last  = new Date(today.getFullYear() - 1, 11, 31);
+      return { date_from: fmt(first), date_to: fmt(last) };
+    }
+    default:
+      return { date_from: '', date_to: '' };
+  }
+}
+
 export function LeadsCentrePage() {
   const [searchParams] = useSearchParams();
   const [filters, setFilters] = useState({
@@ -16,6 +80,7 @@ export function LeadsCentrePage() {
   });
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [datePreset, setDatePreset] = useState('');
 
   // Debounce search
   const handleSearchChange = useCallback((value) => {
@@ -45,22 +110,24 @@ export function LeadsCentrePage() {
     setFilters(f => ({
       ...f,
       [key]: value,
-      // Clear branch when region changes to load correct branches
       ...(key === 'region' ? { branch: '' } : {})
     }));
+    // Clear preset when dates are manually changed
+    if (key === 'date_from' || key === 'date_to') setDatePreset('');
+    setPage(1);
+  };
+
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset);
+    const range = getDateRange(preset);
+    setFilters(f => ({ ...f, ...range }));
     setPage(1);
   };
 
   const clearFilters = () => {
-    setFilters({
-      search: '',
-      lead_source: '',
-      region: '',
-      branch: '',
-      date_from: '',
-      date_to: '',
-    });
+    setFilters({ search: '', lead_source: '', region: '', branch: '', date_from: '', date_to: '' });
     setDebouncedSearch('');
+    setDatePreset('');
     setPage(1);
   };
 
@@ -180,6 +247,21 @@ export function LeadsCentrePage() {
               <option value="">All Branches</option>
               {data?.filters?.branches?.map(branch => (
                 <option key={branch} value={branch}>{branch}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date Preset */}
+          <div className="filterGroup">
+            <label>Date Period</label>
+            <select
+              value={datePreset}
+              onChange={(e) => handlePresetChange(e.target.value)}
+              className="filterSelect"
+            >
+              <option value="">Custom Range</option>
+              {DATE_PRESETS.map(p => (
+                <option key={p.value} value={p.value}>{p.label}</option>
               ))}
             </select>
           </div>
