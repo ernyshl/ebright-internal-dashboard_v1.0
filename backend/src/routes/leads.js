@@ -33,17 +33,34 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       ORDER BY count_30_days DESC;
     `;
 
-    // B) Regions
+    // B) Regions — mapped from clean_branch to Region A / B / C
     const queryRegion = `
-      SELECT
-        region,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-      FROM master_leads_powerbi
-      WHERE region IS NOT NULL AND TRIM(region) != ''
-      GROUP BY region
+      SELECT *
+      FROM (
+        SELECT
+          CASE
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
+              'Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
+            ]) THEN 'Region A'
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
+              'Danau Kota','Kota Damansara','Ampang','Sri Petaling',
+              'Bandar Tun Hussein Onn','Kajang TTDI Groove','Taman Sri Gombak'
+            ]) THEN 'Region B'
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
+              'Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya',
+              'Bandar Seri Putra','Dataran Puchong Utama'
+            ]) OR LOWER(TRIM(clean_branch)) LIKE '%online%' THEN 'Region C'
+            ELSE NULL
+          END AS region,
+          COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
+          COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
+          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
+          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
+        FROM master_leads_powerbi
+        WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != ''
+        GROUP BY 1
+      ) sub
+      WHERE region IS NOT NULL
       ORDER BY region;
     `;
 
