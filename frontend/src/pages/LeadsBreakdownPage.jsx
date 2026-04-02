@@ -197,7 +197,7 @@ function RegionCard({ region, counts, color }) {
                 style={{ width: `${Math.min((value / total) * 100 || 0, 100)}%` }}
               />
             </div>
-            {label === 'Today' ? (
+            {labelDesktop === 'Today' ? (
               <Link to={getLeadCentreUrl('', period, regionName)} className="regionBarValueLink">
                 {formatNumber(value)}
               </Link>
