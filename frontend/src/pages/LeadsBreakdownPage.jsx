@@ -118,19 +118,19 @@ function SourceCard({ source, counts, color }) {
           <Link to={getLeadCentreUrl(source.name, 'yesterday')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(yesterday)}</span>
           </Link>
-          <span className="sourceStatLabel">-1 day</span>
+          <span className="sourceStatLabel"><span className="labelDesktop">Yesterday</span><span className="labelMobile">-1 day</span></span>
         </div>
         <div className="sourceStat">
           <Link to={getLeadCentreUrl(source.name, '7days')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(days7)}</span>
           </Link>
-          <span className="sourceStatLabel">-7 days</span>
+          <span className="sourceStatLabel"><span className="labelDesktop">Last 7 Days</span><span className="labelMobile">-7 days</span></span>
         </div>
         <div className="sourceStat">
           <Link to={getLeadCentreUrl(source.name, '30days')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(days30)}</span>
           </Link>
-          <span className="sourceStatLabel">-30 days</span>
+          <span className="sourceStatLabel"><span className="labelDesktop">Last 30 Days</span><span className="labelMobile">-30 days</span></span>
         </div>
       </div>
       <div className={`sourceCardTrend ${trend >= 0 ? 'trendUp' : 'trendDown'}`}>
@@ -146,18 +146,18 @@ function RegionCard({ region, counts, color }) {
   const n = (v) => (typeof v === 'string' ? parseInt(v, 10) : (v || 0));
   const today     = n(counts?.count_today);
   const yesterday = n(counts?.count_yesterday);
-  const thisWeek  = n(counts?.count_this_week);
-  const thisMonth = n(counts?.count_this_month);
+  const days7     = n(counts?.count_7_days);
+  const days30    = n(counts?.count_30_days);
 
-  const total = thisMonth || 1; // use this month as bar denominator
+  const total = days30 || 1;
   const regionName = region.name;
   const branches = REGION_BRANCHES[regionName] || [];
 
   const bars = [
-    { label: 'Today',      value: today,     period: 'today' },
-    { label: 'Yesterday',  value: yesterday, period: 'yesterday' },
-    { label: 'This Week',  value: thisWeek,  period: 'thisweek' },
-    { label: 'This Month', value: thisMonth, period: 'thismonth' },
+    { labelDesktop: 'Today',        labelMobile: 'Today',    value: today,     period: 'today' },
+    { labelDesktop: 'Yesterday',    labelMobile: '-1 day',   value: yesterday, period: 'yesterday' },
+    { labelDesktop: 'Last 7 Days',  labelMobile: '-7 days',  value: days7,     period: '7days' },
+    { labelDesktop: 'Last 30 Days', labelMobile: '-30 days', value: days30,    period: '30days' },
   ];
 
   return (
@@ -185,9 +185,12 @@ function RegionCard({ region, counts, color }) {
         </Link>
       </div>
       <div className="regionCardBars">
-        {bars.map(({ label, value, period }) => (
-          <div key={label} className="regionBarItem">
-            <div className="regionBarLabel">{label}</div>
+        {bars.map(({ labelDesktop, labelMobile, value, period }) => (
+          <div key={labelDesktop} className="regionBarItem">
+            <div className="regionBarLabel">
+              <span className="labelDesktop">{labelDesktop}</span>
+              <span className="labelMobile">{labelMobile}</span>
+            </div>
             <div className="regionBarTrack">
               <div
                 className="regionBarFill"
@@ -238,9 +241,9 @@ function BranchTable({ branches }) {
           <tr>
             <th>Branch</th>
             <th className="textRight">Today</th>
-            <th className="textRight">-1 day</th>
-            <th className="textRight">-7 days</th>
-            <th className="textRight">-30 days</th>
+            <th className="textRight"><span className="labelDesktop">Yesterday</span><span className="labelMobile">-1 day</span></th>
+            <th className="textRight"><span className="labelDesktop">Last 7 Days</span><span className="labelMobile">-7 days</span></th>
+            <th className="textRight"><span className="labelDesktop">Last 30 Days</span><span className="labelMobile">-30 days</span></th>
           </tr>
         </thead>
         <tbody>

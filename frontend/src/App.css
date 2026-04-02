@@ -5566,6 +5566,15 @@
   background: var(--textSecondary);
 }
 
+/* Responsive labels: short on mobile, full on desktop */
+.labelDesktop { display: none; }
+.labelMobile  { display: inline; }
+
+@media (min-width: 768px) {
+  .labelDesktop { display: inline; }
+  .labelMobile  { display: none; }
+}
+
 @media (min-width: 640px) {
   .eventDashboardGrid {
     grid-template-columns: repeat(2, 1fr);

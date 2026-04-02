@@ -54,8 +54,8 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           END AS region,
           COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
           COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-          COUNT(*) FILTER (WHERE ${asDate} >= date_trunc('week', ${today}) AND ${asDate} <= ${today}) AS count_this_week,
-          COUNT(*) FILTER (WHERE ${asDate} >= date_trunc('month', ${today}) AND ${asDate} <= ${today}) AS count_this_month
+          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
+          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
         WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != ''
         GROUP BY 1
