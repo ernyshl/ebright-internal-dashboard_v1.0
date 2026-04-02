@@ -67,15 +67,15 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
       paramIndex++;
     }
 
-    // Date range filters
+    // Date range filters — compare in Asia/Kuala_Lumpur (UTC+8) to avoid timezone drift
     if (date_from) {
-      conditions.push(`submitted_at >= $${paramIndex}`);
+      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${paramIndex}::date`);
       params.push(date_from);
       paramIndex++;
     }
     if (date_to) {
-      conditions.push(`submitted_at <= $${paramIndex}`);
-      params.push(`${date_to} 23:59:59`);
+      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${paramIndex}::date`);
+      params.push(date_to);
       paramIndex++;
     }
 
