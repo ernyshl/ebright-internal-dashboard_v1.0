@@ -51,7 +51,7 @@ export function BranchRankingPage() {
   const [branch, setBranch] = useState('');
   const [activePreset, setActivePreset] = useState('this_month');
   const [toast, setToast] = useState(null);
-  const chartRef = useRef(null);
+  const captureRef = useRef(null);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -59,7 +59,7 @@ export function BranchRankingPage() {
   };
 
   const captureToClipboard = useCallback(async () => {
-    if (!chartRef.current) {
+    if (!captureRef.current) {
       showToast('⚠️ Chart not ready');
       return;
     }
@@ -67,9 +67,10 @@ export function BranchRankingPage() {
 
     let dataUrl;
     try {
-      dataUrl = await toPng(chartRef.current, {
+      dataUrl = await toPng(captureRef.current, {
         backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#161b2b' : '#ffffff',
         pixelRatio: 2,
+        filter: (node) => !node?.dataset?.noCapture,
       });
     } catch (err) {
       showToast(`⚠️ Render failed: ${err.message}`);
@@ -167,6 +168,8 @@ export function BranchRankingPage() {
         </div>
       </div>
 
+      {/* Capture wrapper: filters + chart */}
+      <div ref={captureRef}>
       {/* Filters + Total Revenue inline */}
       <div className="brRankFilters">
         <div className="brRankFilterGroup">
@@ -215,7 +218,8 @@ export function BranchRankingPage() {
           className="brRankPresetBtn"
           onClick={captureToClipboard}
           disabled={isLoading}
-          title="Copy chart to clipboard (Ctrl+Shift+S)"
+          title="Save chart as image"
+          data-no-capture="true"
         >
           📋
         </button>
@@ -287,6 +291,7 @@ export function BranchRankingPage() {
           </table>
         </div>
       )}
+      </div>{/* end captureRef */}
     </div>
   );
 }
