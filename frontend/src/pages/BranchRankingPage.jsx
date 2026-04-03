@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
@@ -77,41 +77,15 @@ export function BranchRankingPage() {
       return;
     }
 
-    const filename = `branch-ranking-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.png`;
-
-    // Try clipboard first (Chrome/Edge, HTTPS required)
-    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
-      try {
-        const blob = await new Promise((resolve, reject) => {
-          canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob returned null')), 'image/png');
-        });
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        showToast('📋 Copied to clipboard!');
-        return;
-      } catch {
-        // fall through to download
-      }
-    }
-
-    // Fallback: download as PNG file
+    // Download as PNG file
     const url = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = `branch-ranking-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.png`;
     a.click();
     showToast('📥 Downloaded!');
   }, [selectedMonth, selectedYear]);
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
-        e.preventDefault();
-        captureToClipboard();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [captureToClipboard]);
 
   const applyPreset = (preset) => {
     if (preset === 'this_month') {
