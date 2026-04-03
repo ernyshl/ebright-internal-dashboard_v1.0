@@ -233,7 +233,7 @@ export function BranchRankingPage() {
       ) : isError ? (
         <div className="errorText">Failed to load branch ranking data.</div>
       ) : (
-        <div ref={chartRef} className="card brRankChartCard">
+        <div className="card brRankChartCard">
           <table className="brRankBarTable">
             <tbody>
               {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
