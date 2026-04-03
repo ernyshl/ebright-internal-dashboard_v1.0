@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
@@ -64,24 +64,37 @@ export function BranchRankingPage() {
       return;
     }
     showToast('⏳ Capturing…');
-    let canvas;
+
+    let dataUrl;
     try {
-      canvas = await html2canvas(chartRef.current, {
+      dataUrl = await toPng(chartRef.current, {
         backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#161b2b' : '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
+        pixelRatio: 2,
       });
     } catch (err) {
       showToast(`⚠️ Render failed: ${err.message}`);
       return;
     }
 
-    // Download as PNG file
-    const url = canvas.toDataURL('image/png');
+    const filename = `branch-ranking-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.png`;
+
+    // Try clipboard first
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      try {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('📋 Copied to clipboard!');
+        return;
+      } catch {
+        // fall through to download
+      }
+    }
+
+    // Fallback: download
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `branch-ranking-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.png`;
+    a.href = dataUrl;
+    a.download = filename;
     a.click();
     showToast('📥 Downloaded!');
   }, [selectedMonth, selectedYear]);
