@@ -76,19 +76,31 @@ export function BranchRankingPage() {
       showToast(`⚠️ Render failed: ${err.message}`);
       return;
     }
-    try {
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob returned null')), 'image/png');
-      });
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showToast('📋 Copied to clipboard!');
-    } catch (err) {
-      // Clipboard failed — open in new tab as last resort
-      showToast(`⚠️ Clipboard blocked (${err.message}) — opening in tab`);
-      const url = canvas.toDataURL('image/png');
-      window.open(url, '_blank');
+
+    const filename = `branch-ranking-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.png`;
+
+    // Try clipboard first (Chrome/Edge, HTTPS required)
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      try {
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob returned null')), 'image/png');
+        });
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('📋 Copied to clipboard!');
+        return;
+      } catch {
+        // fall through to download
+      }
     }
-  }, []);
+
+    // Fallback: download as PNG file
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    showToast('📥 Downloaded!');
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     const handler = (e) => {
