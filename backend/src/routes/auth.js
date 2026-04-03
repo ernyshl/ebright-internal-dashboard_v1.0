@@ -11,9 +11,9 @@ const router = express.Router();
 
 // Rate limiting store (in-memory)
 const loginAttempts = new Map();
-const MAX_ATTEMPTS = 5; // Maximum 5 failed attempts per window
+const MAX_ATTEMPTS = 10; // Maximum 10 failed attempts per window
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes window
-const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minute lockout after max attempts
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minute lockout after max attempts
 
 function isRateLimited(email) {
   const now = Date.now();
