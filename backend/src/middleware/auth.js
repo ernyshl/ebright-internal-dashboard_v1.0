@@ -17,8 +17,8 @@ function requireAuth(req, res, next) {
       complete: true,
     });
     
-    // Additional security checks
-    if (!payload.payload.sub || !payload.payload.email || !payload.payload.role) {
+    // Additional security checks (TV tokens have no email — only sub + role required)
+    if (!payload.payload.sub || !payload.payload.role) {
       return res.status(401).json({ error: 'Invalid token payload' });
     }
     
