@@ -275,5 +275,44 @@ router.put('/profile', requireAuth, async (req, res, next) => {
   }
 });
 
+// GET /api/auth/device?key=UUID — exchange device API key for a 365-day TV JWT
+router.get('/device', async (req, res, next) => {
+  try {
+    const { key } = req.query;
+    if (!key) return res.status(400).json({ error: 'Missing key' });
+
+    const { rows } = await pool.query(
+      'SELECT id, device_name, view_key FROM dashboard_devices WHERE api_key = $1 AND is_active = TRUE LIMIT 1',
+      [key],
+    );
+    if (rows.length === 0) return res.status(401).json({ error: 'Invalid or inactive device key' });
+
+    const device = rows[0];
+
+    // Update last_seen
+    await pool.query('UPDATE dashboard_devices SET last_seen = NOW() WHERE id = $1', [device.id]);
+
+    const token = jwt.sign(
+      {
+        sub: `device:${device.id}`,
+        role: 'tv',
+        deviceName: device.device_name,
+        viewKey: device.view_key,
+        iat: Math.floor(Date.now() / 1000),
+      },
+      env.JWT_SECRET,
+      {
+        expiresIn: '365d',
+        issuer: 'ebright-dashboard',
+        audience: 'ebright-users',
+      },
+    );
+
+    return res.json({ token, viewKey: device.view_key, deviceName: device.device_name });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = { authRouter: router };
 

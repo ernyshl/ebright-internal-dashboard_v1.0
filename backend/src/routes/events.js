@@ -18,7 +18,7 @@ const eventSchema = z.object({
 });
 
 // GET /api/events - List all events
-router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing', 'od', 'rm']), async (req, res, next) => {
+router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing', 'od', 'rm', 'tv']), async (req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT e.id, e.event_name, TO_CHAR(e.date_from, 'YYYY-MM-DD') as date_from, TO_CHAR(e.date_to, 'YYYY-MM-DD') as date_to, e.location, e.organizers, e.created_at, e.updated_at, u.full_name as creator_name

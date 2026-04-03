@@ -13,6 +13,7 @@ const { academyRouter } = require('./routes/academy');
 const { eventsRouter } = require('./routes/events');
 const { financeRouter } = require('./routes/finance');
 const { leadsCentreRouter } = require('./routes/leadsCentre');
+const { devicesRouter } = require('./routes/devices');
 
 const jwt = require('jsonwebtoken');
 
@@ -26,6 +27,7 @@ const roleRateLimits = {
   od: { windowMs: 15 * 60 * 1000, max: 200 },
   finance: { windowMs: 15 * 60 * 1000, max: 200 },
   hr: { windowMs: 15 * 60 * 1000, max: 200 },
+  tv: { windowMs: 15 * 60 * 1000, max: 500 },
   // Default for unknown roles
   default: { windowMs: 15 * 60 * 1000, max: 100 },
 };
@@ -144,6 +146,7 @@ function createApp() {
   app.use('/api/events', applyRoleBasedRateLimit, eventsRouter);
   app.use('/api/finance', applyRoleBasedRateLimit, financeRouter);
   app.use('/api/leads-centre', applyRoleBasedRateLimit, leadsCentreRouter);
+  app.use('/api/devices', applyRoleBasedRateLimit, devicesRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

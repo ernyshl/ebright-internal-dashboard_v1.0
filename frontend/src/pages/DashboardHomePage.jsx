@@ -87,6 +87,18 @@ export function DashboardHomePage() {
       links: [
         { label: 'HR Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' }
       ]
+    },
+    {
+      id: 'admin',
+      name: 'Admin',
+      icon: '🔧',
+      color: '#6b7280',
+      adminOnly: true,
+      links: [
+        { label: 'User Management', path: '/users' },
+        { label: 'Permissions', path: '/permissions' },
+        { label: '📺 TV Devices', path: '/admin/devices' },
+      ]
     }
   ];
 
@@ -94,6 +106,7 @@ export function DashboardHomePage() {
   const filteredDepartments = isSuperAdmin
     ? departmentData
     : departmentData
+      .filter(dept => !dept.adminOnly)
       .map(dept => ({
         ...dept,
         // For marketing, also check if user has permission (don't show just because of gaReports)

@@ -7,6 +7,7 @@ const VALID_ROLES = [
   'hr',
   'academy',
   'finance',
+  'tv',
 ];
 
 module.exports = { VALID_ROLES };

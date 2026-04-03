@@ -4,7 +4,7 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing']), async (_req, res, next) => {
+router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing', 'tv']), async (_req, res, next) => {
   try {
     // All date comparisons use Asia/Kuala_Lumpur (UTC+8)
     const TZ = `'Asia/Kuala_Lumpur'`;

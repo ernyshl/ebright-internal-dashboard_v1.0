@@ -5,7 +5,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const financeRouter = express.Router();
 
 financeRouter.use(requireAuth);
-financeRouter.use(requireRole(['super_admin', 'ceo', 'finance', 'od', 'rm']));
+financeRouter.use(requireRole(['super_admin', 'ceo', 'finance', 'od', 'rm', 'tv']));
 
 // Branch Ranking — always returns top 20 branches (RM0 for those with no data in period)
 financeRouter.get('/branch-ranking', async (req, res, next) => {

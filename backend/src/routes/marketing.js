@@ -16,7 +16,7 @@ const ACCOUNTS = {
 
 // Mirrors the Streamlit logic from `app.py` (meta_spend table) and returns
 // per-channel stats for today / yesterday / 7d / 30d.
-router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od']), async (req, res, next) => {
+router.get('/performance', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'tv']), async (req, res, next) => {
   try {
     const { month, year } = req.query;
 

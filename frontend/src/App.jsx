@@ -21,12 +21,15 @@ import { EventDashboardPage } from './pages/EventDashboardPage';
 import { EventEntryPage } from './pages/EventEntryPage';
 import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { BranchRankingPage } from './pages/BranchRankingPage';
+import { TvPage } from './pages/TvPage';
+import { DeviceManagerPage } from './pages/DeviceManagerPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/tv" element={<TvPage />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
@@ -80,6 +83,9 @@ export default function App() {
           } />
           <Route path="/permissions" element={
             <RequirePermission roles={['super_admin']}><PermissionsPage /></RequirePermission>
+          } />
+          <Route path="/admin/devices" element={
+            <RequirePermission roles={['super_admin']}><DeviceManagerPage /></RequirePermission>
           } />
         </Route>
       </Route>
