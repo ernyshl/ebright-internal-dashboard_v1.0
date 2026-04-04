@@ -101,6 +101,16 @@ export function DashboardHomePage() {
       ]
     },
     {
+      id: 'testing',
+      name: 'Testing Purposes Only (dnft)',
+      icon: '🧪',
+      color: '#f97316',
+      adminOnly: true,
+      links: [
+        { label: 'Testing Data', path: '/platform-breakdown' },
+      ]
+    },
+    {
       id: 'rm',
       name: 'For Regional Manager',
       icon: '📊',

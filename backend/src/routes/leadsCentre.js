@@ -120,6 +120,48 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
   }
 });
 
+// GET /api/leads-centre/email-source — email → lead_source mapping for cross-reference
+router.get('/email-source', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT LOWER(TRIM(email)) AS email, lead_source
+       FROM master_leads_powerbi
+       WHERE email IS NOT NULL AND TRIM(email) != '' AND lead_source IS NOT NULL AND TRIM(lead_source) != ''`
+    );
+    // Build map: email → most common lead_source (in case of duplicates)
+    const map = {};
+    for (const r of rows) {
+      if (!map[r.email]) map[r.email] = r.lead_source;
+    }
+    return res.json({ emailSource: map });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// GET /api/leads-centre/nl-by-source — NL count grouped by lead_source for date range
+router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (req, res, next) => {
+  try {
+    const { date_from = '', date_to = '' } = req.query;
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+    if (date_from) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`); params.push(date_from); }
+    if (date_to)   { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`); params.push(date_to); }
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const { rows } = await pool.query(
+      `SELECT COALESCE(NULLIF(TRIM(lead_source),''), 'Unknown') AS lead_source, COUNT(*) AS nl
+       FROM master_leads_powerbi ${where}
+       GROUP BY COALESCE(NULLIF(TRIM(lead_source),''), 'Unknown')
+       ORDER BY nl DESC`,
+      params,
+    );
+    return res.json({ nl: rows });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // GET /api/leads-centre/emails — all emails in DB (for cross-reference)
 router.get('/emails', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (_req, res, next) => {
   try {
