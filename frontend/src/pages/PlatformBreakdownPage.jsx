@@ -1,13 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import {
-  fetchLeadsData,
-  filterByPreset,
-  formatDateRange,
-  getApiDateRange,
-} from '../lib/leadsSheet';
+import { formatDateRange, getApiDateRange } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -25,75 +20,44 @@ export function PlatformBreakdownPage() {
   const [preset, setPreset] = useState('today');
   const { date_from, date_to } = getApiDateRange(preset);
 
-  // NL by source from DB
   const { data: nlData, isLoading: nlLoading, refetch: refetchNl } = useQuery({
     queryKey: ['nlBySource', date_from, date_to],
     queryFn: () => apiFetch(`/api/leads-centre/nl-by-source?date_from=${date_from}&date_to=${date_to}`),
     staleTime: 3 * 60 * 1000,
   });
 
-  // Email → lead_source map from DB
-  const { data: emailSourceData, isLoading: emailLoading, refetch: refetchEmailSource } = useQuery({
-    queryKey: ['emailSource'],
-    queryFn: () => apiFetch('/api/leads-centre/email-source'),
-    staleTime: 10 * 60 * 1000,
+  const { data: ghlData, isLoading: ghlLoading, refetch: refetchGhl } = useQuery({
+    queryKey: ['ghlBySource', date_from, date_to],
+    queryFn: () => apiFetch(`/api/ghl-stages/by-source?date_from=${date_from}&date_to=${date_to}`),
+    staleTime: 3 * 60 * 1000,
   });
 
-  // GSheet CT/SU/ENR rows
-  const { data: allSheetRows = [], isLoading: sheetLoading, refetch: refetchSheet } = useQuery({
-    queryKey: ['leadsSheet'],
-    queryFn: fetchLeadsData,
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-  });
+  const isLoading = nlLoading || ghlLoading;
+  const handleRefresh = () => { refetchNl(); refetchGhl(); };
 
-  const isLoading = nlLoading || emailLoading || sheetLoading;
+  // Merge NL (from DB by lead_source) + CT/SU/ENR (from ghl_stages joined by email)
+  const nlBySource  = {};
+  for (const r of (nlData?.nl || [])) nlBySource[r.lead_source] = Number(r.nl);
 
-  const handleRefresh = () => { refetchNl(); refetchEmailSource(); refetchSheet(); };
+  const ghlBySource = {};
+  for (const r of (ghlData?.bySource || [])) {
+    ghlBySource[r.lead_source] = { CT: Number(r.ct), SU: Number(r.su), ENR: Number(r.enr) };
+  }
 
-  const tableData = useMemo(() => {
-    const emailSourceMap = emailSourceData?.emailSource || {};
-    const nlRows = nlData?.nl || [];
-    const filteredSheet = filterByPreset(allSheetRows, preset);
+  const allSources = new Set([...Object.keys(nlBySource), ...Object.keys(ghlBySource)]);
+  const rows = Array.from(allSources).map(source => ({
+    source,
+    NL:  nlBySource[source]       || 0,
+    CT:  ghlBySource[source]?.CT  || 0,
+    SU:  ghlBySource[source]?.SU  || 0,
+    ENR: ghlBySource[source]?.ENR || 0,
+  })).filter(r => r.NL + r.CT + r.SU + r.ENR > 0)
+    .sort((a, b) => b.NL - a.NL);
 
-    // Build NL map: lead_source → count
-    const nlBySource = {};
-    for (const r of nlRows) {
-      nlBySource[r.lead_source] = Number(r.nl);
-    }
-
-    // Build CT/SU/ENR map: lead_source → { CT, SU, ENR }
-    const ghlBySource = {};
-    for (const r of filteredSheet) {
-      if (!r.email || !['CT', 'SU', 'ENR'].includes(r.stage)) continue;
-      const source = emailSourceMap[r.email.toLowerCase().trim()] || 'Unknown';
-      if (!ghlBySource[source]) ghlBySource[source] = { CT: 0, SU: 0, ENR: 0 };
-      ghlBySource[source][r.stage]++;
-    }
-
-    // Merge all sources
-    const allSources = new Set([
-      ...Object.keys(nlBySource),
-      ...Object.keys(ghlBySource),
-    ]);
-
-    const rows = Array.from(allSources).map(source => {
-      const NL  = nlBySource[source] || 0;
-      const CT  = ghlBySource[source]?.CT  || 0;
-      const SU  = ghlBySource[source]?.SU  || 0;
-      const ENR = ghlBySource[source]?.ENR || 0;
-      return { source, NL, CT, SU, ENR };
-    }).filter(r => r.NL + r.CT + r.SU + r.ENR > 0)
-      .sort((a, b) => b.NL - a.NL);
-
-    // Grand total
-    const total = rows.reduce(
-      (acc, r) => ({ NL: acc.NL + r.NL, CT: acc.CT + r.CT, SU: acc.SU + r.SU, ENR: acc.ENR + r.ENR }),
-      { NL: 0, CT: 0, SU: 0, ENR: 0 }
-    );
-
-    return { rows, total };
-  }, [nlData, emailSourceData, allSheetRows, preset]);
+  const total = rows.reduce(
+    (acc, r) => ({ NL: acc.NL + r.NL, CT: acc.CT + r.CT, SU: acc.SU + r.SU, ENR: acc.ENR + r.ENR }),
+    { NL: 0, CT: 0, SU: 0, ENR: 0 }
+  );
 
   const dateLabel = formatDateRange(preset);
 
@@ -107,7 +71,6 @@ export function PlatformBreakdownPage() {
         </div>
       </div>
 
-      {/* Filter bar */}
       <div className="ldFilterBar">
         {PRESETS.map(p => (
           <button
@@ -118,9 +81,7 @@ export function PlatformBreakdownPage() {
             {p.label}
           </button>
         ))}
-        <button className="btn btnGhost btnSmall" onClick={handleRefresh} style={{ marginLeft: 'auto' }}>
-          ↺ Refresh
-        </button>
+        <button className="btn btnGhost btnSmall" onClick={handleRefresh} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
       </div>
 
       {isLoading ? (
@@ -132,7 +93,7 @@ export function PlatformBreakdownPage() {
         <div className="card ldTableCard">
           <h3 className="ldTableTitle">NL / CT / SU / ENR by Platform</h3>
           <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-            NL from database · CT/SU/ENR from GHL Sheet (matched by email to identify platform)
+            NL from database · CT/SU/ENR from GHL webhook (matched by email to identify platform)
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table className="dataTable">
@@ -146,33 +107,33 @@ export function PlatformBreakdownPage() {
                 </tr>
               </thead>
               <tbody>
-                {tableData.rows.length === 0 ? (
+                {rows.length === 0 ? (
                   <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No data</td></tr>
-                ) : tableData.rows.map(r => (
+                ) : rows.map(r => (
                   <tr key={r.source}>
                     <td><strong>{r.source}</strong></td>
-                    <td>{r.NL} <span className="ldPct">({pct(r.ENR, r.NL)})</span></td>
-                    <td>{r.CT} <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
-                    <td>{r.SU} <span className="ldPct">({pct(r.SU, r.CT)})</span></td>
+                    <td>{r.NL}  <span className="ldPct">({pct(r.ENR, r.NL)})</span></td>
+                    <td>{r.CT}  <span className="ldPct">({pct(r.CT,  r.NL)})</span></td>
+                    <td>{r.SU}  <span className="ldPct">({pct(r.SU,  r.CT)})</span></td>
                     <td>{r.ENR} <span className="ldPct">({pct(r.ENR, r.SU)})</span></td>
                   </tr>
                 ))}
               </tbody>
-              {tableData.rows.length > 0 && (
+              {rows.length > 0 && (
                 <tfoot>
                   <tr className="ldTotalRow">
                     <td><strong>Total</strong></td>
-                    <td><strong>{tableData.total.NL}</strong> <span className="ldPct">({pct(tableData.total.ENR, tableData.total.NL)})</span></td>
-                    <td><strong>{tableData.total.CT}</strong> <span className="ldPct">({pct(tableData.total.CT, tableData.total.NL)})</span></td>
-                    <td><strong>{tableData.total.SU}</strong> <span className="ldPct">({pct(tableData.total.SU, tableData.total.CT)})</span></td>
-                    <td><strong>{tableData.total.ENR}</strong> <span className="ldPct">({pct(tableData.total.ENR, tableData.total.SU)})</span></td>
+                    <td><strong>{total.NL}</strong>  <span className="ldPct">({pct(total.ENR, total.NL)})</span></td>
+                    <td><strong>{total.CT}</strong>  <span className="ldPct">({pct(total.CT,  total.NL)})</span></td>
+                    <td><strong>{total.SU}</strong>  <span className="ldPct">({pct(total.SU,  total.CT)})</span></td>
+                    <td><strong>{total.ENR}</strong> <span className="ldPct">({pct(total.ENR, total.SU)})</span></td>
                   </tr>
                 </tfoot>
               )}
             </table>
           </div>
           <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
-            * "Unknown" = CT/SU/ENR records whose email was not found in the database (manually added in GHL)
+            * "Unknown" = GHL leads whose email was not found in the database (manually added in GHL, no form submission)
           </p>
         </div>
       )}

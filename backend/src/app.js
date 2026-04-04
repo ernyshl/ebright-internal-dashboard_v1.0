@@ -14,6 +14,7 @@ const { eventsRouter } = require('./routes/events');
 const { financeRouter } = require('./routes/finance');
 const { leadsCentreRouter } = require('./routes/leadsCentre');
 const { devicesRouter } = require('./routes/devices');
+const { ghlStagesRouter } = require('./routes/ghlStages');
 
 const jwt = require('jsonwebtoken');
 
@@ -147,6 +148,8 @@ function createApp() {
   app.use('/api/finance', applyRoleBasedRateLimit, financeRouter);
   app.use('/api/leads-centre', applyRoleBasedRateLimit, leadsCentreRouter);
   app.use('/api/devices', applyRoleBasedRateLimit, devicesRouter);
+  // GHL webhook — public endpoint (no auth, secret via query param)
+  app.use('/api/ghl-stages', applyRoleBasedRateLimit, ghlStagesRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
