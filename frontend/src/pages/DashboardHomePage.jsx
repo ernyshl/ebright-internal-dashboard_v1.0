@@ -99,6 +99,21 @@ export function DashboardHomePage() {
         { label: 'Permissions', path: '/permissions' },
         { label: '📺 TV Devices', path: '/admin/devices' },
       ]
+    },
+    {
+      id: 'rm',
+      name: 'For Regional Manager',
+      icon: '📊',
+      color: '#0ea5e9',
+      visibleRoles: ['super_admin', 'rm'],
+      gaReports: [
+        { label: 'CT to NL (Dashboard by Region)', url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_7ocip3dd2d' },
+        { label: 'Today Dashboard', url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_rzbux1co0d' },
+        { label: 'Yesterday Dashboard', url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_ulmzo6co0d' },
+      ],
+      links: [
+        { label: 'CT to NL (Overall)', path: '/leads-dashboard' },
+      ]
     }
   ];
 
@@ -107,6 +122,7 @@ export function DashboardHomePage() {
     ? departmentData
     : departmentData
       .filter(dept => !dept.adminOnly)
+      .filter(dept => !dept.visibleRoles || dept.visibleRoles.includes(user?.role))
       .map(dept => ({
         ...dept,
         // For marketing, also check if user has permission (don't show just because of gaReports)

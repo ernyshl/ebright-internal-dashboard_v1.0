@@ -23,6 +23,7 @@ import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { BranchRankingPage } from './pages/BranchRankingPage';
 import { TvPage } from './pages/TvPage';
 import { DeviceManagerPage } from './pages/DeviceManagerPage';
+import { LeadsDashboardPage } from './pages/LeadsDashboardPage';
 
 export default function App() {
   return (
@@ -86,6 +87,9 @@ export default function App() {
           } />
           <Route path="/admin/devices" element={
             <RequirePermission roles={['super_admin']}><DeviceManagerPage /></RequirePermission>
+          } />
+          <Route path="/leads-dashboard" element={
+            <RequirePermission roles={['super_admin', 'rm']}><LeadsDashboardPage /></RequirePermission>
           } />
         </Route>
       </Route>

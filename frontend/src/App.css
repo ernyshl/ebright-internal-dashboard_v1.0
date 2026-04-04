@@ -5664,3 +5664,104 @@
 .btnDanger:hover {
   background: #fef2f2;
 }
+
+/* ===== LEADS DASHBOARD ===== */
+.ldFilterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.ldSummarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.ldRegionRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+.ldRegionLabel {
+  min-width: 100px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  padding-top: 8px;
+  flex-shrink: 0;
+}
+.ldRegionRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ldMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ldMetricBox {
+  background: var(--surface2, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.ldMetricLabel {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.ldMetricValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ldTablesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ldTableCard {
+  padding: 20px;
+}
+.ldTableTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+.ldColHint {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.ldPct {
+  font-size: 11px;
+  color: var(--muted);
+}
+.ldTotalRow td {
+  background: var(--surface2, #f3f4f6);
+  border-top: 2px solid var(--border, #e5e7eb);
+}
+
+@media (max-width: 640px) {
+  .ldMetricGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ldRegionRow {
+    flex-direction: column;
+  }
+  .ldRegionLabel {
+    padding-top: 0;
+  }
+}
