@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
+import { apiFetch } from '../lib/api';
 import {
   fetchLeadsData,
   filterByPreset,
@@ -35,6 +36,12 @@ const REGIONS = [
 
 const PAGE_SIZE = 50;
 
+const DB_MATCH_OPTIONS = [
+  { key: '',      label: 'All' },
+  { key: 'yes',   label: '✓ In DB' },
+  { key: 'no',    label: '✗ Not in DB' },
+];
+
 const STAGE_COLORS = {
   NL:  { bg: '#eff6ff', color: '#1d4ed8' },
   CT:  { bg: '#fefce8', color: '#854d0e' },
@@ -50,6 +57,7 @@ export function LeadsGhlViewPage() {
   const [region, setRegion]   = useState(searchParams.get('region') || '');
   const [pipeline, setPipeline] = useState(searchParams.get('pipeline') || '');
   const [search, setSearch]   = useState('');
+  const [dbMatch, setDbMatch] = useState('');
   const [page, setPage]       = useState(1);
 
   // Sync URL params when filters set externally (e.g. dashboard link)
@@ -67,12 +75,28 @@ export function LeadsGhlViewPage() {
   // Available pipelines for selected region
   const availablePipelines = region ? REGION_PIPELINES[region] || [] : Object.keys(PIPELINE_REGION).sort();
 
-  const { data: allRows = [], isLoading, isError, refetch } = useQuery({
+  const { data: allRows = [], isLoading: sheetLoading, isError: sheetError, refetch: refetchSheet } = useQuery({
     queryKey: ['leadsSheet'],
     queryFn: fetchLeadsData,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
+
+  const { data: emailData, isLoading: emailLoading, refetch: refetchEmails } = useQuery({
+    queryKey: ['dbEmails'],
+    queryFn: () => apiFetch('/api/leads-centre/emails'),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const dbEmailSet = useMemo(() => {
+    const emails = emailData?.emails || [];
+    return new Set(emails.map(e => e.toLowerCase().trim()));
+  }, [emailData]);
+
+  const isLoading = sheetLoading || emailLoading;
+  const isError = sheetError;
+
+  const refetch = () => { refetchSheet(); refetchEmails(); };
 
   const filtered = useMemo(() => {
     let rows = filterByPreset(allRows, preset);
@@ -80,6 +104,13 @@ export function LeadsGhlViewPage() {
     if (stage)    rows = rows.filter(r => r.stage === stage);
     if (region)   rows = rows.filter(r => r.region === region);
     if (pipeline) rows = rows.filter(r => r.pipeline === pipeline);
+
+    if (dbMatch) {
+      rows = rows.filter(r => {
+        const inDb = r.email ? dbEmailSet.has(r.email.toLowerCase().trim()) : false;
+        return dbMatch === 'yes' ? inDb : !inDb;
+      });
+    }
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -91,7 +122,7 @@ export function LeadsGhlViewPage() {
     }
 
     return rows;
-  }, [allRows, preset, stage, region, pipeline, search]);
+  }, [allRows, preset, stage, region, pipeline, dbMatch, search, dbEmailSet]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -160,6 +191,14 @@ export function LeadsGhlViewPage() {
           </select>
         </div>
 
+        {/* DB Match */}
+        <div className="brRankFilterGroup">
+          <label className="brRankLabel">In DB?</label>
+          <select className="filterSelect" value={dbMatch} onChange={e => { setDbMatch(e.target.value); setPage(1); }}>
+            {DB_MATCH_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        </div>
+
         {/* Search */}
         <div className="brRankFilterGroup" style={{ flex: 1, minWidth: 180 }}>
           <label className="brRankLabel">Search</label>
@@ -173,9 +212,9 @@ export function LeadsGhlViewPage() {
         </div>
 
         {/* Clear */}
-        {(stage || region || pipeline || search) && (
+        {(stage || region || pipeline || dbMatch || search) && (
           <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn btnGhost btnSmall" onClick={() => { setStage(''); setRegion(''); setPipeline(''); setSearch(''); setPage(1); }}>
+            <button className="btn btnGhost btnSmall" onClick={() => { setStage(''); setRegion(''); setPipeline(''); setDbMatch(''); setSearch(''); setPage(1); }}>
               Clear
             </button>
           </div>
@@ -203,13 +242,15 @@ export function LeadsGhlViewPage() {
                 <th>Stage</th>
                 <th>Pipeline</th>
                 <th>Region</th>
+                <th title="Is this email found in master_leads_powerbi (DB)?">In DB?</th>
               </tr>
             </thead>
             <tbody>
               {paginated.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
               ) : paginated.map((r, i) => {
                 const stageStyle = STAGE_COLORS[r.stage] || {};
+                const inDb = r.email ? dbEmailSet.has(r.email.toLowerCase().trim()) : false;
                 return (
                   <tr key={i}>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
@@ -231,6 +272,17 @@ export function LeadsGhlViewPage() {
                     </td>
                     <td>{r.pipeline || '—'}</td>
                     <td>{r.region || '—'}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {r.email ? (
+                        <span style={{
+                          fontWeight: 600,
+                          fontSize: 12,
+                          color: inDb ? '#16a34a' : '#dc2626',
+                        }}>
+                          {inDb ? '✓ In DB' : '✗ Not in DB'}
+                        </span>
+                      ) : <span style={{ color: 'var(--muted)', fontSize: 12 }}>No email</span>}
+                    </td>
                   </tr>
                 );
               })}

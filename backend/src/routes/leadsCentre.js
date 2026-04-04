@@ -120,6 +120,18 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
   }
 });
 
+// GET /api/leads-centre/emails — all emails in DB (for cross-reference)
+router.get('/emails', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT LOWER(TRIM(email)) AS email FROM master_leads_powerbi WHERE email IS NOT NULL AND TRIM(email) != ''`
+    );
+    return res.json({ emails: rows.map(r => r.email) });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // GET /api/leads-centre/nl-by-branch — NL count grouped by clean_branch for date range
 router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (req, res, next) => {
   try {
