@@ -24,6 +24,7 @@ import { BranchRankingPage } from './pages/BranchRankingPage';
 import { TvPage } from './pages/TvPage';
 import { DeviceManagerPage } from './pages/DeviceManagerPage';
 import { LeadsDashboardPage } from './pages/LeadsDashboardPage';
+import { LeadsGhlViewPage } from './pages/LeadsGhlViewPage';
 
 export default function App() {
   return (
@@ -90,6 +91,9 @@ export default function App() {
           } />
           <Route path="/leads-dashboard" element={
             <RequirePermission roles={['super_admin', 'rm']}><LeadsDashboardPage /></RequirePermission>
+          } />
+          <Route path="/leads-ghl-view" element={
+            <RequirePermission roles={['super_admin', 'rm']}><LeadsGhlViewPage /></RequirePermission>
           } />
         </Route>
       </Route>

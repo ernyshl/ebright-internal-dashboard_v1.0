@@ -5753,6 +5753,27 @@
   background: var(--surface2, #f3f4f6);
   border-top: 2px solid var(--border, #e5e7eb);
 }
+.ldMetricLink {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: pointer;
+}
+.ldMetricLink:hover {
+  color: var(--brand, #dc2626);
+}
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+.paginationInfo {
+  font-size: 13px;
+  color: var(--muted);
+}
 
 @media (max-width: 640px) {
   .ldMetricGrid {

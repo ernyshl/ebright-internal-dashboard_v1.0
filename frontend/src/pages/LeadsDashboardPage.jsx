@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 import {
@@ -22,10 +23,10 @@ const PRESETS = [
 ];
 
 const SECTIONS = [
-  { key: 'overall',   label: 'Overall',  pipelines: ALL_PIPELINES },
-  { key: 'region_a',  label: 'Region A', pipelines: REGION_PIPELINES['Region A'] },
-  { key: 'region_b',  label: 'Region B', pipelines: REGION_PIPELINES['Region B'] },
-  { key: 'region_c',  label: 'Region C', pipelines: REGION_PIPELINES['Region C'] },
+  { key: 'overall',   label: 'Overall',  pipelines: ALL_PIPELINES,                  regionKey: '' },
+  { key: 'region_a',  label: 'Region A', pipelines: REGION_PIPELINES['Region A'],   regionKey: 'Region A' },
+  { key: 'region_b',  label: 'Region B', pipelines: REGION_PIPELINES['Region B'],   regionKey: 'Region B' },
+  { key: 'region_c',  label: 'Region C', pipelines: REGION_PIPELINES['Region C'],   regionKey: 'Region C' },
 ];
 
 function pct(a, b) {
@@ -70,26 +71,33 @@ function computeSectionMetrics(pipelines, merged) {
   };
 }
 
-function MetricBox({ label, value }) {
+function MetricBox({ label, value, to }) {
   return (
     <div className="ldMetricBox">
       <div className="ldMetricLabel">{label}</div>
-      <div className="ldMetricValue">{value}</div>
+      <div className="ldMetricValue">
+        {to ? (
+          <Link to={to} className="ldMetricLink">{value}</Link>
+        ) : value}
+      </div>
     </div>
   );
 }
 
-function RegionSummary({ label, pipelines, merged }) {
+function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
   const m = computeSectionMetrics(pipelines, merged);
+  const regionParam = regionKey ? `&region=${encodeURIComponent(regionKey)}` : '';
+  const ghlBase = `/leads-ghl-view?preset=${preset}${regionParam}`;
+
   return (
     <div className="ldRegionRow">
       <div className="ldRegionLabel">{label}</div>
       <div className="ldRegionRight">
         <div className="ldMetricGrid">
           <MetricBox label="NL" value={m.NL} />
-          <MetricBox label="CT" value={m.CT} />
-          <MetricBox label="SU" value={m.SU} />
-          <MetricBox label="ENR" value={m.ENR} />
+          <MetricBox label="CT" value={m.CT} to={`${ghlBase}&stage=CT`} />
+          <MetricBox label="SU" value={m.SU} to={`${ghlBase}&stage=SU`} />
+          <MetricBox label="ENR" value={m.ENR} to={`${ghlBase}&stage=ENR`} />
         </div>
         <div className="ldMetricGrid">
           <MetricBox label="Conversion Rate" value={m.convRate} />
@@ -233,6 +241,8 @@ export function LeadsDashboardPage() {
                 label={s.label}
                 pipelines={s.pipelines}
                 merged={merged}
+                preset={preset}
+                regionKey={s.regionKey}
               />
             ))}
           </div>
