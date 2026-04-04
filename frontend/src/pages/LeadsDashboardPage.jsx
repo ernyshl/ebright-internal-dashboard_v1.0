@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
+import { apiFetch } from '../lib/api';
 import {
   fetchLeadsData,
   filterByPreset,
-  computeMetrics,
   computeByPipeline,
   formatDateRange,
+  getApiDateRange,
   REGION_PIPELINES,
   ALL_PIPELINES,
+  BRANCH_TO_PIPELINE,
 } from '../lib/leadsSheet';
 
 const PRESETS = [
@@ -16,18 +18,56 @@ const PRESETS = [
   { key: 'yesterday',  label: 'Yesterday' },
   { key: 'this_week',  label: 'This Week' },
   { key: 'this_month', label: 'This Month' },
-  { key: 'my_filter',  label: 'My Filter' },
+  { key: 'my_filter',  label: 'My Filter (Sat–Sun)' },
 ];
 
 const SECTIONS = [
-  { key: 'overall',  label: 'Overall',  pipelines: ALL_PIPELINES },
-  { key: 'region_a', label: 'Region A', pipelines: REGION_PIPELINES['Region A'] },
-  { key: 'region_b', label: 'Region B', pipelines: REGION_PIPELINES['Region B'] },
-  { key: 'region_c', label: 'Region C', pipelines: REGION_PIPELINES['Region C'] },
+  { key: 'overall',   label: 'Overall',  pipelines: ALL_PIPELINES },
+  { key: 'region_a',  label: 'Region A', pipelines: REGION_PIPELINES['Region A'] },
+  { key: 'region_b',  label: 'Region B', pipelines: REGION_PIPELINES['Region B'] },
+  { key: 'region_c',  label: 'Region C', pipelines: REGION_PIPELINES['Region C'] },
 ];
 
 function pct(a, b) {
   return b > 0 ? (a / b * 100).toFixed(2) + '%' : 'No data';
+}
+
+// Build NL-by-pipeline map from DB response
+function buildNlByPipeline(nlRows) {
+  const map = {};
+  for (const row of nlRows) {
+    const pipeline = BRANCH_TO_PIPELINE[row.branch];
+    if (pipeline) {
+      map[pipeline] = (map[pipeline] || 0) + Number(row.nl);
+    }
+  }
+  return map;
+}
+
+// Merge DB NL with Sheet CT/SU/ENR into unified per-pipeline map
+function mergeData(nlByPipeline, sheetByPipeline, pipelines) {
+  const result = {};
+  for (const pip of pipelines) {
+    const nl = nlByPipeline[pip] || 0;
+    const sheet = sheetByPipeline[pip] || { CT: 0, SU: 0, ENR: 0 };
+    result[pip] = { NL: nl, CT: sheet.CT, SU: sheet.SU, ENR: sheet.ENR };
+  }
+  return result;
+}
+
+function computeSectionMetrics(pipelines, merged) {
+  const tot = { NL: 0, CT: 0, SU: 0, ENR: 0 };
+  for (const pip of pipelines) {
+    const r = merged[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
+    tot.NL += r.NL; tot.CT += r.CT; tot.SU += r.SU; tot.ENR += r.ENR;
+  }
+  return {
+    ...tot,
+    convRate:   pct(tot.ENR, tot.NL),
+    confRate:   pct(tot.CT, tot.NL),
+    showUpRate: pct(tot.SU, tot.CT),
+    enrolRate:  pct(tot.ENR, tot.SU),
+  };
 }
 
 function MetricBox({ label, value }) {
@@ -39,8 +79,8 @@ function MetricBox({ label, value }) {
   );
 }
 
-function RegionSummary({ label, rows }) {
-  const m = computeMetrics(rows);
+function RegionSummary({ label, pipelines, merged }) {
+  const m = computeSectionMetrics(pipelines, merged);
   return (
     <div className="ldRegionRow">
       <div className="ldRegionLabel">{label}</div>
@@ -62,10 +102,10 @@ function RegionSummary({ label, rows }) {
   );
 }
 
-function PipelineTable({ title, pipelines, byPipeline }) {
+function PipelineTable({ title, pipelines, merged }) {
   const totals = { NL: 0, CT: 0, SU: 0, ENR: 0 };
   const tableRows = pipelines.map(pip => {
-    const r = byPipeline[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
+    const r = merged[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
     totals.NL += r.NL; totals.CT += r.CT; totals.SU += r.SU; totals.ENR += r.ENR;
     return { pip, ...r };
   }).filter(r => r.NL + r.CT + r.SU + r.ENR > 0);
@@ -117,24 +157,34 @@ function PipelineTable({ title, pipelines, byPipeline }) {
 export function LeadsDashboardPage() {
   const [preset, setPreset] = useState('today');
 
-  const { data: allRows = [], isLoading, isError, refetch } = useQuery({
+  const { date_from, date_to } = getApiDateRange(preset);
+
+  // NL from database
+  const { data: nlData, isLoading: nlLoading, isError: nlError, refetch: refetchNl } = useQuery({
+    queryKey: ['leadsDashboardNl', date_from, date_to],
+    queryFn: () => apiFetch(`/api/leads-centre/nl-by-branch?date_from=${date_from}&date_to=${date_to}`),
+    staleTime: 3 * 60 * 1000,
+  });
+
+  // CT/SU/ENR from Google Sheet
+  const { data: sheetRows = [], isLoading: sheetLoading, isError: sheetError, refetch: refetchSheet } = useQuery({
     queryKey: ['leadsSheet'],
     queryFn: fetchLeadsData,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 
-  const filtered = filterByPreset(allRows, preset);
-  const byPipeline = computeByPipeline(filtered);
+  const isLoading = nlLoading || sheetLoading;
+  const isError = nlError || sheetError;
 
-  const regionRows = {
-    overall:  filtered,
-    region_a: filtered.filter(r => r.region === 'Region A'),
-    region_b: filtered.filter(r => r.region === 'Region B'),
-    region_c: filtered.filter(r => r.region === 'Region C'),
-  };
+  const filtered = filterByPreset(sheetRows, preset);
+  const sheetByPipeline = computeByPipeline(filtered);
+  const nlByPipeline = buildNlByPipeline(nlData?.nl || []);
+  const merged = mergeData(nlByPipeline, sheetByPipeline, ALL_PIPELINES);
 
   const dateLabel = formatDateRange(preset);
+
+  const handleRefresh = () => { refetchNl(); refetchSheet(); };
 
   return (
     <div className="dashboardPage">
@@ -154,10 +204,10 @@ export function LeadsDashboardPage() {
             className={`btn ${preset === p.key ? 'btnPrimary' : 'btnGhost'} btnSmall`}
             onClick={() => setPreset(p.key)}
           >
-            {p.key === 'my_filter' ? `${p.label} (Sat–Sun)` : p.label}
+            {p.label}
           </button>
         ))}
-        <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>
+        <button className="btn btnGhost btnSmall" onClick={handleRefresh} style={{ marginLeft: 'auto' }}>
           ↺ Refresh
         </button>
       </div>
@@ -165,12 +215,12 @@ export function LeadsDashboardPage() {
       {isLoading && (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <div className="loadingDots"><span /><span /><span /></div>
-          <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading sheet data…</p>
+          <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading data…</p>
         </div>
       )}
 
       {isError && (
-        <div className="errorText">Failed to load Google Sheet data. Check that the sheet is public.</div>
+        <div className="errorText">Failed to load data. Check DB connection and that the Google Sheet is public.</div>
       )}
 
       {!isLoading && !isError && (
@@ -181,7 +231,8 @@ export function LeadsDashboardPage() {
               <RegionSummary
                 key={s.key}
                 label={s.label}
-                rows={regionRows[s.key]}
+                pipelines={s.pipelines}
+                merged={merged}
               />
             ))}
           </div>
@@ -193,7 +244,7 @@ export function LeadsDashboardPage() {
                 key={s.key}
                 title={s.label}
                 pipelines={s.pipelines}
-                byPipeline={byPipeline}
+                merged={merged}
               />
             ))}
           </div>

@@ -120,4 +120,39 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
   }
 });
 
+// GET /api/leads-centre/nl-by-branch — NL count grouped by clean_branch for date range
+router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (req, res, next) => {
+  try {
+    const { date_from = '', date_to = '' } = req.query;
+
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+
+    if (date_from) {
+      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+      params.push(date_from);
+    }
+    if (date_to) {
+      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+      params.push(date_to);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const result = await pool.query(
+      `SELECT TRIM(clean_branch) AS branch, COUNT(*) AS nl
+       FROM master_leads_powerbi
+       ${where}
+       GROUP BY TRIM(clean_branch)
+       ORDER BY branch`,
+      params,
+    );
+
+    return res.json({ nl: result.rows });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = { leadsCentreRouter: router };

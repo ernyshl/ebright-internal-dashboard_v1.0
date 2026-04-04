@@ -1,3 +1,28 @@
+// Branch name (from DB clean_branch) → Pipeline code (from Google Sheet)
+export const BRANCH_TO_PIPELINE = {
+  'Online':                  '01 ONL',
+  'Subang Taipan':           '02 ST',
+  'Sri Petaling':            '03 SP',
+  'Shah Alam':               '04 SA',
+  'Kota Damansara':          '05 KD',
+  'Putrajaya':               '06 PJY',
+  'Ampang':                  '07 AMP',
+  'Cyberjaya':               '08 CJY',
+  'Klang':                   '09 KLG',
+  'Denai Alam':              '10 DA',
+  'Bandar Baru Bangi':       '11 BBB',
+  'Danau Kota':              '12 DK',
+  'Setia Alam':              '13 SHA',
+  'Bandar Tun Hussein Onn':  '14 BTHO',
+  'Eco Grandeur':            '15 EGR',
+  'Bandar Seri Putra':       '16 BSP',
+  'Rimbayu':                 '17 RBY',
+  'Kajang TTDI Groove':      '18 TSG',
+  'Kota Warisan':            '19 KW',
+  'Taman Sri Gombak':        '20 KTG',
+  'Dataran Puchong Utama':   '08 CJY', // closest match — update if needed
+};
+
 const SHEET_ID = '1o011OFPYmR0Y36tHRf6UEqMaJwjGoO0ntpXUEsPTI3w';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
@@ -158,6 +183,17 @@ export function computeByPipeline(rows) {
     if (map[r.pipeline][r.stage] !== undefined) map[r.pipeline][r.stage]++;
   }
   return map;
+}
+
+export function getApiDateRange(preset) {
+  const { from, to } = getDateRange(preset);
+  const fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  return { date_from: fmt(from), date_to: fmt(to) };
 }
 
 export function formatDateRange(preset) {
