@@ -40,11 +40,11 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         SELECT
           CASE
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
+              'Bandar Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
             ]) THEN 'Region A'
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
               'Danau Kota','Kota Damansara','Ampang','Sri Petaling',
-              'Bandar Tun Hussein Onn','Kajang TTDI Groove','Taman Sri Gombak'
+              'Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak'
             ]) THEN 'Region B'
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
               'Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya',
