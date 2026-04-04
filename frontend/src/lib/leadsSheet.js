@@ -3,7 +3,7 @@ export const BRANCH_TO_PIPELINE = {
   'Online':                  '01 ONL',
   'Subang Taipan':           '02 ST',
   'Sri Petaling':            '03 SP',
-  'Shah Alam':               '04 SA',
+  'Setia Alam':              '04 SA',
   'Kota Damansara':          '05 KD',
   'Putrajaya':               '06 PJY',
   'Ampang':                  '07 AMP',
@@ -12,7 +12,7 @@ export const BRANCH_TO_PIPELINE = {
   'Denai Alam':              '10 DA',
   'Bandar Baru Bangi':       '11 BBB',
   'Danau Kota':              '12 DK',
-  'Setia Alam':              '13 SHA',
+  'Shah Alam':               '13 SHA',
   'Bandar Tun Hussein Onn':  '14 BTHO',
   'Eco Grandeur':            '15 EGR',
   'Bandar Seri Putra':       '16 BSP',
@@ -20,7 +20,7 @@ export const BRANCH_TO_PIPELINE = {
   'Kajang TTDI Groove':      '18 TSG',
   'Kota Warisan':            '19 KW',
   'Taman Sri Gombak':        '20 KTG',
-  'Dataran Puchong Utama':   '08 CJY', // closest match — update if needed
+  'Dataran Puchong Utama':   '21 DPU',
 };
 
 const SHEET_ID = '1o011OFPYmR0Y36tHRf6UEqMaJwjGoO0ntpXUEsPTI3w';
@@ -30,7 +30,7 @@ export const PIPELINE_REGION = {
   '01 ONL':  'Region C',
   '02 ST':   'Region A',
   '03 SP':   'Region B',
-  '04 SA':   'Region A',
+  '04 SA':   'Region A',  // Setia Alam
   '05 KD':   'Region B',
   '06 PJY':  'Region C',
   '07 AMP':  'Region B',
@@ -39,7 +39,7 @@ export const PIPELINE_REGION = {
   '10 DA':   'Region A',
   '11 BBB':  'Region C',
   '12 DK':   'Region B',
-  '13 SHA':  'Region A',
+  '13 SHA':  'Region A',  // Shah Alam
   '14 BTHO': 'Region B',
   '15 EGR':  'Region A',
   '16 BSP':  'Region C',
@@ -47,12 +47,13 @@ export const PIPELINE_REGION = {
   '18 TSG':  'Region B',
   '19 KW':   'Region C',
   '20 KTG':  'Region B',
+  '21 DPU':  'Region C',  // Dataran Puchong Utama
 };
 
 export const REGION_PIPELINES = {
   'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY'],
   'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG'],
-  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW'],
+  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 DPU'],
 };
 
 export const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
