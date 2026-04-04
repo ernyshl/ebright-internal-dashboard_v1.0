@@ -149,12 +149,12 @@ export function getDateRange(preset) {
     return { from: m, to: endOfDay(today) };
   }
   if (preset === 'my_filter') {
-    // Last Saturday to next Sunday (inclusive)
+    // This Saturday to next Sunday (Sat + 8 days)
     const sat = new Date(today);
     const daysAgo = (today.getDay() - 6 + 7) % 7;
     sat.setDate(today.getDate() - daysAgo);
     const nextSun = new Date(sat);
-    nextSun.setDate(sat.getDate() + 7);
+    nextSun.setDate(sat.getDate() + 8);
     return { from: sat, to: endOfDay(nextSun) };
   }
   return { from: today, to: endOfDay(today) };
