@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import { PIPELINE_REGION } from '../lib/leadsSheet';
+import { PIPELINE_REGION, PIPELINE_TO_BRANCH, REGION_PIPELINES } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -86,20 +86,32 @@ export function GhlLeadsCentrePage() {
   const [preset,   setPreset]   = useState(searchParams.get('preset')   || 'this_month');
   const [stage,    setStage]    = useState(searchParams.get('stage')    || '');
   const [pipeline, setPipeline] = useState(searchParams.get('pipeline') || '');
+  const [region,   setRegion]   = useState(searchParams.get('region')   || '');
   const [search,   setSearch]   = useState('');
   const [page,     setPage]     = useState(1);
 
-  useEffect(() => { setPage(1); }, [preset, stage, pipeline, search]);
+  useEffect(() => { setPage(1); }, [preset, stage, pipeline, region, search]);
+
+  // Filter pipelines by region
+  const filteredPipelines = region ? (REGION_PIPELINES[region] || []) : Object.keys(PIPELINE_REGION).sort();
+  // Reset pipeline if it's not in the current region
+  useEffect(() => {
+    if (pipeline && region && !filteredPipelines.includes(pipeline)) setPipeline('');
+  }, [region, pipeline, filteredPipelines]);
 
   const { date_from, date_to } = getDateRange(preset);
 
   const params = new URLSearchParams({ date_from, date_to, page, limit: PAGE_SIZE });
   if (stage)    params.set('stage', stage);
   if (pipeline) params.set('pipeline', pipeline);
+  if (!pipeline && region) {
+    // Send all pipelines in the region as comma-separated
+    params.set('pipelines', filteredPipelines.join(','));
+  }
   if (search)   params.set('search', search);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['ghlLeadsCentre', date_from, date_to, stage, pipeline, search, page],
+    queryKey: ['ghlLeadsCentre', date_from, date_to, stage, pipeline, region, search, page],
     queryFn: () => apiFetch(`/api/ghl-stages?${params}`),
     staleTime: 2 * 60 * 1000,
     keepPreviousData: true,
@@ -108,8 +120,6 @@ export function GhlLeadsCentrePage() {
   const records    = data?.records || [];
   const total      = data?.total || 0;
   const totalPages = data?.totalPages || 1;
-
-  const availablePipelines = Object.keys(PIPELINE_REGION).sort();
 
   const fmtDate = (d) => d ? new Date(d).toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -146,10 +156,19 @@ export function GhlLeadsCentrePage() {
           </select>
         </div>
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">Pipeline</label>
+          <label className="brRankLabel">Region</label>
+          <select className="filterSelect" value={region} onChange={e => setRegion(e.target.value)}>
+            <option value="">All Regions</option>
+            <option value="Region A">Region A</option>
+            <option value="Region B">Region B</option>
+            <option value="Region C">Region C</option>
+          </select>
+        </div>
+        <div className="brRankFilterGroup">
+          <label className="brRankLabel">Branch</label>
           <select className="filterSelect" value={pipeline} onChange={e => setPipeline(e.target.value)}>
-            <option value="">All Pipelines</option>
-            {availablePipelines.map(p => <option key={p} value={p}>{p}</option>)}
+            <option value="">All Branches</option>
+            {filteredPipelines.map(p => <option key={p} value={p}>{PIPELINE_TO_BRANCH[p] || p}</option>)}
           </select>
         </div>
         <div className="brRankFilterGroup" style={{ flex: 1, minWidth: 180 }}>
@@ -162,9 +181,9 @@ export function GhlLeadsCentrePage() {
             style={{ width: '100%' }}
           />
         </div>
-        {(stage || pipeline || search) && (
+        {(stage || pipeline || region || search) && (
           <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn btnGhost btnSmall" onClick={() => { setStage(''); setPipeline(''); setSearch(''); }}>Clear</button>
+            <button className="btn btnGhost btnSmall" onClick={() => { setStage(''); setPipeline(''); setRegion(''); setSearch(''); }}>Clear</button>
           </div>
         )}
       </div>
@@ -187,7 +206,7 @@ export function GhlLeadsCentrePage() {
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Stage</th>
-                <th>Pipeline</th>
+                <th>Branch</th>
                 <th>Region</th>
                 <th>Student Name</th>
               </tr>
@@ -210,7 +229,7 @@ export function GhlLeadsCentrePage() {
                         {r.stage_key}
                       </span>
                     </td>
-                    <td>{r.pipeline_name || '—'}</td>
+                    <td>{PIPELINE_TO_BRANCH[r.pipeline_name] || r.pipeline_name || '—'}</td>
                     <td>{region}</td>
                     <td>{r.student_name || '—'}</td>
                   </tr>

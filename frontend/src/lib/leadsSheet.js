@@ -59,6 +59,31 @@ export const REGION_PIPELINES = {
 
 export const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
 
+// Reverse map: pipeline code → branch name (first match wins for duplicates like 18 TSG)
+export const PIPELINE_TO_BRANCH = {
+  '01 ONL':  'Online',
+  '02 ST':   'Subang Taipan',
+  '03 SP':   'Sri Petaling',
+  '04 SA':   'Setia Alam',
+  '05 KD':   'Kota Damansara',
+  '06 PJY':  'Putrajaya',
+  '07 AMP':  'Ampang',
+  '08 CJY':  'Cyberjaya',
+  '09 KLG':  'Klang',
+  '10 DA':   'Denai Alam',
+  '11 BBB':  'Bandar Baru Bangi',
+  '12 DK':   'Danau Kota',
+  '13 SHA':  'Shah Alam',
+  '14 BTHO': 'Bandar Tun Hussein Onn',
+  '15 EGR':  'Eco Grandeur',
+  '16 BSP':  'Bandar Seri Putra',
+  '17 RBY':  'Bandar Rimbayu',
+  '18 TSG':  'Taman Sri Gombak',
+  '19 KW':   'Kota Warisan',
+  '20 KTG':  'Kajang',
+  '21 DPU':  'Dataran Puchong Utama',
+};
+
 function parseDate(str) {
   if (!str) return null;
   const parts = str.trim().split(' ');

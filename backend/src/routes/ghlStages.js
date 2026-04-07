@@ -72,7 +72,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
   try {
     const {
       date_from = '', date_to = '',
-      stage = '', pipeline = '', search = '',
+      stage = '', pipeline = '', pipelines = '', search = '',
       page = 1, limit = 50,
     } = req.query;
 
@@ -90,6 +90,14 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     }
     if (stage)    { conditions.push(`stage_key = $${idx++}`); params.push(stage); }
     if (pipeline) { conditions.push(`pipeline_name = $${idx++}`); params.push(pipeline); }
+    else if (pipelines) {
+      const list = pipelines.split(',').map(p => p.trim()).filter(Boolean);
+      if (list.length > 0) {
+        const placeholders = list.map(() => `$${idx++}`).join(',');
+        conditions.push(`pipeline_name IN (${placeholders})`);
+        params.push(...list);
+      }
+    }
     if (search) {
       conditions.push(`(email ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx})`);
       params.push(`%${search}%`);
