@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import { PIPELINE_REGION, PIPELINE_TO_BRANCH, REGION_PIPELINES, fetchLeadsRawForImport } from '../lib/leadsSheet';
+import { PIPELINE_REGION, PIPELINE_TO_BRANCH, REGION_PIPELINES } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -12,7 +12,8 @@ const PRESETS = [
   { key: 'last_week',  label: 'Last Week' },
   { key: 'this_month', label: 'This Month' },
   { key: 'last_month', label: 'Last Month' },
-  { key: 'my_filter',  label: 'My Filter (Sat–Sun)' },
+  { key: 'my_filter',  label: 'My Filter (Sat-Sun)' },
+  { key: 'custom',     label: 'Custom Range' },
 ];
 
 const STAGE_OPTIONS = [
@@ -42,7 +43,7 @@ const PAGE_SIZE = 50;
 
 const EMPTY_FORM = { email: '', last_name: '', phone: '', stage_raw: 'New Lead (NL)', pipeline_name: '', student_name: '', lead_source: '' };
 
-function fmt(d) {
+function fmtD(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -53,31 +54,31 @@ function getDateRange(preset) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  if (preset === 'today') return { date_from: fmt(today), date_to: fmt(today) };
+  if (preset === 'today') return { date_from: fmtD(today), date_to: fmtD(today) };
   if (preset === 'yesterday') {
     const y = new Date(today); y.setDate(y.getDate() - 1);
-    return { date_from: fmt(y), date_to: fmt(y) };
+    return { date_from: fmtD(y), date_to: fmtD(y) };
   }
   if (preset === 'this_week') {
     const day = today.getDay();
     const mon = new Date(today); mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
-    return { date_from: fmt(mon), date_to: fmt(today) };
+    return { date_from: fmtD(mon), date_to: fmtD(today) };
   }
   if (preset === 'last_week') {
     const day = today.getDay();
     const thisMon = new Date(today); thisMon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
     const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
     const lastSun = new Date(thisMon); lastSun.setDate(thisMon.getDate() - 1);
-    return { date_from: fmt(lastMon), date_to: fmt(lastSun) };
+    return { date_from: fmtD(lastMon), date_to: fmtD(lastSun) };
   }
   if (preset === 'this_month') {
     const first = new Date(today.getFullYear(), today.getMonth(), 1);
-    return { date_from: fmt(first), date_to: fmt(today) };
+    return { date_from: fmtD(first), date_to: fmtD(today) };
   }
   if (preset === 'last_month') {
     const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const last  = new Date(today.getFullYear(), today.getMonth(), 0);
-    return { date_from: fmt(first), date_to: fmt(last) };
+    return { date_from: fmtD(first), date_to: fmtD(last) };
   }
   if (preset === 'my_filter') {
     const sat = new Date(today);
@@ -85,38 +86,55 @@ function getDateRange(preset) {
     sat.setDate(today.getDate() - daysAgo);
     const nextSun = new Date(sat);
     nextSun.setDate(sat.getDate() + 8);
-    return { date_from: fmt(sat), date_to: fmt(nextSun) };
+    return { date_from: fmtD(sat), date_to: fmtD(nextSun) };
   }
-  return { date_from: fmt(today), date_to: fmt(today) };
+  return { date_from: fmtD(today), date_to: fmtD(today) };
 }
 
 export function GhlLeadsCentrePage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
-  const [preset,   setPreset]   = useState(searchParams.get('preset')   || 'this_month');
-  const [stage,    setStage]    = useState(searchParams.get('stage')    || '');
-  const [pipeline, setPipeline] = useState(searchParams.get('pipeline') || '');
-  const [region,   setRegion]   = useState(searchParams.get('region')   || '');
-  const [search,   setSearch]   = useState('');
-  const [page,     setPage]     = useState(1);
+  const [preset,     setPreset]     = useState(searchParams.get('preset') || 'this_month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo,   setCustomTo]   = useState('');
+  const [stage,      setStage]      = useState(searchParams.get('stage')    || '');
+  const [pipeline,   setPipeline]   = useState(searchParams.get('pipeline') || '');
+  const [region,     setRegion]     = useState(searchParams.get('region')   || '');
+  const [search,     setSearch]     = useState('');
+  const [page,       setPage]       = useState(1);
 
   // CRUD state
   const [showForm,   setShowForm]   = useState(false);
   const [editingId,  setEditingId]  = useState(null);
   const [form,       setForm]       = useState({ ...EMPTY_FORM });
   const [deleteId,   setDeleteId]   = useState(null);
-  const [importing,  setImporting]  = useState(false);
-  const [importResult, setImportResult] = useState(null);
 
-  useEffect(() => { setPage(1); }, [preset, stage, pipeline, region, search]);
+  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, stage, pipeline, region, search]);
 
   const filteredPipelines = region ? (REGION_PIPELINES[region] || []) : ALL_PIPELINES;
   useEffect(() => {
     if (pipeline && region && !filteredPipelines.includes(pipeline)) setPipeline('');
   }, [region, pipeline, filteredPipelines]);
 
-  const { date_from, date_to } = getDateRange(preset);
+  // Compute date range
+  let date_from, date_to;
+  if (preset === 'custom') {
+    date_from = customFrom;
+    date_to = customTo;
+  } else {
+    const range = getDateRange(preset);
+    date_from = range.date_from;
+    date_to = range.date_to;
+  }
+
+  const handlePresetClick = (key) => {
+    setPreset(key);
+    if (key !== 'custom') {
+      setCustomFrom('');
+      setCustomTo('');
+    }
+  };
 
   const params = new URLSearchParams({ date_from, date_to, page, limit: PAGE_SIZE });
   if (stage)    params.set('stage', stage);
@@ -129,6 +147,7 @@ export function GhlLeadsCentrePage() {
     queryFn: () => apiFetch(`/api/ghl-stages?${params}`),
     staleTime: 2 * 60 * 1000,
     keepPreviousData: true,
+    enabled: preset !== 'custom' || (!!customFrom && !!customTo),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['ghlLeadsCentre'] });
@@ -187,24 +206,6 @@ export function GhlLeadsCentrePage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  const handleImportGSheet = async () => {
-    if (!confirm('This will DELETE all existing records and re-import from Google Sheet with correct dates. Continue?')) return;
-    setImporting(true);
-    setImportResult(null);
-    try {
-      // Clear existing imported data first
-      const rows = await fetchLeadsRawForImport();
-      const res = await apiFetch('/api/ghl-stages/bulk', { method: 'POST', body: { records: rows, clearFirst: true } });
-      setImportResult({ type: 'success', text: `Done! ${res.inserted} inserted, ${res.skipped} skipped, ${res.total} total.` });
-      invalidate();
-    } catch (err) {
-      setImportResult({ type: 'error', text: `Failed: ${err?.data?.error || err?.message || 'Unknown'}` });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-
   return (
     <div className="dashboardPage">
       <div className="dashboardHeader">
@@ -213,24 +214,8 @@ export function GhlLeadsCentrePage() {
           <h1 className="pageHeaderTitle">GHL Lead Centre</h1>
           <p className="headerSubtitle">{total} records · from GHL webhook data</p>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn btnSecondary btnSmall" onClick={handleImportGSheet} disabled={importing}>
-            {importing ? 'Importing…' : 'Re-import from GSheet'}
-          </button>
-          <button className="btn btnPrimary btnSmall" onClick={handleAdd}>+ Add Record</button>
-        </div>
+        <button className="btn btnPrimary btnSmall" onClick={handleAdd} style={{ marginLeft: 'auto' }}>+ Add Record</button>
       </div>
-
-      {importResult && (
-        <div style={{
-          padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 13, fontWeight: 600,
-          background: importResult.type === 'success' ? '#f0fdf4' : '#fef2f2',
-          color: importResult.type === 'success' ? '#166534' : '#dc2626',
-        }}>
-          {importResult.text}
-          <button onClick={() => setImportResult(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>✕</button>
-        </div>
-      )}
 
       {/* Create / Edit Form */}
       {showForm && (
@@ -275,7 +260,7 @@ export function GhlLeadsCentrePage() {
             </label>
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, alignItems: 'center' }}>
               <button className="btn btnPrimary" type="submit" disabled={isSaving}>
-                {isSaving ? 'Saving…' : (editingId ? 'Save Changes' : 'Add Record')}
+                {isSaving ? 'Saving...' : (editingId ? 'Save Changes' : 'Add Record')}
               </button>
               {(createMutation.isError || updateMutation.isError) && (
                 <span style={{ color: 'var(--brand)', fontSize: 12 }}>
@@ -287,19 +272,32 @@ export function GhlLeadsCentrePage() {
         </div>
       )}
 
-      {/* Date presets */}
-      <div className="ldFilterBar">
+      {/* Date presets + custom range */}
+      <div className="ldFilterBar" style={{ flexWrap: 'wrap' }}>
         {PRESETS.map(p => (
           <button
             key={p.key}
             className={`btn ${preset === p.key ? 'btnPrimary' : 'btnGhost'} btnSmall`}
-            onClick={() => setPreset(p.key)}
+            onClick={() => handlePresetClick(p.key)}
           >
             {p.label}
           </button>
         ))}
         <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
       </div>
+
+      {preset === 'custom' && (
+        <div className="brRankFilters" style={{ marginBottom: 0, gap: 12 }}>
+          <div className="brRankFilterGroup">
+            <label className="brRankLabel">From</label>
+            <input type="date" className="filterInput" value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+          </div>
+          <div className="brRankFilterGroup">
+            <label className="brRankLabel">To</label>
+            <input type="date" className="filterInput" value={customTo} onChange={e => setCustomTo(e.target.value)} />
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="brRankFilters" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
@@ -346,7 +344,7 @@ export function GhlLeadsCentrePage() {
       {isLoading ? (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <div className="loadingDots"><span /><span /><span /></div>
-          <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading…</p>
+          <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading...</p>
         </div>
       ) : isError ? (
         <div className="errorText">Failed to load GHL data.</div>
@@ -434,7 +432,7 @@ export function GhlLeadsCentrePage() {
                   onClick={() => deleteMutation.mutate(deleteId)}
                   disabled={deleteMutation.isPending}
                 >
-                  {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
                 </button>
                 <button className="btn btnGhost" onClick={() => setDeleteId(null)}>Cancel</button>
               </div>
