@@ -157,17 +157,21 @@ export async function fetchLeadsRawForImport() {
   const text = await res.text();
   const rows = parseCSV(text);
 
-  return rows.map(row => ({
-    email: (row['Email'] || '').trim(),
-    last_name: (row['Last Name'] || '').trim(),
-    phone: (row['Phone Number'] || '').trim(),
-    stage_raw: (row['Stage'] || '').trim(),
-    pipeline_name: (row['Pipeline'] || '').trim(),
-    branch: (row['Branch'] || '').trim(),
-    student_name: '',
-    contact_type: (row['Type'] || 'lead').trim(),
-    lead_source: '',
-  })).filter(r => r.stage_raw && r.email);
+  return rows.map(row => {
+    const d = parseDate(row['Date']);
+    return {
+      email: (row['Email'] || '').trim(),
+      last_name: (row['Last Name'] || '').trim(),
+      phone: (row['Phone Number'] || '').trim(),
+      stage_raw: (row['Stage'] || '').trim(),
+      pipeline_name: (row['Pipeline'] || '').trim(),
+      branch: (row['Branch'] || '').trim(),
+      student_name: '',
+      contact_type: (row['Type'] || 'lead').trim(),
+      lead_source: '',
+      received_at: d ? d.toISOString() : null,
+    };
+  }).filter(r => r.stage_raw && r.email);
 }
 
 export function getDateRange(preset) {

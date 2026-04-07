@@ -300,9 +300,14 @@ router.delete('/:id', requireAuth, requireRole(['super_admin']), async (req, res
 // ──────────────────────────────────────────────────────────────
 router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
-    const { records } = req.body;
+    const { records, clearFirst } = req.body;
     if (!Array.isArray(records) || records.length === 0) {
       return res.status(400).json({ error: 'records must be a non-empty array' });
+    }
+
+    // Optionally wipe the table before re-importing
+    if (clearFirst) {
+      await pool.query('DELETE FROM ghl_stages');
     }
 
     let inserted = 0;
@@ -318,6 +323,7 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       const studentName = (r.student_name || '').trim();
       const contactType = (r.contact_type || 'lead').trim();
       const leadSource  = (r.lead_source || '').trim();
+      const receivedAt  = r.received_at || null;
 
       const stageKey = getStageKey(rawStage);
       if (!stageKey) { skipped++; continue; }
@@ -325,10 +331,10 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
       const { rowCount } = await pool.query(
-        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, received_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, COALESCE($12::timestamptz, NOW()))
          ON CONFLICT (fingerprint) DO NOTHING`,
-        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource]
+        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, receivedAt]
       );
 
       if (rowCount > 0) inserted++;
