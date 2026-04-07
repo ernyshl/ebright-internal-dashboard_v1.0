@@ -205,4 +205,88 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
   }
 });
 
+// ──────────────────────────────────────────────────────────────
+// POST /api/ghl-stages — manually create a record (super_admin)
+// ──────────────────────────────────────────────────────────────
+router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+  try {
+    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead' } = req.body;
+
+    const stageKey = getStageKey(stage_raw);
+    if (!stageKey) return res.status(400).json({ error: 'Invalid stage. Use: New Lead (NL), Confirmed (CT), Show-Up (SU), or Enrolled (ENR)' });
+
+    const fingerprint = `${email.trim().toLowerCase()}|${last_name.trim()}|${student_name.trim()}|${stage_raw.trim()}`.replace(/\s+/g, '');
+
+    const { rows } = await pool.query(
+      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (fingerprint) DO NOTHING
+       RETURNING id`,
+      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint]
+    );
+
+    if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same fingerprint already exists)' });
+    return res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// PUT /api/ghl-stages/:id — update a record (super_admin)
+// ──────────────────────────────────────────────────────────────
+router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type } = req.body;
+
+    // Recalculate stage_key if stage_raw changed
+    let stageKey;
+    if (stage_raw !== undefined) {
+      stageKey = getStageKey(stage_raw);
+      if (!stageKey) return res.status(400).json({ error: 'Invalid stage. Use: New Lead (NL), Confirmed (CT), Show-Up (SU), or Enrolled (ENR)' });
+    }
+
+    const sets = [];
+    const params = [];
+    let idx = 1;
+
+    if (email !== undefined)        { sets.push(`email = $${idx++}`);         params.push(email.trim().toLowerCase()); }
+    if (last_name !== undefined)    { sets.push(`last_name = $${idx++}`);     params.push(last_name.trim()); }
+    if (phone !== undefined)        { sets.push(`phone = $${idx++}`);         params.push(phone.trim()); }
+    if (stage_raw !== undefined)    { sets.push(`stage_raw = $${idx++}`);     params.push(stage_raw.trim()); sets.push(`stage_key = $${idx++}`); params.push(stageKey); }
+    if (pipeline_name !== undefined){ sets.push(`pipeline_name = $${idx++}`); params.push(pipeline_name.trim()); }
+    if (branch !== undefined)       { sets.push(`branch = $${idx++}`);        params.push(branch.trim()); }
+    if (student_name !== undefined) { sets.push(`student_name = $${idx++}`);  params.push(student_name.trim()); }
+    if (contact_type !== undefined) { sets.push(`contact_type = $${idx++}`);  params.push(contact_type.trim()); }
+
+    if (sets.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+    params.push(id);
+    const { rowCount } = await pool.query(
+      `UPDATE ghl_stages SET ${sets.join(', ')} WHERE id = $${idx}`,
+      params
+    );
+
+    if (rowCount === 0) return res.status(404).json({ error: 'Record not found' });
+    return res.json({ message: 'Updated' });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// DELETE /api/ghl-stages/:id — delete a record (super_admin)
+// ──────────────────────────────────────────────────────────────
+router.delete('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rowCount } = await pool.query('DELETE FROM ghl_stages WHERE id = $1', [id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Record not found' });
+    return res.json({ message: 'Deleted' });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = { ghlStagesRouter: router };
