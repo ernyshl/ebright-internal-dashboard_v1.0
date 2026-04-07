@@ -9,55 +9,6 @@ const { VALID_ROLES } = require('../constants');
 
 const router = express.Router();
 
-// Rate limiting store (in-memory)
-const loginAttempts = new Map();
-const MAX_ATTEMPTS = 10; // Maximum 10 failed attempts per window
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes window
-const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minute lockout after max attempts
-
-function isRateLimited(email) {
-  const now = Date.now();
-  const record = loginAttempts.get(email);
-  if (!record) return { blocked: false };
-
-  // Check if account is locked
-  if (record.lockedUntil && now < record.lockedUntil) {
-    const waitTime = Math.ceil((record.lockedUntil - now) / 1000);
-    return { blocked: true, waitTime };
-  }
-
-  // Reset if window has passed
-  if (now > record.resetTime) {
-    loginAttempts.delete(email);
-    return { blocked: false };
-  }
-
-  return { blocked: false };
-}
-
-function recordLoginFailure(email) {
-  const now = Date.now();
-  const record = loginAttempts.get(email) || { count: 0, resetTime: now + WINDOW_MS, lockedUntil: 0 };
-
-  // Reset if window has passed
-  if (now > record.resetTime) {
-    record.count = 0;
-    record.resetTime = now + WINDOW_MS;
-    record.lockedUntil = 0;
-  }
-
-  record.count++;
-
-  if (record.count >= MAX_ATTEMPTS) {
-    record.lockedUntil = now + LOCKOUT_DURATION;
-  }
-
-  loginAttempts.set(email, record);
-}
-
-function clearLoginAttempts(email) {
-  loginAttempts.delete(email);
-}
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -79,15 +30,6 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = LoginSchema.parse(req.body);
 
-    // Check rate limit (passive check)
-    const rateLimit = isRateLimited(email);
-    if (rateLimit.blocked) {
-      return res.status(429).json({
-        error: 'Too many login attempts. Please try again later.',
-        waitTime: rateLimit.waitTime
-      });
-    }
-
     const { rows } = await pool.query(
       `
       select id, email, full_name, role, password_hash, is_active
@@ -100,19 +42,14 @@ router.post('/login', async (req, res, next) => {
 
     const user = rows[0];
     if (!user || !user.is_active) {
-      recordLoginFailure(email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const ok = await bcrypt.compare(password, user.password_hash);
 
     if (!ok) {
-      recordLoginFailure(email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-
-    // Success! Clear any existing failure records
-    clearLoginAttempts(email);
 
     const token = jwt.sign(
       {

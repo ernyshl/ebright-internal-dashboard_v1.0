@@ -47,7 +47,8 @@ export function DashboardHomePage() {
       icon: '💰',
       color: '#10b981',
       links: [
-        { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' }
+        { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
+        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
       ]
     },
     {
@@ -66,7 +67,8 @@ export function DashboardHomePage() {
       icon: '📈',
       color: '#f59e0b',
       links: [
-        { label: 'Marketing Performance', path: '/marketing-performance', dashboard: 'marketing' }
+        { label: 'Marketing Performance', path: '/marketing-performance', dashboard: 'marketing' },
+        { label: 'Enrolment by Platform', path: '/platform-breakdown', dashboard: 'marketing' }
       ],
       gaReports: gaReports
     },
@@ -98,16 +100,6 @@ export function DashboardHomePage() {
         { label: 'User Management', path: '/users' },
         { label: 'Permissions', path: '/permissions' },
         { label: '📺 TV Devices', path: '/admin/devices' },
-      ]
-    },
-    {
-      id: 'testing',
-      name: 'Testing Purposes Only (dnft)',
-      icon: '🧪',
-      color: '#f97316',
-      adminOnly: true,
-      links: [
-        { label: 'Testing Data', path: '/platform-breakdown' },
       ]
     },
     {

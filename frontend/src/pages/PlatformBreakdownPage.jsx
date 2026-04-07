@@ -12,6 +12,15 @@ const PRESETS = [
   { key: 'my_filter',  label: 'My Filter (Sat–Sun)' },
 ];
 
+const SOURCE_DISPLAY = {
+  'Trial Class Form': 'Website (Conversion)',
+  'Website': 'Website (Organic)',
+};
+
+function displaySource(source) {
+  return SOURCE_DISPLAY[source] || source;
+}
+
 function pct(a, b) {
   return b > 0 ? (a / b * 100).toFixed(2) + '%' : 'No data';
 }
@@ -66,7 +75,7 @@ export function PlatformBreakdownPage() {
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
-          <h1 className="pageHeaderTitle">Platform Breakdown</h1>
+          <h1 className="pageHeaderTitle">Enrolment by Platform</h1>
           <p className="headerSubtitle">NL / CT / SU / ENR by lead source · {dateLabel}</p>
         </div>
       </div>
@@ -111,7 +120,7 @@ export function PlatformBreakdownPage() {
                   <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No data</td></tr>
                 ) : rows.map(r => (
                   <tr key={r.source}>
-                    <td><strong>{r.source}</strong></td>
+                    <td><strong>{displaySource(r.source)}</strong></td>
                     <td>{r.NL}  <span className="ldPct">({pct(r.ENR, r.NL)})</span></td>
                     <td>{r.CT}  <span className="ldPct">({pct(r.CT,  r.NL)})</span></td>
                     <td>{r.SU}  <span className="ldPct">({pct(r.SU,  r.CT)})</span></td>
