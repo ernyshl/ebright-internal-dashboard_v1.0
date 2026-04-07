@@ -100,8 +100,14 @@ function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
       <div className="ldRegionLabel">{label}</div>
       <div className="ldRegionRight">
         <div className="ldMetricGrid">
-          <MetricBox label="NL (Raw)" value={m.NL} />
-          <MetricBox label="NL (GHL)" value={m.GHL_NL} />
+          <div className="ldMetricBox">
+            <div className="ldMetricLabel">NL (Raw | GHL)</div>
+            <div className="ldMetricValue">
+              <Link to={`/leads-centre?date_from=${preset === 'today' ? '' : ''}`} className="ldMetricLink">{m.NL}</Link>
+              <span style={{ margin: '0 6px', color: 'var(--muted)' }}>|</span>
+              <Link to={`${ghlBase}&stage=NL`} className="ldMetricLink" style={m.NL !== m.GHL_NL ? { color: '#dc2626' } : {}}>{m.GHL_NL}</Link>
+            </div>
+          </div>
           <MetricBox label="CT"  value={m.CT}  to={`${ghlBase}&stage=CT`} />
           <MetricBox label="SU"  value={m.SU}  to={`${ghlBase}&stage=SU`} />
           <MetricBox label="ENR" value={m.ENR} to={`${ghlBase}&stage=ENR`} />
@@ -136,8 +142,7 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
           <thead>
             <tr>
               <th>Pipeline</th>
-              <th>NL (Raw) <span className="ldColHint">(Conv%)</span></th>
-              <th>NL (GHL)</th>
+              <th>NL (Raw | GHL) <span className="ldColHint">(Conv%)</span></th>
               <th>CT <span className="ldColHint">(Conf%)</span></th>
               <th>SU <span className="ldColHint">(ShowUp%)</span></th>
               <th>ENR <span className="ldColHint">(Enrol%)</span></th>
@@ -145,14 +150,18 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
           </thead>
           <tbody>
             {tableRows.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>No data</td></tr>
+              <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>No data</td></tr>
             ) : tableRows.map(r => {
               const nlMismatch = r.NL !== r.GHL_NL;
               return (
                 <tr key={r.pip}>
                   <td>{r.pip}</td>
-                  <td>{r.NL} <span className="ldPct">({pct(r.ENR, r.NL)})</span></td>
-                  <td style={nlMismatch ? { background: '#fef2f2', color: '#dc2626', fontWeight: 600 } : {}}>{r.GHL_NL}</td>
+                  <td>
+                    <Link to={`/leads-centre?branch=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.NL}</Link>
+                    <span style={{ margin: '0 4px', color: 'var(--muted)' }}>|</span>
+                    <Link to={`${ghlBase}&stage=NL&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink" style={nlMismatch ? { color: '#dc2626', fontWeight: 600 } : {}}>{r.GHL_NL}</Link>
+                    {' '}<span className="ldPct">({pct(r.ENR, r.NL)})</span>
+                  </td>
                   <td><Link to={`${ghlBase}&stage=CT&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.CT}</Link> <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
                   <td><Link to={`${ghlBase}&stage=SU&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.SU}</Link> <span className="ldPct">({pct(r.SU, r.CT)})</span></td>
                   <td><Link to={`${ghlBase}&stage=ENR&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.ENR}</Link> <span className="ldPct">({pct(r.ENR, r.SU)})</span></td>
@@ -164,8 +173,12 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
             <tfoot>
               <tr className="ldTotalRow">
                 <td><strong>Total</strong></td>
-                <td><strong>{totals.NL}</strong> <span className="ldPct">({pct(totals.ENR, totals.NL)})</span></td>
-                <td style={totals.NL !== totals.GHL_NL ? { background: '#fef2f2', color: '#dc2626', fontWeight: 600 } : {}}><strong>{totals.GHL_NL}</strong></td>
+                <td>
+                  <strong>{totals.NL}</strong>
+                  <span style={{ margin: '0 4px', color: 'var(--muted)' }}>|</span>
+                  <strong style={totals.NL !== totals.GHL_NL ? { color: '#dc2626' } : {}}>{totals.GHL_NL}</strong>
+                  {' '}<span className="ldPct">({pct(totals.ENR, totals.NL)})</span>
+                </td>
                 <td><strong>{totals.CT}</strong> <span className="ldPct">({pct(totals.CT, totals.NL)})</span></td>
                 <td><strong>{totals.SU}</strong> <span className="ldPct">({pct(totals.SU, totals.CT)})</span></td>
                 <td><strong>{totals.ENR}</strong> <span className="ldPct">({pct(totals.ENR, totals.SU)})</span></td>
