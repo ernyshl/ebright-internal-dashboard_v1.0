@@ -33,7 +33,7 @@ router.post('/webhook', async (req, res) => {
 
     const email       = (data.email        || '').trim().toLowerCase();
     const lastName    = (data.last_name    || '').trim();
-    const rawStage    = (data.pipeline_stage || data.Stage || '').trim();
+    const rawStage    = (data.pipleline_stage || data.pipeline_stage || data.Stage || data.stage || '').trim();
     const studentName = (data.student_name || '').trim();
     const phone       = (data.phone        || '').trim();
     const branch      = (data.Branch       || data['Branch Name'] || '').trim();
