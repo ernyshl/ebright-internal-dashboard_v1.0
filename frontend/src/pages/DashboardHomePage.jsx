@@ -1,13 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
-import { getUser } from '../lib/auth';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 
 export function DashboardHomePage() {
   const navigate = useNavigate();
-  const user = getUser();
-  const isSuperAdmin = user?.role === 'super_admin';
   const { permissions, dashboards, isLoading } = usePermissions();
 
   // Fetch recent events for dashboard overview
@@ -95,11 +92,10 @@ export function DashboardHomePage() {
       name: 'Admin',
       icon: '🔧',
       color: '#6b7280',
-      adminOnly: true,
       links: [
-        { label: 'User Management', path: '/users' },
-        { label: 'Permissions', path: '/permissions' },
-        { label: '📺 TV Devices', path: '/admin/devices' },
+        { label: 'User Management', path: '/users', dashboard: 'admin' },
+        { label: 'Permissions', path: '/permissions', dashboard: 'admin' },
+        { label: '📺 TV Devices', path: '/admin/devices', dashboard: 'admin' },
       ]
     },
     {
@@ -107,47 +103,39 @@ export function DashboardHomePage() {
       name: 'Testing Purposes Only (dnft)',
       icon: '🧪',
       color: '#f97316',
-      adminOnly: true,
       links: [
-        { label: 'GHL Lead Centre', path: '/ghl-lead-centre' },
-        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard' },
-        { label: 'To Tally', path: '/tally' },
+        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'testing' },
+        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'testing' },
+        { label: 'To Tally', path: '/tally', dashboard: 'testing' },
       ]
     },
     {
-      id: 'rm',
+      id: 'rm_dashboard',
       name: 'For Regional Manager',
       icon: '📊',
       color: '#0ea5e9',
-      visibleRoles: ['super_admin', 'rm'],
       gaReports: [
         { label: 'CT to NL (Dashboard by Region)', url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_7ocip3dd2d' },
         { label: 'Today Dashboard', url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_rzbux1co0d' },
         { label: 'Yesterday Dashboard', url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_ulmzo6co0d' },
       ],
       links: [
-        { label: 'CT to NL (Overall)', path: '/leads-dashboard' },
+        { label: 'CT to NL (Overall)', path: '/leads-dashboard', dashboard: 'rm_dashboard' },
       ]
     }
   ];
 
-  // Filter departments based on permissions - super admin sees everything
-  const filteredDepartments = isSuperAdmin
-    ? departmentData
-    : departmentData
-      .filter(dept => !dept.adminOnly)
-      .filter(dept => !dept.visibleRoles || dept.visibleRoles.includes(user?.role))
+  // Filter departments based on permissions
+  const filteredDepartments = departmentData
       .map(dept => ({
         ...dept,
-        // For marketing, also check if user has permission (don't show just because of gaReports)
-        gaReports: dept.gaReports && canAccess('marketing', permissions) ? dept.gaReports : undefined,
+        gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
         links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
       }))
       .filter(dept => {
-        // Keep department if it has links OR (is marketing AND has marketing permission)
         const hasLinks = dept.links.length > 0;
-        const hasMarketingAccess = dept.id === 'marketing' && canAccess('marketing', permissions);
-        return hasLinks || hasMarketingAccess;
+        const hasGaReports = !!dept.gaReports;
+        return hasLinks || hasGaReports;
       });
 
   if (isLoading) {

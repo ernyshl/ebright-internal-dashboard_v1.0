@@ -83,33 +83,36 @@ export default function App() {
             <RequirePermission dashboard="finance"><BranchRankingPage /></RequirePermission>
           } />
 
-          {/* Super admin only */}
+          {/* Admin */}
           <Route path="/users" element={
-            <RequirePermission roles={['super_admin']}><UsersPage /></RequirePermission>
+            <RequirePermission dashboard="admin"><UsersPage /></RequirePermission>
           } />
           <Route path="/permissions" element={
-            <RequirePermission roles={['super_admin']}><PermissionsPage /></RequirePermission>
+            <RequirePermission dashboard="admin"><PermissionsPage /></RequirePermission>
           } />
           <Route path="/admin/devices" element={
-            <RequirePermission roles={['super_admin']}><DeviceManagerPage /></RequirePermission>
+            <RequirePermission dashboard="admin"><DeviceManagerPage /></RequirePermission>
           } />
+          {/* Regional Manager */}
           <Route path="/leads-dashboard" element={
-            <RequirePermission roles={['super_admin', 'rm']}><LeadsDashboardPage /></RequirePermission>
+            <RequirePermission dashboard="rm_dashboard"><LeadsDashboardPage /></RequirePermission>
           } />
           <Route path="/leads-ghl-view" element={
-            <RequirePermission roles={['super_admin', 'rm']}><LeadsGhlViewPage /></RequirePermission>
+            <RequirePermission dashboard="rm_dashboard"><LeadsGhlViewPage /></RequirePermission>
           } />
+          {/* Marketing */}
           <Route path="/platform-breakdown" element={
-            <RequirePermission roles={['super_admin', 'ceo', 'marketing']} dashboard="marketing"><PlatformBreakdownPage /></RequirePermission>
+            <RequirePermission dashboard="marketing"><PlatformBreakdownPage /></RequirePermission>
           } />
+          {/* Testing */}
           <Route path="/ghl-lead-centre" element={
-            <RequirePermission roles={['super_admin']}><GhlLeadsCentrePage /></RequirePermission>
+            <RequirePermission dashboard="testing"><GhlLeadsCentrePage /></RequirePermission>
           } />
           <Route path="/ghl-dashboard" element={
-            <RequirePermission roles={['super_admin']}><GhlDashboardPage /></RequirePermission>
+            <RequirePermission dashboard="testing"><GhlDashboardPage /></RequirePermission>
           } />
           <Route path="/tally" element={
-            <RequirePermission roles={['super_admin']}><TallyPage /></RequirePermission>
+            <RequirePermission dashboard="testing"><TallyPage /></RequirePermission>
           } />
         </Route>
       </Route>
