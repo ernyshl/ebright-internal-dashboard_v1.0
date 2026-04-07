@@ -151,6 +151,25 @@ export async function fetchLeadsData() {
   }).filter(r => r.date && r.stage);
 }
 
+// Returns raw rows for bulk import (preserves original Stage text)
+export async function fetchLeadsRawForImport() {
+  const res = await fetch(CSV_URL);
+  const text = await res.text();
+  const rows = parseCSV(text);
+
+  return rows.map(row => ({
+    email: (row['Email'] || '').trim(),
+    last_name: (row['Last Name'] || '').trim(),
+    phone: (row['Phone Number'] || '').trim(),
+    stage_raw: (row['Stage'] || '').trim(),
+    pipeline_name: (row['Pipeline'] || '').trim(),
+    branch: (row['Branch'] || '').trim(),
+    student_name: '',
+    contact_type: (row['Type'] || 'lead').trim(),
+    lead_source: '',
+  })).filter(r => r.stage_raw && r.email);
+}
+
 export function getDateRange(preset) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
