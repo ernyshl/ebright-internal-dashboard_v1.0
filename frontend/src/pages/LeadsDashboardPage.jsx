@@ -9,6 +9,9 @@ import {
   REGION_PIPELINES,
   ALL_PIPELINES,
   BRANCH_TO_PIPELINE,
+  fetchLeadsData,
+  filterByPreset,
+  computeByPipeline,
 } from '../lib/leadsSheet';
 
 const PRESETS = [
@@ -178,17 +181,27 @@ export function LeadsDashboardPage() {
     staleTime: 3 * 60 * 1000,
   });
 
-  const { data: ghlData, isLoading: ghlLoading, refetch: refetchGhl } = useQuery({
-    queryKey: ['ghlByPipeline', date_from, date_to],
-    queryFn: () => apiFetch(`/api/ghl-stages/by-pipeline?date_from=${date_from}&date_to=${date_to}`),
+  const { data: sheetRows, isLoading: sheetLoading, refetch: refetchSheet } = useQuery({
+    queryKey: ['leadsSheet'],
+    queryFn: fetchLeadsData,
     staleTime: 3 * 60 * 1000,
   });
 
-  const isLoading = nlLoading || ghlLoading;
-  const handleRefresh = () => { refetchNl(); refetchGhl(); };
+  const isLoading = nlLoading || sheetLoading;
+  const handleRefresh = () => { refetchNl(); refetchSheet(); };
+
+  const filtered = filterByPreset(sheetRows || [], preset);
+  const sheetByPipeline = computeByPipeline(filtered);
 
   const nlByPipeline  = buildNlByPipeline(nlData?.nl || []);
-  const ghlByPipeline = buildGhlByPipeline(ghlData?.byPipeline || []);
+  const ghlByPipeline = buildGhlByPipeline(
+    Object.entries(sheetByPipeline).map(([pip, counts]) => ({
+      pipeline_name: pip,
+      ct: counts.CT || 0,
+      su: counts.SU || 0,
+      enr: counts.ENR || 0,
+    }))
+  );
   const merged        = mergeData(nlByPipeline, ghlByPipeline, ALL_PIPELINES);
   const dateLabel     = formatDateRange(preset);
 

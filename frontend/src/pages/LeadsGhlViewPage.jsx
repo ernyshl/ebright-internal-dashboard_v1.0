@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import { formatDateRange, getApiDateRange, PIPELINE_REGION } from '../lib/leadsSheet';
+import { formatDateRange, fetchLeadsData, filterByPreset, PIPELINE_REGION } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -49,8 +49,6 @@ export function LeadsGhlViewPage() {
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [preset, stage, pipeline, search, dbMatch]);
 
-  const { date_from, date_to } = getApiDateRange(preset);
-
   // DB emails for cross-reference
   const { data: emailData } = useQuery({
     queryKey: ['dbEmails'],
@@ -59,38 +57,42 @@ export function LeadsGhlViewPage() {
   });
   const dbEmailSet = new Set((emailData?.emails || []).map(e => e.toLowerCase().trim()));
 
-  // Build query params
-  const params = new URLSearchParams({ date_from, date_to, page, limit: PAGE_SIZE });
-  if (stage)    params.set('stage', stage);
-  if (pipeline) params.set('pipeline', pipeline);
-  if (search)   params.set('search', search);
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['ghlStages', date_from, date_to, stage, pipeline, search, page],
-    queryFn: () => apiFetch(`/api/ghl-stages?${params}`),
-    staleTime: 2 * 60 * 1000,
-    keepPreviousData: true,
+  // Fetch from GSheet
+  const { data: sheetRows, isLoading, isError, refetch } = useQuery({
+    queryKey: ['leadsSheet'],
+    queryFn: fetchLeadsData,
+    staleTime: 3 * 60 * 1000,
   });
 
-  const allRecords = data?.records || [];
-  // Apply dbMatch client-side (fast, data already paginated)
-  const records = dbMatch
-    ? allRecords.filter(r => {
+  // Filter and paginate client-side
+  const filtered = useMemo(() => {
+    let rows = filterByPreset(sheetRows || [], preset);
+    if (stage)    rows = rows.filter(r => r.stage === stage);
+    if (pipeline) rows = rows.filter(r => r.pipeline === pipeline);
+    if (search) {
+      const q = search.toLowerCase();
+      rows = rows.filter(r =>
+        (r.lastName || '').toLowerCase().includes(q) ||
+        (r.email || '').toLowerCase().includes(q) ||
+        (r.phone || '').toLowerCase().includes(q)
+      );
+    }
+    if (dbMatch) {
+      rows = rows.filter(r => {
         const inDb = r.email ? dbEmailSet.has(r.email.toLowerCase().trim()) : false;
         return dbMatch === 'yes' ? inDb : !inDb;
-      })
-    : allRecords;
+      });
+    }
+    return rows;
+  }, [sheetRows, preset, stage, pipeline, search, dbMatch, dbEmailSet]);
 
-  const total      = data?.total || 0;
-  const totalPages = data?.totalPages || 1;
+  const total      = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const records    = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const availablePipelines = Object.keys(PIPELINE_REGION).sort();
   const dateLabel  = formatDateRange(preset);
   const stageLabel = STAGES.find(s => s.key === stage)?.label || 'All Stages';
-
-  const fmtDate = (d) => d ? new Date(d).toLocaleString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  }) : '—';
 
   return (
     <div className="dashboardPage">
@@ -181,22 +183,22 @@ export function LeadsGhlViewPage() {
               {records.length === 0 ? (
                 <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
               ) : records.map((r, i) => {
-                const stageStyle = STAGE_COLORS[r.stage_key] || {};
+                const stageStyle = STAGE_COLORS[r.stage] || {};
                 const inDb = r.email ? dbEmailSet.has(r.email.toLowerCase().trim()) : false;
-                const region = PIPELINE_REGION[r.pipeline_name] || '—';
+                const region = PIPELINE_REGION[r.pipeline] || '—';
                 return (
-                  <tr key={r.id}>
+                  <tr key={`${r.email}-${r.pipeline}-${r.stage}-${i}`}>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDate(r.received_at_local)}</td>
-                    <td>{r.last_name || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{r.date ? r.date.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                    <td>{r.lastName || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.email || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.phone || '—'}</td>
                     <td>
                       <span style={{ background: stageStyle.bg, color: stageStyle.color, borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600 }}>
-                        {r.stage_key}
+                        {r.stage}
                       </span>
                     </td>
-                    <td>{r.pipeline_name || '—'}</td>
+                    <td>{r.pipeline || '—'}</td>
                     <td>{region}</td>
                     <td style={{ textAlign: 'center' }}>
                       {r.email ? (

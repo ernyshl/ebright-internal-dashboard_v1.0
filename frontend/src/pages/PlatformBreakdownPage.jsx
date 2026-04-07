@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import { formatDateRange, getApiDateRange } from '../lib/leadsSheet';
+import { formatDateRange, getApiDateRange, fetchLeadsData, filterByPreset } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -35,22 +35,37 @@ export function PlatformBreakdownPage() {
     staleTime: 3 * 60 * 1000,
   });
 
-  const { data: ghlData, isLoading: ghlLoading, refetch: refetchGhl } = useQuery({
-    queryKey: ['ghlBySource', date_from, date_to],
-    queryFn: () => apiFetch(`/api/ghl-stages/by-source?date_from=${date_from}&date_to=${date_to}`),
+  // GSheet data for CT/SU/ENR
+  const { data: sheetRows, isLoading: sheetLoading, refetch: refetchSheet } = useQuery({
+    queryKey: ['leadsSheet'],
+    queryFn: fetchLeadsData,
     staleTime: 3 * 60 * 1000,
   });
 
-  const isLoading = nlLoading || ghlLoading;
-  const handleRefresh = () => { refetchNl(); refetchGhl(); };
+  // email → lead_source mapping from DB
+  const { data: emailSourceData, isLoading: esLoading, refetch: refetchEs } = useQuery({
+    queryKey: ['emailSource'],
+    queryFn: () => apiFetch('/api/leads-centre/email-source'),
+    staleTime: 10 * 60 * 1000,
+  });
 
-  // Merge NL (from DB by lead_source) + CT/SU/ENR (from ghl_stages joined by email)
+  const isLoading = nlLoading || sheetLoading || esLoading;
+  const handleRefresh = () => { refetchNl(); refetchSheet(); refetchEs(); };
+
+  // Merge NL (from DB by lead_source) + CT/SU/ENR (from GSheet joined by email → lead_source)
   const nlBySource  = {};
   for (const r of (nlData?.nl || [])) nlBySource[r.lead_source] = Number(r.nl);
 
+  const emailSourceMap = emailSourceData?.emailSource || {};
+  const filtered = filterByPreset(sheetRows || [], preset);
   const ghlBySource = {};
-  for (const r of (ghlData?.bySource || [])) {
-    ghlBySource[r.lead_source] = { CT: Number(r.ct), SU: Number(r.su), ENR: Number(r.enr) };
+  for (const r of filtered) {
+    if (r.stage === 'NL') continue; // only CT/SU/ENR
+    const source = (r.email ? emailSourceMap[r.email.toLowerCase().trim()] : null) || 'Unknown';
+    if (!ghlBySource[source]) ghlBySource[source] = { CT: 0, SU: 0, ENR: 0 };
+    if (r.stage === 'CT')  ghlBySource[source].CT++;
+    if (r.stage === 'SU')  ghlBySource[source].SU++;
+    if (r.stage === 'ENR') ghlBySource[source].ENR++;
   }
 
   const allSources = new Set([...Object.keys(nlBySource), ...Object.keys(ghlBySource)]);
@@ -102,7 +117,7 @@ export function PlatformBreakdownPage() {
         <div className="card ldTableCard">
           <h3 className="ldTableTitle">NL / CT / SU / ENR by Platform</h3>
           <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-            NL from database · CT/SU/ENR from GHL webhook (matched by email to identify platform)
+            NL from database · CT/SU/ENR from GHL data (matched by email to identify platform)
           </p>
           <div style={{ overflowX: 'auto' }}>
             <table className="dataTable">
