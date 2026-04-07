@@ -330,11 +330,14 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
 
       const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
+      // Use a unique fingerprint per row to allow duplicates in bulk import
+      const bulkFingerprint = `${fingerprint}|${receivedAt || Date.now()}|${inserted + skipped}`;
+
       const { rowCount } = await pool.query(
         `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, received_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, COALESCE($12::timestamptz, NOW()))
          ON CONFLICT (fingerprint) DO NOTHING`,
-        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, receivedAt]
+        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, receivedAt]
       );
 
       if (rowCount > 0) inserted++;
