@@ -30,7 +30,6 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   const navItems = [
     { to: '/', label: 'Dashboard Home', icon: '🏠', roles: null },
     { to: '/executive-summary', label: 'Executive Summary', icon: '📊', roles: ['super_admin', 'ceo'] },
-    { to: '/branch-ranking', label: 'Branch Ranking', icon: '🏆', roles: ['super_admin', 'ceo', 'finance', 'od', 'rm'] },
     { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr'] },
     { to: '/leads-ghl-view', label: 'Leads GHL View', icon: '🔍', roles: ['super_admin', 'rm'] },
     { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },

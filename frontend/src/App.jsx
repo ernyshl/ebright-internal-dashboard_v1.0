@@ -77,7 +77,7 @@ export default function App() {
             <RequirePermission roles={['super_admin', 'ceo']}><ExecutiveSummaryPage /></RequirePermission>
           } />
           <Route path="/branch-ranking" element={
-            <RequirePermission roles={['super_admin', 'ceo', 'finance', 'od', 'rm']}><BranchRankingPage /></RequirePermission>
+            <RequirePermission dashboard="finance"><BranchRankingPage /></RequirePermission>
           } />
 
           {/* Super admin only */}
