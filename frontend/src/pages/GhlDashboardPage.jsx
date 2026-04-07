@@ -15,7 +15,9 @@ const PRESETS = [
   { key: 'today',      label: 'Today' },
   { key: 'yesterday',  label: 'Yesterday' },
   { key: 'this_week',  label: 'This Week' },
+  { key: 'last_week',  label: 'Last Week' },
   { key: 'this_month', label: 'This Month' },
+  { key: 'last_month', label: 'Last Month' },
   { key: 'my_filter',  label: 'My Filter (Sat–Sun)' },
 ];
 

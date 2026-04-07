@@ -144,9 +144,22 @@ export function getDateRange(preset) {
     mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
     return { from: mon, to: endOfDay(today) };
   }
+  if (preset === 'last_week') {
+    const day = today.getDay();
+    const thisMon = new Date(today);
+    thisMon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
+    const lastSun = new Date(thisMon); lastSun.setDate(thisMon.getDate() - 1);
+    return { from: lastMon, to: endOfDay(lastSun) };
+  }
   if (preset === 'this_month') {
     const m = new Date(today.getFullYear(), today.getMonth(), 1);
     return { from: m, to: endOfDay(today) };
+  }
+  if (preset === 'last_month') {
+    const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const last  = new Date(today.getFullYear(), today.getMonth(), 0);
+    return { from: first, to: endOfDay(last) };
   }
   if (preset === 'my_filter') {
     // This Saturday to next Sunday (Sat + 8 days)

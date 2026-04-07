@@ -9,7 +9,9 @@ const PRESETS = [
   { key: 'today',      label: 'Today' },
   { key: 'yesterday',  label: 'Yesterday' },
   { key: 'this_week',  label: 'This Week' },
+  { key: 'last_week',  label: 'Last Week' },
   { key: 'this_month', label: 'This Month' },
+  { key: 'last_month', label: 'Last Month' },
   { key: 'my_filter',  label: 'My Filter (Sat–Sun)' },
 ];
 
@@ -51,9 +53,21 @@ function getDateRange(preset) {
     const mon = new Date(today); mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
     return { date_from: fmt(mon), date_to: fmt(today) };
   }
+  if (preset === 'last_week') {
+    const day = today.getDay();
+    const thisMon = new Date(today); thisMon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
+    const lastSun = new Date(thisMon); lastSun.setDate(thisMon.getDate() - 1);
+    return { date_from: fmt(lastMon), date_to: fmt(lastSun) };
+  }
   if (preset === 'this_month') {
     const first = new Date(today.getFullYear(), today.getMonth(), 1);
     return { date_from: fmt(first), date_to: fmt(today) };
+  }
+  if (preset === 'last_month') {
+    const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const last  = new Date(today.getFullYear(), today.getMonth(), 0);
+    return { date_from: fmt(first), date_to: fmt(last) };
   }
   if (preset === 'my_filter') {
     const sat = new Date(today);
