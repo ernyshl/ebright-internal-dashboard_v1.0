@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import { PIPELINE_REGION, PIPELINE_TO_BRANCH, REGION_PIPELINES, fetchLeadsRawForImport } from '../lib/leadsSheet';
+import { PIPELINE_REGION, PIPELINE_TO_BRANCH, REGION_PIPELINES } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -106,8 +106,6 @@ export function GhlLeadsCentrePage() {
   const [editingId,  setEditingId]  = useState(null);
   const [form,       setForm]       = useState({ ...EMPTY_FORM });
   const [deleteId,   setDeleteId]   = useState(null);
-  const [importing,  setImporting]  = useState(false);
-  const [importResult, setImportResult] = useState(null);
 
   useEffect(() => { setPage(1); }, [preset, stage, pipeline, region, search]);
 
@@ -187,21 +185,6 @@ export function GhlLeadsCentrePage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  const handleImportGSheet = async () => {
-    if (!confirm('Import all records from Google Sheet into the GHL database? Duplicates will be skipped.')) return;
-    setImporting(true);
-    setImportResult(null);
-    try {
-      const rows = await fetchLeadsRawForImport();
-      const res = await apiFetch('/api/ghl-stages/bulk', { method: 'POST', body: { records: rows } });
-      setImportResult({ type: 'success', text: `Done! ${res.inserted} inserted, ${res.skipped} skipped (duplicates), ${res.total} total rows.` });
-      invalidate();
-    } catch (err) {
-      setImportResult({ type: 'error', text: `Import failed: ${err?.data?.error || err?.message || 'Unknown error'}` });
-    } finally {
-      setImporting(false);
-    }
-  };
 
   return (
     <div className="dashboardPage">
@@ -211,24 +194,8 @@ export function GhlLeadsCentrePage() {
           <h1 className="pageHeaderTitle">GHL Lead Centre</h1>
           <p className="headerSubtitle">{total} records · from GHL webhook data</p>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn btnSecondary btnSmall" onClick={handleImportGSheet} disabled={importing}>
-            {importing ? 'Importing…' : 'Import from GSheet'}
-          </button>
-          <button className="btn btnPrimary btnSmall" onClick={handleAdd}>+ Add Record</button>
-        </div>
+        <button className="btn btnPrimary btnSmall" onClick={handleAdd} style={{ marginLeft: 'auto' }}>+ Add Record</button>
       </div>
-
-      {importResult && (
-        <div style={{
-          padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 13, fontWeight: 600,
-          background: importResult.type === 'success' ? '#f0fdf4' : '#fef2f2',
-          color: importResult.type === 'success' ? '#166534' : '#dc2626',
-        }}>
-          {importResult.text}
-          <button onClick={() => setImportResult(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>✕</button>
-        </div>
-      )}
 
       {/* Create / Edit Form */}
       {showForm && (
