@@ -111,6 +111,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'GHL Lead Centre', path: '/ghl-lead-centre' },
         { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard' },
+        { label: 'To Tally', path: '/tally' },
       ]
     },
     {

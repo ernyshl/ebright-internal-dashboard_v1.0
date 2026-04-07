@@ -28,6 +28,7 @@ import { LeadsGhlViewPage } from './pages/LeadsGhlViewPage';
 import { PlatformBreakdownPage } from './pages/PlatformBreakdownPage';
 import { GhlLeadsCentrePage } from './pages/GhlLeadsCentrePage';
 import { GhlDashboardPage } from './pages/GhlDashboardPage';
+import { TallyPage } from './pages/TallyPage';
 
 export default function App() {
   return (
@@ -106,6 +107,9 @@ export default function App() {
           } />
           <Route path="/ghl-dashboard" element={
             <RequirePermission roles={['super_admin']}><GhlDashboardPage /></RequirePermission>
+          } />
+          <Route path="/tally" element={
+            <RequirePermission roles={['super_admin']}><TallyPage /></RequirePermission>
           } />
         </Route>
       </Route>

@@ -40,7 +40,7 @@ const STAGE_COLORS = {
 const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
 const PAGE_SIZE = 50;
 
-const EMPTY_FORM = { email: '', last_name: '', phone: '', stage_raw: 'New Lead (NL)', pipeline_name: '', student_name: '' };
+const EMPTY_FORM = { email: '', last_name: '', phone: '', stage_raw: 'New Lead (NL)', pipeline_name: '', student_name: '', lead_source: '' };
 
 function fmt(d) {
   const y = d.getFullYear();
@@ -163,6 +163,7 @@ export function GhlLeadsCentrePage() {
       stage_raw: r.stage_raw || 'New Lead (NL)',
       pipeline_name: r.pipeline_name || '',
       student_name: r.student_name || '',
+      lead_source: r.lead_source || '',
     });
     setShowForm(true);
   };
@@ -231,6 +232,10 @@ export function GhlLeadsCentrePage() {
             <label className="field">
               <div className="label">Student Name</div>
               <input className="input" value={form.student_name} onChange={e => setForm({ ...form, student_name: e.target.value })} />
+            </label>
+            <label className="field">
+              <div className="label">Lead Source</div>
+              <input className="input" value={form.lead_source} onChange={e => setForm({ ...form, lead_source: e.target.value })} placeholder="e.g. Facebook, TikTok" />
             </label>
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 10, alignItems: 'center' }}>
               <button className="btn btnPrimary" type="submit" disabled={isSaving}>
@@ -323,12 +328,13 @@ export function GhlLeadsCentrePage() {
                 <th>Branch</th>
                 <th>Region</th>
                 <th>Student Name</th>
+                <th>Source</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {records.length === 0 ? (
-                <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
+                <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
               ) : records.map((r, i) => {
                 const stageStyle = STAGE_COLORS[r.stage_key] || {};
                 const rowRegion = PIPELINE_REGION[r.pipeline_name] || '—';
@@ -347,6 +353,7 @@ export function GhlLeadsCentrePage() {
                     <td>{PIPELINE_TO_BRANCH[r.pipeline_name] || r.pipeline_name || '—'}</td>
                     <td>{rowRegion}</td>
                     <td>{r.student_name || '—'}</td>
+                    <td style={{ fontSize: 12 }}>{r.lead_source || '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button className="btn btnSmall btnSecondary" onClick={() => handleEdit(r)}>Edit</button>

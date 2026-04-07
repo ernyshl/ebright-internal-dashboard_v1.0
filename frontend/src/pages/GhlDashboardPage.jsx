@@ -41,11 +41,12 @@ function buildNlByPipeline(nlRows) {
   return map;
 }
 
-function buildGhlByPipeline(ghlRows) {
+function buildGhlAllByPipeline(ghlRows) {
   const map = {};
   for (const row of (ghlRows || [])) {
     if (!row.pipeline_name) continue;
     map[row.pipeline_name] = {
+      NL:  Number(row.nl)  || 0,
       CT:  Number(row.ct)  || 0,
       SU:  Number(row.su)  || 0,
       ENR: Number(row.enr) || 0,
@@ -54,21 +55,21 @@ function buildGhlByPipeline(ghlRows) {
   return map;
 }
 
-function mergeData(nlByPipeline, ghlByPipeline, pipelines) {
+function mergeData(dbNlByPipeline, ghlByPipeline, pipelines) {
   const result = {};
   for (const pip of pipelines) {
-    const nl  = nlByPipeline[pip]  || 0;
-    const ghl = ghlByPipeline[pip] || { CT: 0, SU: 0, ENR: 0 };
-    result[pip] = { NL: nl, CT: ghl.CT, SU: ghl.SU, ENR: ghl.ENR };
+    const dbNl  = dbNlByPipeline[pip] || 0;
+    const ghl   = ghlByPipeline[pip]  || { NL: 0, CT: 0, SU: 0, ENR: 0 };
+    result[pip] = { NL: dbNl, GHL_NL: ghl.NL, CT: ghl.CT, SU: ghl.SU, ENR: ghl.ENR };
   }
   return result;
 }
 
 function computeSectionMetrics(pipelines, merged) {
-  const tot = { NL: 0, CT: 0, SU: 0, ENR: 0 };
+  const tot = { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
   for (const pip of pipelines) {
-    const r = merged[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
-    tot.NL += r.NL; tot.CT += r.CT; tot.SU += r.SU; tot.ENR += r.ENR;
+    const r = merged[pip] || { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
+    tot.NL += r.NL; tot.GHL_NL += r.GHL_NL; tot.CT += r.CT; tot.SU += r.SU; tot.ENR += r.ENR;
   }
   return {
     ...tot,
@@ -99,7 +100,8 @@ function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
       <div className="ldRegionLabel">{label}</div>
       <div className="ldRegionRight">
         <div className="ldMetricGrid">
-          <MetricBox label="NL" value={m.NL} />
+          <MetricBox label="NL (Raw)" value={m.NL} />
+          <MetricBox label="NL (GHL)" value={m.GHL_NL} />
           <MetricBox label="CT"  value={m.CT}  to={`${ghlBase}&stage=CT`} />
           <MetricBox label="SU"  value={m.SU}  to={`${ghlBase}&stage=SU`} />
           <MetricBox label="ENR" value={m.ENR} to={`${ghlBase}&stage=ENR`} />
@@ -116,15 +118,15 @@ function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
 }
 
 function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
-  const totals = { NL: 0, CT: 0, SU: 0, ENR: 0 };
+  const totals = { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
   const regionParam = regionKey ? `&region=${encodeURIComponent(regionKey)}` : '';
   const ghlBase = `/ghl-lead-centre?preset=${preset}${regionParam}`;
 
   const tableRows = pipelines.map(pip => {
-    const r = merged[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
-    totals.NL += r.NL; totals.CT += r.CT; totals.SU += r.SU; totals.ENR += r.ENR;
+    const r = merged[pip] || { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
+    totals.NL += r.NL; totals.GHL_NL += r.GHL_NL; totals.CT += r.CT; totals.SU += r.SU; totals.ENR += r.ENR;
     return { pip, ...r };
-  }).filter(r => r.NL + r.CT + r.SU + r.ENR > 0);
+  }).filter(r => r.NL + r.GHL_NL + r.CT + r.SU + r.ENR > 0);
 
   return (
     <div className="card ldTableCard">
@@ -134,7 +136,8 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
           <thead>
             <tr>
               <th>Pipeline</th>
-              <th>NL <span className="ldColHint">(Conv%)</span></th>
+              <th>NL (Raw) <span className="ldColHint">(Conv%)</span></th>
+              <th>NL (GHL)</th>
               <th>CT <span className="ldColHint">(Conf%)</span></th>
               <th>SU <span className="ldColHint">(ShowUp%)</span></th>
               <th>ENR <span className="ldColHint">(Enrol%)</span></th>
@@ -142,22 +145,27 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
           </thead>
           <tbody>
             {tableRows.length === 0 ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>No data</td></tr>
-            ) : tableRows.map(r => (
-              <tr key={r.pip}>
-                <td>{r.pip}</td>
-                <td>{r.NL} <span className="ldPct">({pct(r.ENR, r.NL)})</span></td>
-                <td><Link to={`${ghlBase}&stage=CT&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.CT}</Link> <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
-                <td><Link to={`${ghlBase}&stage=SU&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.SU}</Link> <span className="ldPct">({pct(r.SU, r.CT)})</span></td>
-                <td><Link to={`${ghlBase}&stage=ENR&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.ENR}</Link> <span className="ldPct">({pct(r.ENR, r.SU)})</span></td>
-              </tr>
-            ))}
+              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)' }}>No data</td></tr>
+            ) : tableRows.map(r => {
+              const nlMismatch = r.NL !== r.GHL_NL;
+              return (
+                <tr key={r.pip}>
+                  <td>{r.pip}</td>
+                  <td>{r.NL} <span className="ldPct">({pct(r.ENR, r.NL)})</span></td>
+                  <td style={nlMismatch ? { background: '#fef2f2', color: '#dc2626', fontWeight: 600 } : {}}>{r.GHL_NL}</td>
+                  <td><Link to={`${ghlBase}&stage=CT&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.CT}</Link> <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
+                  <td><Link to={`${ghlBase}&stage=SU&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.SU}</Link> <span className="ldPct">({pct(r.SU, r.CT)})</span></td>
+                  <td><Link to={`${ghlBase}&stage=ENR&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.ENR}</Link> <span className="ldPct">({pct(r.ENR, r.SU)})</span></td>
+                </tr>
+              );
+            })}
           </tbody>
           {tableRows.length > 0 && (
             <tfoot>
               <tr className="ldTotalRow">
                 <td><strong>Total</strong></td>
                 <td><strong>{totals.NL}</strong> <span className="ldPct">({pct(totals.ENR, totals.NL)})</span></td>
+                <td style={totals.NL !== totals.GHL_NL ? { background: '#fef2f2', color: '#dc2626', fontWeight: 600 } : {}}><strong>{totals.GHL_NL}</strong></td>
                 <td><strong>{totals.CT}</strong> <span className="ldPct">({pct(totals.CT, totals.NL)})</span></td>
                 <td><strong>{totals.SU}</strong> <span className="ldPct">({pct(totals.SU, totals.CT)})</span></td>
                 <td><strong>{totals.ENR}</strong> <span className="ldPct">({pct(totals.ENR, totals.SU)})</span></td>
@@ -192,7 +200,7 @@ export function GhlDashboardPage() {
   const handleRefresh = () => { refetchNl(); refetchGhl(); };
 
   const nlByPipeline  = buildNlByPipeline(nlData?.nl || []);
-  const ghlByPipeline = buildGhlByPipeline(ghlData?.byPipeline || []);
+  const ghlByPipeline = buildGhlAllByPipeline(ghlData?.byPipeline || []);
   const merged        = mergeData(nlByPipeline, ghlByPipeline, ALL_PIPELINES);
   const dateLabel     = formatDateRange(preset);
 

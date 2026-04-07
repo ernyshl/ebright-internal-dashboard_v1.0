@@ -39,6 +39,7 @@ router.post('/webhook', async (req, res) => {
     const branch      = (data.Branch       || data['Branch Name'] || '').trim();
     const pipelineName = (data.pipeline_name || '').trim();
     const contactType = (data.contact_type || 'lead').trim();
+    const leadSource  = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) {
@@ -51,10 +52,10 @@ router.post('/webhook', async (req, res) => {
     // Upsert — ON CONFLICT DO NOTHING deduplicates permanently
     await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (fingerprint) DO NOTHING`,
-      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint]
+      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource]
     );
 
     return res.status(200).json({ status: 'ok' });
@@ -110,7 +111,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const [countResult, dataResult] = await Promise.all([
       pool.query(`SELECT COUNT(*) FROM ghl_stages ${where}`, params),
       pool.query(
-        `SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type,
+        `SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source,
                 (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at_local
          FROM ghl_stages ${where}
          ORDER BY received_at DESC
@@ -136,7 +137,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
 router.get('/by-pipeline', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '' } = req.query;
-    const conditions = [`stage_key IN ('CT','SU','ENR')`];
+    const conditions = [];
     const params = [];
     let idx = 1;
 
@@ -149,13 +150,16 @@ router.get('/by-pipeline', requireAuth, requireRole(ALLOWED_ROLES), async (req, 
       params.push(date_to);
     }
 
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
     const { rows } = await pool.query(
       `SELECT pipeline_name,
+              COUNT(*) FILTER (WHERE stage_key = 'NL')  AS nl,
               COUNT(*) FILTER (WHERE stage_key = 'CT')  AS ct,
               COUNT(*) FILTER (WHERE stage_key = 'SU')  AS su,
               COUNT(*) FILTER (WHERE stage_key = 'ENR') AS enr
        FROM ghl_stages
-       WHERE ${conditions.join(' AND ')}
+       ${where}
        GROUP BY pipeline_name`,
       params,
     );
@@ -210,7 +214,7 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 // ──────────────────────────────────────────────────────────────
 router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
-    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead' } = req.body;
+    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '' } = req.body;
 
     const stageKey = getStageKey(stage_raw);
     if (!stageKey) return res.status(400).json({ error: 'Invalid stage. Use: New Lead (NL), Confirmed (CT), Show-Up (SU), or Enrolled (ENR)' });
@@ -218,11 +222,11 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
     const fingerprint = `${email.trim().toLowerCase()}|${last_name.trim()}|${student_name.trim()}|${stage_raw.trim()}`.replace(/\s+/g, '');
 
     const { rows } = await pool.query(
-      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (fingerprint) DO NOTHING
        RETURNING id`,
-      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint]
+      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim()]
     );
 
     if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same fingerprint already exists)' });
@@ -238,7 +242,7 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
 router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type } = req.body;
+    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source } = req.body;
 
     // Recalculate stage_key if stage_raw changed
     let stageKey;
@@ -259,6 +263,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     if (branch !== undefined)       { sets.push(`branch = $${idx++}`);        params.push(branch.trim()); }
     if (student_name !== undefined) { sets.push(`student_name = $${idx++}`);  params.push(student_name.trim()); }
     if (contact_type !== undefined) { sets.push(`contact_type = $${idx++}`);  params.push(contact_type.trim()); }
+    if (lead_source !== undefined)  { sets.push(`lead_source = $${idx++}`);   params.push(lead_source.trim()); }
 
     if (sets.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
@@ -284,6 +289,105 @@ router.delete('/:id', requireAuth, requireRole(['super_admin']), async (req, res
     const { rowCount } = await pool.query('DELETE FROM ghl_stages WHERE id = $1', [id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Record not found' });
     return res.json({ message: 'Deleted' });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// POST /api/ghl-stages/bulk — bulk import records (super_admin)
+// Accepts JSON array of records
+// ──────────────────────────────────────────────────────────────
+router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+  try {
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records must be a non-empty array' });
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const r of records) {
+      const email       = (r.email || '').trim().toLowerCase();
+      const lastName    = (r.last_name || '').trim();
+      const phone       = (r.phone || '').trim();
+      const rawStage    = (r.stage_raw || r.stage || '').trim();
+      const pipelineName = (r.pipeline_name || '').trim();
+      const branch      = (r.branch || '').trim();
+      const studentName = (r.student_name || '').trim();
+      const contactType = (r.contact_type || 'lead').trim();
+      const leadSource  = (r.lead_source || '').trim();
+
+      const stageKey = getStageKey(rawStage);
+      if (!stageKey) { skipped++; continue; }
+
+      const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
+
+      const { rowCount } = await pool.query(
+        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT (fingerprint) DO NOTHING`,
+        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource]
+      );
+
+      if (rowCount > 0) inserted++;
+      else skipped++;
+    }
+
+    return res.json({ inserted, skipped, total: records.length });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/ghl-stages/tally — raw DB leads vs GHL leads for comparison
+// ──────────────────────────────────────────────────────────────
+router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+  try {
+    const { date_from = '', date_to = '', pipeline = '', lead_source = '' } = req.query;
+
+    // Raw leads from master_leads_powerbi
+    const rawConditions = [];
+    const rawParams = [];
+    let ridx = 1;
+    if (date_from) { rawConditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${ridx++}::date`); rawParams.push(date_from); }
+    if (date_to)   { rawConditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${ridx++}::date`); rawParams.push(date_to); }
+    if (pipeline)  { rawConditions.push(`clean_branch = $${ridx++}`); rawParams.push(pipeline); }
+    if (lead_source) { rawConditions.push(`lead_source = $${ridx++}`); rawParams.push(lead_source); }
+    const rawWhere = rawConditions.length ? `WHERE ${rawConditions.join(' AND ')}` : '';
+
+    const { rows: rawLeads } = await pool.query(
+      `SELECT LOWER(TRIM(email)) AS email, full_name, phone_number AS phone, clean_branch AS branch, lead_source,
+              (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
+       FROM master_leads_powerbi ${rawWhere}
+       ORDER BY submitted_at DESC`,
+      rawParams,
+    );
+
+    // GHL leads
+    const ghlConditions = [];
+    const ghlParams = [];
+    let gidx = 1;
+    if (date_from) { ghlConditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${gidx++}::date`); ghlParams.push(date_from); }
+    if (date_to)   { ghlConditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${gidx++}::date`); ghlParams.push(date_to); }
+    if (pipeline)  {
+      // Map branch name to pipeline codes — let the frontend handle this, just filter by pipeline_name
+      ghlConditions.push(`pipeline_name = $${gidx++}`); ghlParams.push(pipeline);
+    }
+    if (lead_source) { ghlConditions.push(`lead_source = $${gidx++}`); ghlParams.push(lead_source); }
+    const ghlWhere = ghlConditions.length ? `WHERE ${ghlConditions.join(' AND ')}` : '';
+
+    const { rows: ghlLeads } = await pool.query(
+      `SELECT email, last_name, phone, pipeline_name, stage_key, lead_source,
+              (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at
+       FROM ghl_stages ${ghlWhere}
+       ORDER BY received_at DESC`,
+      ghlParams,
+    );
+
+    return res.json({ rawLeads, ghlLeads });
   } catch (err) {
     return next(err);
   }
