@@ -26,6 +26,8 @@ import { DeviceManagerPage } from './pages/DeviceManagerPage';
 import { LeadsDashboardPage } from './pages/LeadsDashboardPage';
 import { LeadsGhlViewPage } from './pages/LeadsGhlViewPage';
 import { PlatformBreakdownPage } from './pages/PlatformBreakdownPage';
+import { GhlLeadsCentrePage } from './pages/GhlLeadsCentrePage';
+import { GhlDashboardPage } from './pages/GhlDashboardPage';
 
 export default function App() {
   return (
@@ -98,6 +100,12 @@ export default function App() {
           } />
           <Route path="/platform-breakdown" element={
             <RequirePermission roles={['super_admin', 'ceo', 'marketing']} dashboard="marketing"><PlatformBreakdownPage /></RequirePermission>
+          } />
+          <Route path="/ghl-lead-centre" element={
+            <RequirePermission roles={['super_admin']}><GhlLeadsCentrePage /></RequirePermission>
+          } />
+          <Route path="/ghl-dashboard" element={
+            <RequirePermission roles={['super_admin']}><GhlDashboardPage /></RequirePermission>
           } />
         </Route>
       </Route>

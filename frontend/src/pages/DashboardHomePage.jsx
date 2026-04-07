@@ -103,6 +103,17 @@ export function DashboardHomePage() {
       ]
     },
     {
+      id: 'testing',
+      name: 'Testing Purposes Only (dnft)',
+      icon: '🧪',
+      color: '#f97316',
+      adminOnly: true,
+      links: [
+        { label: 'GHL Lead Centre', path: '/ghl-lead-centre' },
+        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard' },
+      ]
+    },
+    {
       id: 'rm',
       name: 'For Regional Manager',
       icon: '📊',
