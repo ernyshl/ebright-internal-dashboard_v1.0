@@ -143,12 +143,16 @@ router.get('/email-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
 router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '' } = req.query;
-    const conditions = [];
+    const conditions = [
+      `clean_branch IS NOT NULL`,
+      `TRIM(clean_branch) != ''`,
+      `LOWER(TRIM(clean_branch)) != 'unspecified'`,
+    ];
     const params = [];
     let idx = 1;
     if (date_from) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`); params.push(date_from); }
     if (date_to)   { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`); params.push(date_to); }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where = `WHERE ${conditions.join(' AND ')}`;
     const { rows } = await pool.query(
       `SELECT COALESCE(NULLIF(TRIM(lead_source),''), 'Unknown') AS lead_source, COUNT(*) AS nl
        FROM master_leads_powerbi ${where}
@@ -179,7 +183,11 @@ router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'mar
   try {
     const { date_from = '', date_to = '' } = req.query;
 
-    const conditions = [];
+    const conditions = [
+      `clean_branch IS NOT NULL`,
+      `TRIM(clean_branch) != ''`,
+      `LOWER(TRIM(clean_branch)) != 'unspecified'`,
+    ];
     const params = [];
     let idx = 1;
 
@@ -192,7 +200,7 @@ router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'mar
       params.push(date_to);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where = `WHERE ${conditions.join(' AND ')}`;
 
     const result = await pool.query(
       `SELECT TRIM(clean_branch) AS branch, COUNT(*) AS nl
