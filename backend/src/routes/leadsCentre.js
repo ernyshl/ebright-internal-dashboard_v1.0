@@ -147,6 +147,8 @@ router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
       `clean_branch IS NOT NULL`,
       `TRIM(clean_branch) != ''`,
       `LOWER(TRIM(clean_branch)) != 'unspecified'`,
+      `LOWER(TRIM(clean_branch)) != 'unknown branch'`,
+      `LOWER(TRIM(clean_branch)) NOT LIKE '%test%'`,
     ];
     const params = [];
     let idx = 1;
@@ -187,6 +189,8 @@ router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'mar
       `clean_branch IS NOT NULL`,
       `TRIM(clean_branch) != ''`,
       `LOWER(TRIM(clean_branch)) != 'unspecified'`,
+      `LOWER(TRIM(clean_branch)) != 'unknown branch'`,
+      `LOWER(TRIM(clean_branch)) NOT LIKE '%test%'`,
     ];
     const params = [];
     let idx = 1;
