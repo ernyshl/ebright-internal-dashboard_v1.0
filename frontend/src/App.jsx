@@ -97,7 +97,7 @@ export default function App() {
             <RequirePermission roles={['super_admin', 'rm']}><LeadsGhlViewPage /></RequirePermission>
           } />
           <Route path="/platform-breakdown" element={
-            <RequirePermission roles={['super_admin']}><PlatformBreakdownPage /></RequirePermission>
+            <RequirePermission roles={['super_admin', 'ceo', 'marketing']} dashboard="marketing"><PlatformBreakdownPage /></RequirePermission>
           } />
         </Route>
       </Route>
