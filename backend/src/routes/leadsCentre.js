@@ -16,7 +16,7 @@ function sanitizeSearchTerm(term) {
 }
 
 // GET /api/leads-centre — filtered, paginated leads search
-router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr']), async (req, res, next) => {
+router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (req, res, next) => {
   try {
     const {
       search = '',

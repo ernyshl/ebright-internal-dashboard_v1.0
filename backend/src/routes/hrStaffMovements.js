@@ -4,7 +4,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr'];
+const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
 // GET /api/hr-staff-movements/dashboard — dashboard view (-2 weeks to +2 months)
 router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
