@@ -47,6 +47,54 @@ export const TV_VIEWS = [
     type: 'iframe',
     url: 'https://docs.google.com/document/d/1A6O7ThKnu0wcqTopgjMjvnujoroxeSIRA5tFFER5mLk/preview',
   },
+  {
+    key: 'leads-dashboard',
+    label: 'Leads Dashboard (CT to NL)',
+    type: 'internal',
+    path: '/leads-dashboard',
+  },
+  {
+    key: 'leads-centre',
+    label: 'Leads Centre',
+    type: 'internal',
+    path: '/leads-centre',
+  },
+  {
+    key: 'ghl-dashboard',
+    label: 'GHL Dashboard',
+    type: 'internal',
+    path: '/ghl-dashboard',
+  },
+  {
+    key: 'ghl-lead-centre',
+    label: 'GHL Lead Centre',
+    type: 'internal',
+    path: '/ghl-lead-centre',
+  },
+  {
+    key: 'platform-breakdown',
+    label: 'Enrolment by Platform',
+    type: 'internal',
+    path: '/platform-breakdown',
+  },
+  {
+    key: 'finance',
+    label: 'Finance Dashboard',
+    type: 'internal',
+    path: '/finance',
+  },
+  {
+    key: 'hr-onb-ofb',
+    label: 'ONB/OFB Dashboard',
+    type: 'internal',
+    path: '/hr-onb-ofb',
+  },
+  {
+    key: 'looker-3',
+    label: 'Looker Studio (Yesterday)',
+    type: 'iframe',
+    url: 'https://lookerstudio.google.com/embed/reporting/775a46b1-e020-465a-861e-067e6a21a004/page/p_ulmzo6co0d',
+  },
 ];
 
 export function getView(key) {

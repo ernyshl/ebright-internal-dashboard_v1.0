@@ -9,13 +9,27 @@ import { EventDashboardPage } from './EventDashboardPage';
 import { LeadsBreakdownPage } from './LeadsBreakdownPage';
 import { MarketingPerformancePage } from './MarketingPerformancePage';
 import { ExecutiveSummaryPage } from './ExecutiveSummaryPage';
+import { LeadsDashboardPage } from './LeadsDashboardPage';
+import { LeadsCentrePage } from './LeadsCentrePage';
+import { GhlDashboardPage } from './GhlDashboardPage';
+import { GhlLeadsCentrePage } from './GhlLeadsCentrePage';
+import { PlatformBreakdownPage } from './PlatformBreakdownPage';
+import { FinanceDashboardPage } from './FinanceDashboardPage';
+import { HrOnbOfbDashboardPage } from './HrOnbOfbDashboardPage';
 
 const INTERNAL_COMPONENTS = {
-  'branch-ranking':       BranchRankingPage,
-  'event-dashboard':      EventDashboardPage,
-  'branch-distribution':  LeadsBreakdownPage,
+  'branch-ranking':        BranchRankingPage,
+  'event-dashboard':       EventDashboardPage,
+  'branch-distribution':   LeadsBreakdownPage,
   'marketing-performance': MarketingPerformancePage,
-  'executive-summary':    ExecutiveSummaryPage,
+  'executive-summary':     ExecutiveSummaryPage,
+  'leads-dashboard':       LeadsDashboardPage,
+  'leads-centre':          LeadsCentrePage,
+  'ghl-dashboard':         GhlDashboardPage,
+  'ghl-lead-centre':       GhlLeadsCentrePage,
+  'platform-breakdown':    PlatformBreakdownPage,
+  'finance':               FinanceDashboardPage,
+  'hr-onb-ofb':            HrOnbOfbDashboardPage,
 };
 
 // Schedule a reload at the next 3:00 AM

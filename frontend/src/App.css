@@ -5651,7 +5651,7 @@
 }
 .deviceViewBadge {
   font-size: 12px;
-  background: var(--surface2, #f3f4f6);
+  background: var(--inputBg);
   border-radius: 4px;
   padding: 2px 8px;
 }
@@ -5683,7 +5683,7 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background: var(--surface, #fff);
+  background: var(--panel);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 12px;
   padding: 16px 20px;
@@ -5708,7 +5708,7 @@
   gap: 10px;
 }
 .ldMetricBox {
-  background: var(--surface2, #f9fafb);
+  background: var(--inputBg);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 8px;
   padding: 10px 12px;
@@ -5750,7 +5750,7 @@
   color: var(--muted);
 }
 .ldTotalRow td {
-  background: var(--surface2, #f3f4f6);
+  background: var(--inputBg);
   border-top: 2px solid var(--border, #e5e7eb);
 }
 .ldMetricLink {
