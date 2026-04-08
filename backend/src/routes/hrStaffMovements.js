@@ -149,4 +149,43 @@ router.delete('/:id', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, 
   }
 });
 
+// POST /api/hr-staff-movements/bulk — bulk import
+router.post('/bulk', requireAuth, requireRole(['super_admin', 'hr']), async (req, res, next) => {
+  try {
+    const { records, clearFirst } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records must be a non-empty array' });
+    }
+
+    if (clearFirst) {
+      await pool.query('DELETE FROM hr_staff_movements');
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const r of records) {
+      const name = (r.name || '').trim();
+      const position = (r.position || '').trim();
+      const dept = (r.department_branch || '').trim();
+      const startDate = r.start_date || null;
+      const endDate = r.end_date || null;
+
+      if (!name || !position || !dept) { skipped++; continue; }
+      if (!startDate && !endDate) { skipped++; continue; }
+
+      await pool.query(
+        `INSERT INTO hr_staff_movements (name, position, department_branch, start_date, end_date)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [name, position, dept, startDate, endDate]
+      );
+      inserted++;
+    }
+
+    return res.json({ inserted, skipped, total: records.length });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = { hrStaffMovementsRouter: router };

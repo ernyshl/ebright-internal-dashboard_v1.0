@@ -60,6 +60,8 @@ export function HrStaffListPage() {
   const [editingId,  setEditingId]  = useState(null);
   const [form,       setForm]       = useState({ ...EMPTY_FORM });
   const [deleteId,   setDeleteId]   = useState(null);
+  const [importing,  setImporting]  = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   useEffect(() => { setPage(1); }, [search, posFilter, dept, dateFrom, dateTo]);
 
@@ -129,6 +131,74 @@ export function HrStaffListPage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  const HR_SHEET_CSV = 'https://docs.google.com/spreadsheets/d/1_q2C6uqLpRwTCKSiMD75QOysv8m0UO9I0mDFXTQVVJI/export?format=csv&gid=940851733';
+
+  function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+    const parseRow = (line) => {
+      const values = []; let cur = ''; let inQ = false;
+      for (const ch of line) {
+        if (ch === '"') { inQ = !inQ; }
+        else if (ch === ',' && !inQ) { values.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+      values.push(cur.trim());
+      return values;
+    };
+    const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
+    return lines.slice(1).map(line => {
+      const vals = parseRow(line);
+      const row = {};
+      headers.forEach((h, i) => { row[h] = (vals[i] || '').replace(/^"|"$/g, '').trim(); });
+      return row;
+    }).filter(r => r['name'] || r['Name']);
+  }
+
+  function parseDate(str) {
+    if (!str) return null;
+    // Try DD/MM/YYYY
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      const date = new Date(Number(y), Number(m) - 1, Number(d));
+      if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+    }
+    // Try YYYY-MM-DD or other formats
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    return null;
+  }
+
+  const handleImportGSheet = async () => {
+    if (!confirm('Import staff data from Google Sheet? Existing data will be kept.')) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const res = await fetch(HR_SHEET_CSV);
+      const text = await res.text();
+      const rows = parseCSV(text);
+
+      const records = rows.map(r => ({
+        name: (r['name'] || r['Name'] || '').trim(),
+        position: (r['Position'] || r['position'] || '').trim(),
+        department_branch: (r['Department/Branch'] || r['department/branch'] || r['Department'] || '').trim(),
+        start_date: parseDate(r['Start Date'] || r['start date'] || ''),
+        end_date: parseDate(r['End Date'] || r['end date'] || ''),
+      })).filter(r => r.name && r.position && r.department_branch && (r.start_date || r.end_date));
+
+      const skippedCount = rows.length - records.length;
+
+      const result = await apiFetch('/api/hr-staff-movements/bulk', { method: 'POST', body: { records } });
+      setImportResult({ type: 'success', text: `Done! ${result.inserted} inserted, ${result.skipped + skippedCount} skipped (invalid/missing data), ${rows.length} total rows.` });
+      invalidate();
+    } catch (err) {
+      setImportResult({ type: 'error', text: `Failed: ${err?.data?.error || err?.message || 'Unknown'}` });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="dashboardPage">
       <div className="dashboardHeader">
@@ -137,8 +207,24 @@ export function HrStaffListPage() {
           <h1 className="pageHeaderTitle">Staff List (ONB/OFB)</h1>
           <p className="headerSubtitle">{total} records</p>
         </div>
-        <button className="btn btnPrimary btnSmall" onClick={handleAdd} style={{ marginLeft: 'auto' }}>+ Add Staff</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn btnSecondary btnSmall" onClick={handleImportGSheet} disabled={importing}>
+            {importing ? 'Importing…' : 'Import from GSheet'}
+          </button>
+          <button className="btn btnPrimary btnSmall" onClick={handleAdd}>+ Add Staff</button>
+        </div>
       </div>
+
+      {importResult && (
+        <div style={{
+          padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 13, fontWeight: 600,
+          background: importResult.type === 'success' ? 'var(--successLight)' : 'var(--brandLight)',
+          color: importResult.type === 'success' ? 'var(--success)' : 'var(--brand)',
+        }}>
+          {importResult.text}
+          <button onClick={() => setImportResult(null)} style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, color: 'inherit' }}>✕</button>
+        </div>
+      )}
 
       {/* Create / Edit Form */}
       {showForm && (
