@@ -167,7 +167,7 @@ export function HrStaffListPage() {
               </select>
             </label>
             <label className="field">
-              <div className="label">Starting Date</div>
+              <div className="label">Start Date</div>
               <input className="input" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
             </label>
             <label className="field">
@@ -209,7 +209,7 @@ export function HrStaffListPage() {
           </select>
         </div>
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">Starting Date</label>
+          <label className="brRankLabel">Start Date</label>
           <input type="date" className="filterInput" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
         </div>
         <div className="brRankFilterGroup">
@@ -243,7 +243,7 @@ export function HrStaffListPage() {
                 <th>Name</th>
                 <th>Position</th>
                 <th>Department / Branch</th>
-                <th>Starting Date</th>
+                <th>Start Date</th>
                 <th>End Date</th>
                 <th>Actions</th>
               </tr>

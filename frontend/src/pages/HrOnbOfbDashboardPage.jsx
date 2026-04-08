@@ -11,10 +11,11 @@ function isUpcoming(d) {
   return d && new Date(d) >= new Date(new Date().toDateString());
 }
 
-function Table({ title, records, color, dateField, dateLabel }) {
+function Table({ title, records, type, dateField, dateLabel }) {
+  const isOnb = type === 'onboarding';
   return (
     <div className="card" style={{ flex: 1, overflowX: 'auto', padding: 0 }}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, color }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, color: isOnb ? 'var(--success)' : 'var(--brand)' }}>
         {title} ({records.length})
       </div>
       <table className="dataTable">
@@ -33,7 +34,7 @@ function Table({ title, records, color, dateField, dateLabel }) {
           ) : records.map((r, i) => {
             const upcoming = isUpcoming(r[dateField]);
             return (
-              <tr key={r.id} style={upcoming ? { background: color === '#166534' ? '#f0fdf4' : '#fef2f2' } : {}}>
+              <tr key={r.id} style={upcoming ? { background: isOnb ? 'var(--successLight)' : 'var(--brandLight)' } : {}}>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{i + 1}</td>
                 <td><strong>{r.name}</strong></td>
                 <td>{r.position}</td>
@@ -76,8 +77,8 @@ export function HrOnbOfbDashboardPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <Table title="Onboarding" records={onboarding} color="#166534" dateField="start_date" dateLabel="Starting Date" />
-          <Table title="Offboarding" records={offboarding} color="#dc2626" dateField="end_date" dateLabel="End Date" />
+          <Table title="Onboarding" records={onboarding} type="onboarding" dateField="start_date" dateLabel="Start Date" />
+          <Table title="Offboarding" records={offboarding} type="offboarding" dateField="end_date" dateLabel="End Date" />
         </div>
       )}
     </div>

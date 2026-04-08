@@ -123,11 +123,11 @@ export function TallyPage() {
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>GHL</div>
             </div>
             <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#16a34a' }}>{matched.length}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--success)' }}>{matched.length}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>Matched</div>
             </div>
             <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#dc2626' }}>{rawOnly.length}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--brand)' }}>{rawOnly.length}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>Missing from GHL</div>
             </div>
           </div>
@@ -157,7 +157,7 @@ export function TallyPage() {
                   ) : rawLeads.map((r, i) => {
                     const inGhl = r.email && ghlLeads.some(g => g.email === r.email);
                     return (
-                      <tr key={i} style={!inGhl ? { background: '#fef2f2' } : {}}>
+                      <tr key={i} style={!inGhl ? { background: 'var(--brandLight)' } : {}}>
                         <td style={{ fontSize: 11, color: 'var(--muted)' }}>{i + 1}</td>
                         <td style={{ fontSize: 12 }}>{r.full_name || '—'}</td>
                         <td style={{ fontSize: 11 }}>{r.email || '—'}</td>
@@ -166,8 +166,8 @@ export function TallyPage() {
                         <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{fmtDate(r.submitted_at)}</td>
                         <td style={{ textAlign: 'center' }}>
                           {inGhl
-                            ? <span style={{ color: '#16a34a', fontWeight: 600, fontSize: 12 }}>Yes</span>
-                            : <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 12 }}>No</span>
+                            ? <span style={{ color: 'var(--success)', fontWeight: 600, fontSize: 12 }}>Yes</span>
+                            : <span style={{ color: 'var(--brand)', fontWeight: 600, fontSize: 12 }}>No</span>
                           }
                         </td>
                       </tr>
@@ -201,7 +201,7 @@ export function TallyPage() {
                   ) : ghlLeads.map((r, i) => {
                     const inDb = r.email && rawLeads.some(d => d.email === r.email);
                     return (
-                      <tr key={i} style={!inDb ? { background: '#fefce8' } : {}}>
+                      <tr key={i} style={!inDb ? { background: 'var(--warningLight, #fefce8)' } : {}}>
                         <td style={{ fontSize: 11, color: 'var(--muted)' }}>{i + 1}</td>
                         <td style={{ fontSize: 12 }}>{r.last_name || '—'}</td>
                         <td style={{ fontSize: 11 }}>{r.email || '—'}</td>
@@ -211,8 +211,8 @@ export function TallyPage() {
                         <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{fmtDate(r.received_at)}</td>
                         <td style={{ textAlign: 'center' }}>
                           {inDb
-                            ? <span style={{ color: '#16a34a', fontWeight: 600, fontSize: 12 }}>Yes</span>
-                            : <span style={{ color: '#854d0e', fontWeight: 600, fontSize: 12 }}>No</span>
+                            ? <span style={{ color: 'var(--success)', fontWeight: 600, fontSize: 12 }}>Yes</span>
+                            : <span style={{ color: 'var(--warning, #854d0e)', fontWeight: 600, fontSize: 12 }}>No</span>
                           }
                         </td>
                       </tr>
