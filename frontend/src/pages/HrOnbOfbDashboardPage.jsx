@@ -7,10 +7,6 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function isUpcoming(d) {
-  return d && new Date(d) >= new Date(new Date().toDateString());
-}
-
 function Table({ title, records, type, dateField, dateLabel }) {
   const isOnb = type === 'onboarding';
   return (
@@ -32,14 +28,14 @@ function Table({ title, records, type, dateField, dateLabel }) {
           {records.length === 0 ? (
             <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
           ) : records.map((r, i) => {
-            const upcoming = isUpcoming(r[dateField]);
+            const isTop3 = i < 3;
             return (
-              <tr key={r.id} style={upcoming ? { background: isOnb ? 'var(--successLight)' : 'var(--brandLight)' } : {}}>
+              <tr key={r.id} style={isTop3 ? { background: isOnb ? 'var(--successLight)' : 'var(--brandLight)' } : {}}>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{i + 1}</td>
                 <td><strong>{r.name}</strong></td>
                 <td>{r.position}</td>
                 <td>{r.department_branch}</td>
-                <td style={{ whiteSpace: 'nowrap', fontWeight: upcoming ? 600 : 400 }}>{fmtDate(r[dateField])}</td>
+                <td style={{ whiteSpace: 'nowrap', fontWeight: isTop3 ? 600 : 400 }}>{fmtDate(r[dateField])}</td>
               </tr>
             );
           })}
