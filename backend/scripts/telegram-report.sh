@@ -26,11 +26,6 @@ SELECT
   COUNT(*) as count
 FROM master_leads_powerbi
 WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
-  AND clean_branch IS NOT NULL
-  AND TRIM(clean_branch) != ''
-  AND LOWER(TRIM(clean_branch)) != 'unspecified'
-  AND LOWER(TRIM(clean_branch)) != 'unknown branch'
-  AND LOWER(TRIM(clean_branch)) NOT LIKE '%test%'
 GROUP BY 1
 ORDER BY count DESC;
 "
