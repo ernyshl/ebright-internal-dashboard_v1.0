@@ -16,6 +16,45 @@ const TYPE_COLORS = {
   offboarding: { bg: '#fef2f2', color: '#dc2626' },
 };
 
+const POSITION_OPTIONS = [
+  'HOD',
+  'Executive',
+  'Full-Time Branch Manager',
+  'Full-Time Coach',
+  'Full-Time',
+  'Part-Time',
+  'Intern',
+];
+
+const DEPARTMENT_OPTIONS = [
+  'Academy',
+  'Operation',
+  'Finance',
+  'Marketing',
+  'Industrial Organisation Psychology',
+  'Human Resource',
+  'Optimisation',
+  'Ampang',
+  'Bandar Baru Bangi',
+  'Bandar Rimbayu',
+  'Bandar Seri Putra',
+  'Bandar Tun Hussein Onn',
+  'Cyberjaya',
+  'Danau Kota',
+  'Denai Alam',
+  'Eco Grandeur',
+  'Kajang TTDI Grove',
+  'Klang',
+  'Kota Damansara',
+  'Kota Warisan',
+  'Putrajaya',
+  'Setia Alam',
+  'Shah Alam',
+  'Sri Petaling',
+  'Subang Taipan',
+  'Taman Sri Gombak',
+];
+
 const EMPTY_FORM = { name: '', position: '', department_branch: '', movement_type: 'onboarding', movement_date: '' };
 
 export function HrStaffListPage() {
@@ -23,6 +62,7 @@ export function HrStaffListPage() {
 
   const [search,     setSearch]     = useState('');
   const [type,       setType]       = useState('');
+  const [posFilter,  setPosFilter]  = useState('');
   const [dept,       setDept]       = useState('');
   const [dateFrom,   setDateFrom]   = useState('');
   const [dateTo,     setDateTo]     = useState('');
@@ -33,17 +73,18 @@ export function HrStaffListPage() {
   const [form,       setForm]       = useState({ ...EMPTY_FORM });
   const [deleteId,   setDeleteId]   = useState(null);
 
-  useEffect(() => { setPage(1); }, [search, type, dept, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [search, type, posFilter, dept, dateFrom, dateTo]);
 
   const params = new URLSearchParams({ page, limit: PAGE_SIZE });
-  if (search)   params.set('search', search);
-  if (type)     params.set('movement_type', type);
-  if (dept)     params.set('department_branch', dept);
-  if (dateFrom) params.set('date_from', dateFrom);
-  if (dateTo)   params.set('date_to', dateTo);
+  if (search)    params.set('search', search);
+  if (type)      params.set('movement_type', type);
+  if (posFilter) params.set('position', posFilter);
+  if (dept)      params.set('department_branch', dept);
+  if (dateFrom)  params.set('date_from', dateFrom);
+  if (dateTo)    params.set('date_to', dateTo);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['hrStaffList', search, type, dept, dateFrom, dateTo, page],
+    queryKey: ['hrStaffList', search, type, posFilter, dept, dateFrom, dateTo, page],
     queryFn: () => apiFetch(`/api/hr-staff-movements?${params}`),
     staleTime: 2 * 60 * 1000,
     keepPreviousData: true,
@@ -69,7 +110,6 @@ export function HrStaffListPage() {
   const records    = data?.records || [];
   const total      = data?.total || 0;
   const totalPages = data?.totalPages || 1;
-  const departments = data?.filters?.departments || [];
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
@@ -127,14 +167,17 @@ export function HrStaffListPage() {
             </label>
             <label className="field">
               <div className="label">Position</div>
-              <input className="input" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} required />
+              <select className="input" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} required>
+                <option value="">Select Position</option>
+                {POSITION_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </label>
             <label className="field">
               <div className="label">Department / Branch</div>
-              <input className="input" value={form.department_branch} onChange={e => setForm({ ...form, department_branch: e.target.value })} required list="dept-list" />
-              <datalist id="dept-list">
-                {departments.map(d => <option key={d} value={d} />)}
-              </datalist>
+              <select className="input" value={form.department_branch} onChange={e => setForm({ ...form, department_branch: e.target.value })} required>
+                <option value="">Select Department / Branch</option>
+                {DEPARTMENT_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
             </label>
             <label className="field">
               <div className="label">Type</div>
@@ -174,10 +217,17 @@ export function HrStaffListPage() {
           </select>
         </div>
         <div className="brRankFilterGroup">
+          <label className="brRankLabel">Position</label>
+          <select className="filterSelect" value={posFilter} onChange={e => setPosFilter(e.target.value)}>
+            <option value="">All Positions</option>
+            {POSITION_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div className="brRankFilterGroup">
           <label className="brRankLabel">Department / Branch</label>
           <select className="filterSelect" value={dept} onChange={e => setDept(e.target.value)}>
             <option value="">All</option>
-            {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            {DEPARTMENT_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div className="brRankFilterGroup">
@@ -188,9 +238,9 @@ export function HrStaffListPage() {
           <label className="brRankLabel">To</label>
           <input type="date" className="filterInput" value={dateTo} onChange={e => setDateTo(e.target.value)} />
         </div>
-        {(search || type || dept || dateFrom || dateTo) && (
+        {(search || type || posFilter || dept || dateFrom || dateTo) && (
           <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn btnGhost btnSmall" onClick={() => { setSearch(''); setType(''); setDept(''); setDateFrom(''); setDateTo(''); }}>Clear</button>
+            <button className="btn btnGhost btnSmall" onClick={() => { setSearch(''); setType(''); setPosFilter(''); setDept(''); setDateFrom(''); setDateTo(''); }}>Clear</button>
           </div>
         )}
         <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end', marginLeft: 'auto' }}>

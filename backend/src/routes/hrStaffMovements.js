@@ -37,7 +37,7 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const {
-      search = '', movement_type = '', department_branch = '',
+      search = '', movement_type = '', position = '', department_branch = '',
       date_from = '', date_to = '',
       page = 1, limit = 50,
     } = req.query;
@@ -52,6 +52,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
       idx++;
     }
     if (movement_type) { conditions.push(`movement_type = $${idx++}`); params.push(movement_type); }
+    if (position) { conditions.push(`position = $${idx++}`); params.push(position); }
     if (department_branch) { conditions.push(`department_branch = $${idx++}`); params.push(department_branch); }
     if (date_from) { conditions.push(`movement_date >= $${idx++}::date`); params.push(date_from); }
     if (date_to) { conditions.push(`movement_date <= $${idx++}::date`); params.push(date_to); }
