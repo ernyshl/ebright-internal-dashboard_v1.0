@@ -204,7 +204,7 @@ export function LeadsGhlViewPage() {
                     <td>{region}</td>
                     <td style={{ textAlign: 'center' }}>
                       {r.email ? (
-                        <span style={{ fontWeight: 600, fontSize: 12, color: inDb ? '#16a34a' : '#dc2626' }}>
+                        <span style={{ fontWeight: 600, fontSize: 12, color: inDb ? 'var(--success)' : 'var(--brand)' }}>
                           {inDb ? '✓ In DB' : '✗ Not in DB'}
                         </span>
                       ) : <span style={{ color: 'var(--muted)', fontSize: 12 }}>No email</span>}

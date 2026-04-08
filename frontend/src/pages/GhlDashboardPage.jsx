@@ -105,7 +105,7 @@ function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
             <div className="ldMetricValue">
               <Link to={`/leads-centre?date_from=${preset === 'today' ? '' : ''}`} className="ldMetricLink">{m.NL}</Link>
               <span style={{ margin: '0 6px', color: 'var(--muted)' }}>|</span>
-              <Link to={`${ghlBase}&stage=NL`} className="ldMetricLink" style={m.NL !== m.GHL_NL ? { color: '#dc2626' } : {}}>{m.GHL_NL}</Link>
+              <Link to={`${ghlBase}&stage=NL`} className="ldMetricLink" style={m.NL !== m.GHL_NL ? { color: 'var(--brand)' } : {}}>{m.GHL_NL}</Link>
             </div>
           </div>
           <MetricBox label="CT"  value={m.CT}  to={`${ghlBase}&stage=CT`} />
@@ -159,7 +159,7 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
                   <td>
                     <Link to={`/leads-centre?branch=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.NL}</Link>
                     <span style={{ margin: '0 4px', color: 'var(--muted)' }}>|</span>
-                    <Link to={`${ghlBase}&stage=NL&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink" style={nlMismatch ? { color: '#dc2626', fontWeight: 600 } : {}}>{r.GHL_NL}</Link>
+                    <Link to={`${ghlBase}&stage=NL&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink" style={nlMismatch ? { color: 'var(--brand)', fontWeight: 600 } : {}}>{r.GHL_NL}</Link>
                     {' '}<span className="ldPct">({pct(r.ENR, r.NL)})</span>
                   </td>
                   <td><Link to={`${ghlBase}&stage=CT&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.CT}</Link> <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
@@ -176,7 +176,7 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
                 <td>
                   <strong>{totals.NL}</strong>
                   <span style={{ margin: '0 4px', color: 'var(--muted)' }}>|</span>
-                  <strong style={totals.NL !== totals.GHL_NL ? { color: '#dc2626' } : {}}>{totals.GHL_NL}</strong>
+                  <strong style={totals.NL !== totals.GHL_NL ? { color: 'var(--brand)' } : {}}>{totals.GHL_NL}</strong>
                   {' '}<span className="ldPct">({pct(totals.ENR, totals.NL)})</span>
                 </td>
                 <td><strong>{totals.CT}</strong> <span className="ldPct">({pct(totals.CT, totals.NL)})</span></td>
