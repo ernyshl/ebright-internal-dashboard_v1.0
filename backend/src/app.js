@@ -16,6 +16,7 @@ const { leadsCentreRouter } = require('./routes/leadsCentre');
 const { devicesRouter } = require('./routes/devices');
 const { ghlStagesRouter } = require('./routes/ghlStages');
 const { telegramBotRouter } = require('./routes/telegramBot');
+const { hrStaffMovementsRouter } = require('./routes/hrStaffMovements');
 
 const jwt = require('jsonwebtoken');
 
@@ -153,6 +154,8 @@ function createApp() {
   app.use('/api/ghl-stages', applyRoleBasedRateLimit, ghlStagesRouter);
   // Telegram bot webhook — public endpoint
   app.use('/api/telegram', telegramBotRouter);
+  // HR staff movements
+  app.use('/api/hr-staff-movements', applyRoleBasedRateLimit, hrStaffMovementsRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

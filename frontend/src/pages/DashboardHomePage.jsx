@@ -84,7 +84,9 @@ export function DashboardHomePage() {
       icon: '👥',
       color: '#ec4899',
       links: [
-        { label: 'HR Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' }
+        { label: 'HR Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
+        { label: 'ONB/OFB Dashboard', path: '/hr-onb-ofb', dashboard: 'hr' },
+        { label: 'Staff List (ONB/OFB)', path: '/hr-staff-list', dashboard: 'hr' }
       ]
     },
     {

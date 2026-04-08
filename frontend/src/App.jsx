@@ -29,6 +29,8 @@ import { PlatformBreakdownPage } from './pages/PlatformBreakdownPage';
 import { GhlLeadsCentrePage } from './pages/GhlLeadsCentrePage';
 import { GhlDashboardPage } from './pages/GhlDashboardPage';
 import { TallyPage } from './pages/TallyPage';
+import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
+import { HrStaffListPage } from './pages/HrStaffListPage';
 
 export default function App() {
   return (
@@ -74,6 +76,12 @@ export default function App() {
           } />
           <Route path="/hr-recruitment-funnel" element={
             <RequirePermission dashboard="hr"><HrRecruitmentFunnelPage /></RequirePermission>
+          } />
+          <Route path="/hr-onb-ofb" element={
+            <RequirePermission dashboard="hr"><HrOnbOfbDashboardPage /></RequirePermission>
+          } />
+          <Route path="/hr-staff-list" element={
+            <RequirePermission dashboard="hr"><HrStaffListPage /></RequirePermission>
           } />
 
           <Route path="/executive-summary" element={
