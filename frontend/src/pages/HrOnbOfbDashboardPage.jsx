@@ -2,21 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
-const TYPE_STYLE = {
-  onboarding:  { bg: '#f0fdf4', color: '#166534', label: 'ONB' },
-  offboarding: { bg: '#fef2f2', color: '#dc2626', label: 'OFB' },
-};
-
 function fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function isUpcoming(d) {
-  return new Date(d) >= new Date(new Date().toDateString());
+  return d && new Date(d) >= new Date(new Date().toDateString());
 }
 
-function Table({ title, records, color }) {
+function Table({ title, records, color, dateField, dateLabel }) {
   return (
     <div className="card" style={{ flex: 1, overflowX: 'auto', padding: 0 }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 600, color }}>
@@ -29,21 +24,21 @@ function Table({ title, records, color }) {
             <th>Name</th>
             <th>Position</th>
             <th>Department / Branch</th>
-            <th>Date</th>
+            <th>{dateLabel}</th>
           </tr>
         </thead>
         <tbody>
           {records.length === 0 ? (
             <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
           ) : records.map((r, i) => {
-            const upcoming = isUpcoming(r.movement_date);
+            const upcoming = isUpcoming(r[dateField]);
             return (
               <tr key={r.id} style={upcoming ? { background: color === '#166534' ? '#f0fdf4' : '#fef2f2' } : {}}>
                 <td style={{ color: 'var(--muted)', fontSize: 12 }}>{i + 1}</td>
                 <td><strong>{r.name}</strong></td>
                 <td>{r.position}</td>
                 <td>{r.department_branch}</td>
-                <td style={{ whiteSpace: 'nowrap', fontWeight: upcoming ? 600 : 400 }}>{fmtDate(r.movement_date)}</td>
+                <td style={{ whiteSpace: 'nowrap', fontWeight: upcoming ? 600 : 400 }}>{fmtDate(r[dateField])}</td>
               </tr>
             );
           })}
@@ -81,8 +76,8 @@ export function HrOnbOfbDashboardPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <Table title="Onboarding" records={onboarding} color="#166534" />
-          <Table title="Offboarding" records={offboarding} color="#dc2626" />
+          <Table title="Onboarding" records={onboarding} color="#166534" dateField="start_date" dateLabel="Starting Date" />
+          <Table title="Offboarding" records={offboarding} color="#dc2626" dateField="end_date" dateLabel="End Date" />
         </div>
       )}
     </div>

@@ -10,21 +10,21 @@ const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr'];
 router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
     const { rows: onboarding } = await pool.query(
-      `SELECT id, name, position, department_branch, movement_type, movement_date
+      `SELECT id, name, position, department_branch, start_date, end_date
        FROM hr_staff_movements
-       WHERE movement_type = 'onboarding'
-         AND movement_date >= CURRENT_DATE - INTERVAL '14 days'
-         AND movement_date <= CURRENT_DATE + INTERVAL '2 months'
-       ORDER BY movement_date ASC`
+       WHERE start_date IS NOT NULL
+         AND start_date >= CURRENT_DATE - INTERVAL '14 days'
+         AND start_date <= CURRENT_DATE + INTERVAL '2 months'
+       ORDER BY start_date ASC`
     );
 
     const { rows: offboarding } = await pool.query(
-      `SELECT id, name, position, department_branch, movement_type, movement_date
+      `SELECT id, name, position, department_branch, start_date, end_date
        FROM hr_staff_movements
-       WHERE movement_type = 'offboarding'
-         AND movement_date >= CURRENT_DATE - INTERVAL '14 days'
-         AND movement_date <= CURRENT_DATE + INTERVAL '2 months'
-       ORDER BY movement_date DESC`
+       WHERE end_date IS NOT NULL
+         AND end_date >= CURRENT_DATE - INTERVAL '14 days'
+         AND end_date <= CURRENT_DATE + INTERVAL '2 months'
+       ORDER BY end_date DESC`
     );
 
     return res.json({ onboarding, offboarding });
@@ -37,7 +37,7 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const {
-      search = '', movement_type = '', position = '', department_branch = '',
+      search = '', position = '', department_branch = '',
       date_from = '', date_to = '',
       page = 1, limit = 50,
     } = req.query;
@@ -51,25 +51,23 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
       params.push(`%${search}%`);
       idx++;
     }
-    if (movement_type) { conditions.push(`movement_type = $${idx++}`); params.push(movement_type); }
     if (position) { conditions.push(`position = $${idx++}`); params.push(position); }
     if (department_branch) { conditions.push(`department_branch = $${idx++}`); params.push(department_branch); }
-    if (date_from) { conditions.push(`movement_date >= $${idx++}::date`); params.push(date_from); }
-    if (date_to) { conditions.push(`movement_date <= $${idx++}::date`); params.push(date_to); }
+    if (date_from) { conditions.push(`(start_date >= $${idx}::date OR end_date >= $${idx}::date)`); params.push(date_from); idx++; }
+    if (date_to) { conditions.push(`(start_date <= $${idx}::date OR end_date <= $${idx}::date)`); params.push(date_to); idx++; }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
-    const [countResult, dataResult, deptResult] = await Promise.all([
+    const [countResult, dataResult] = await Promise.all([
       pool.query(`SELECT COUNT(*) FROM hr_staff_movements ${where}`, params),
       pool.query(
-        `SELECT id, name, position, department_branch, movement_type, movement_date, created_at
+        `SELECT id, name, position, department_branch, start_date, end_date, created_at
          FROM hr_staff_movements ${where}
-         ORDER BY movement_date DESC, created_at DESC
+         ORDER BY start_date DESC, created_at DESC
          LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
       ),
-      pool.query(`SELECT DISTINCT department_branch FROM hr_staff_movements WHERE department_branch != '' ORDER BY department_branch`),
     ]);
 
     return res.json({
@@ -77,7 +75,6 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
       total: parseInt(countResult.rows[0].count, 10),
       page: Number(page),
       totalPages: Math.ceil(parseInt(countResult.rows[0].count, 10) / Number(limit)),
-      filters: { departments: deptResult.rows.map(r => r.department_branch) },
     });
   } catch (err) {
     return next(err);
@@ -87,20 +84,20 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
 // POST /api/hr-staff-movements — create
 router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
-    const { name, position, department_branch, movement_type, movement_date } = req.body;
+    const { name, position, department_branch, start_date, end_date } = req.body;
 
-    if (!name || !position || !department_branch || !movement_type || !movement_date) {
-      return res.status(400).json({ error: 'All fields are required: name, position, department_branch, movement_type, movement_date' });
+    if (!name || !position || !department_branch) {
+      return res.status(400).json({ error: 'Name, position, and department/branch are required' });
     }
-    if (!['onboarding', 'offboarding'].includes(movement_type)) {
-      return res.status(400).json({ error: 'movement_type must be onboarding or offboarding' });
+    if (!start_date && !end_date) {
+      return res.status(400).json({ error: 'At least one of start date or end date is required' });
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO hr_staff_movements (name, position, department_branch, movement_type, movement_date)
+      `INSERT INTO hr_staff_movements (name, position, department_branch, start_date, end_date)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [name.trim(), position.trim(), department_branch.trim(), movement_type, movement_date]
+      [name.trim(), position.trim(), department_branch.trim(), start_date || null, end_date || null]
     );
 
     return res.status(201).json({ id: rows[0].id });
@@ -113,11 +110,7 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
 router.put('/:id', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, position, department_branch, movement_type, movement_date } = req.body;
-
-    if (movement_type !== undefined && !['onboarding', 'offboarding'].includes(movement_type)) {
-      return res.status(400).json({ error: 'movement_type must be onboarding or offboarding' });
-    }
+    const { name, position, department_branch, start_date, end_date } = req.body;
 
     const sets = [];
     const params = [];
@@ -126,8 +119,8 @@ router.put('/:id', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, nex
     if (name !== undefined) { sets.push(`name = $${idx++}`); params.push(name.trim()); }
     if (position !== undefined) { sets.push(`position = $${idx++}`); params.push(position.trim()); }
     if (department_branch !== undefined) { sets.push(`department_branch = $${idx++}`); params.push(department_branch.trim()); }
-    if (movement_type !== undefined) { sets.push(`movement_type = $${idx++}`); params.push(movement_type); }
-    if (movement_date !== undefined) { sets.push(`movement_date = $${idx++}`); params.push(movement_date); }
+    if (start_date !== undefined) { sets.push(`start_date = $${idx++}`); params.push(start_date || null); }
+    if (end_date !== undefined) { sets.push(`end_date = $${idx++}`); params.push(end_date || null); }
 
     if (sets.length === 0) return res.status(400).json({ error: 'No fields to update' });
 

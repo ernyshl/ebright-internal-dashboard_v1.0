@@ -5,17 +5,6 @@ import { apiFetch } from '../lib/api';
 
 const PAGE_SIZE = 50;
 
-const TYPE_OPTIONS = [
-  { key: '',            label: 'All Types' },
-  { key: 'onboarding',  label: 'Onboarding' },
-  { key: 'offboarding', label: 'Offboarding' },
-];
-
-const TYPE_COLORS = {
-  onboarding:  { bg: '#f0fdf4', color: '#166534' },
-  offboarding: { bg: '#fef2f2', color: '#dc2626' },
-};
-
 const POSITION_OPTIONS = [
   'HOD',
   'Executive',
@@ -55,13 +44,12 @@ const DEPARTMENT_OPTIONS = [
   'Taman Sri Gombak',
 ];
 
-const EMPTY_FORM = { name: '', position: '', department_branch: '', movement_type: 'onboarding', movement_date: '' };
+const EMPTY_FORM = { name: '', position: '', department_branch: '', start_date: '', end_date: '' };
 
 export function HrStaffListPage() {
   const queryClient = useQueryClient();
 
   const [search,     setSearch]     = useState('');
-  const [type,       setType]       = useState('');
   const [posFilter,  setPosFilter]  = useState('');
   const [dept,       setDept]       = useState('');
   const [dateFrom,   setDateFrom]   = useState('');
@@ -73,38 +61,37 @@ export function HrStaffListPage() {
   const [form,       setForm]       = useState({ ...EMPTY_FORM });
   const [deleteId,   setDeleteId]   = useState(null);
 
-  useEffect(() => { setPage(1); }, [search, type, posFilter, dept, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [search, posFilter, dept, dateFrom, dateTo]);
 
   const params = new URLSearchParams({ page, limit: PAGE_SIZE });
   if (search)    params.set('search', search);
-  if (type)      params.set('movement_type', type);
   if (posFilter) params.set('position', posFilter);
   if (dept)      params.set('department_branch', dept);
   if (dateFrom)  params.set('date_from', dateFrom);
   if (dateTo)    params.set('date_to', dateTo);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['hrStaffList', search, type, posFilter, dept, dateFrom, dateTo, page],
+    queryKey: ['hrStaffList', search, posFilter, dept, dateFrom, dateTo, page],
     queryFn: () => apiFetch(`/api/hr-staff-movements?${params}`),
     staleTime: 2 * 60 * 1000,
     keepPreviousData: true,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['hrStaffList'] });
+  const invalidate = () => { queryClient.invalidateQueries({ queryKey: ['hrStaffList'] }); queryClient.invalidateQueries({ queryKey: ['hrOnbOfbDashboard'] }); };
 
   const createMutation = useMutation({
     mutationFn: (body) => apiFetch('/api/hr-staff-movements', { method: 'POST', body }),
-    onSuccess: () => { invalidate(); queryClient.invalidateQueries({ queryKey: ['hrOnbOfbDashboard'] }); setShowForm(false); setForm({ ...EMPTY_FORM }); },
+    onSuccess: () => { invalidate(); setShowForm(false); setForm({ ...EMPTY_FORM }); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, body }) => apiFetch(`/api/hr-staff-movements/${id}`, { method: 'PUT', body }),
-    onSuccess: () => { invalidate(); queryClient.invalidateQueries({ queryKey: ['hrOnbOfbDashboard'] }); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_FORM }); },
+    onSuccess: () => { invalidate(); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_FORM }); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => apiFetch(`/api/hr-staff-movements/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { invalidate(); queryClient.invalidateQueries({ queryKey: ['hrOnbOfbDashboard'] }); setDeleteId(null); },
+    onSuccess: () => { invalidate(); setDeleteId(null); },
   });
 
   const records    = data?.records || [];
@@ -119,8 +106,8 @@ export function HrStaffListPage() {
       name: r.name || '',
       position: r.position || '',
       department_branch: r.department_branch || '',
-      movement_type: r.movement_type || 'onboarding',
-      movement_date: r.movement_date ? r.movement_date.split('T')[0] : '',
+      start_date: r.start_date ? r.start_date.split('T')[0] : '',
+      end_date: r.end_date ? r.end_date.split('T')[0] : '',
     });
     setShowForm(true);
   };
@@ -180,15 +167,12 @@ export function HrStaffListPage() {
               </select>
             </label>
             <label className="field">
-              <div className="label">Type</div>
-              <select className="input" value={form.movement_type} onChange={e => setForm({ ...form, movement_type: e.target.value })}>
-                <option value="onboarding">Onboarding</option>
-                <option value="offboarding">Offboarding</option>
-              </select>
+              <div className="label">Starting Date</div>
+              <input className="input" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
             </label>
             <label className="field">
-              <div className="label">Date</div>
-              <input className="input" type="date" value={form.movement_date} onChange={e => setForm({ ...form, movement_date: e.target.value })} required />
+              <div className="label">End Date</div>
+              <input className="input" type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
             </label>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
               <button className="btn btnPrimary" type="submit" disabled={isSaving}>
@@ -211,12 +195,6 @@ export function HrStaffListPage() {
           <input className="filterInput" placeholder="Name / Position / Department" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%' }} />
         </div>
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">Type</label>
-          <select className="filterSelect" value={type} onChange={e => setType(e.target.value)}>
-            {TYPE_OPTIONS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-          </select>
-        </div>
-        <div className="brRankFilterGroup">
           <label className="brRankLabel">Position</label>
           <select className="filterSelect" value={posFilter} onChange={e => setPosFilter(e.target.value)}>
             <option value="">All Positions</option>
@@ -231,16 +209,16 @@ export function HrStaffListPage() {
           </select>
         </div>
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">From</label>
+          <label className="brRankLabel">Starting Date</label>
           <input type="date" className="filterInput" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
         </div>
         <div className="brRankFilterGroup">
-          <label className="brRankLabel">To</label>
+          <label className="brRankLabel">End Date</label>
           <input type="date" className="filterInput" value={dateTo} onChange={e => setDateTo(e.target.value)} />
         </div>
-        {(search || type || posFilter || dept || dateFrom || dateTo) && (
+        {(search || posFilter || dept || dateFrom || dateTo) && (
           <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn btnGhost btnSmall" onClick={() => { setSearch(''); setType(''); setPosFilter(''); setDept(''); setDateFrom(''); setDateTo(''); }}>Clear</button>
+            <button className="btn btnGhost btnSmall" onClick={() => { setSearch(''); setPosFilter(''); setDept(''); setDateFrom(''); setDateTo(''); }}>Clear</button>
           </div>
         )}
         <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end', marginLeft: 'auto' }}>
@@ -265,37 +243,30 @@ export function HrStaffListPage() {
                 <th>Name</th>
                 <th>Position</th>
                 <th>Department / Branch</th>
-                <th>Type</th>
-                <th>Date</th>
+                <th>Starting Date</th>
+                <th>End Date</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {records.length === 0 ? (
                 <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
-              ) : records.map((r, i) => {
-                const ts = TYPE_COLORS[r.movement_type] || {};
-                return (
-                  <tr key={r.id}>
-                    <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
-                    <td><strong>{r.name}</strong></td>
-                    <td>{r.position}</td>
-                    <td>{r.department_branch}</td>
-                    <td>
-                      <span style={{ background: ts.bg, color: ts.color, borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600 }}>
-                        {r.movement_type === 'onboarding' ? 'ONB' : 'OFB'}
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.movement_date)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btnSmall btnSecondary" onClick={() => handleEdit(r)}>Edit</button>
-                        <button className="btn btnSmall btnDanger" onClick={() => setDeleteId(r.id)} disabled={deleteMutation.isPending}>Del</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              ) : records.map((r, i) => (
+                <tr key={r.id}>
+                  <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
+                  <td><strong>{r.name}</strong></td>
+                  <td>{r.position}</td>
+                  <td>{r.department_branch}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.start_date)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.end_date)}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn btnSmall btnSecondary" onClick={() => handleEdit(r)}>Edit</button>
+                      <button className="btn btnSmall btnDanger" onClick={() => setDeleteId(r.id)} disabled={deleteMutation.isPending}>Del</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
 
