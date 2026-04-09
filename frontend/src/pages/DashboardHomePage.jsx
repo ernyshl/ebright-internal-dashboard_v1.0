@@ -118,6 +118,7 @@ export function DashboardHomePage() {
         { label: 'User Management', path: '/users', dashboard: 'admin' },
         { label: 'Permissions', path: '/permissions', dashboard: 'admin' },
         { label: '📺 TV Devices', path: '/admin/devices', dashboard: 'admin' },
+        { label: '📋 Audit Log', path: '/admin/audit-log', dashboard: 'admin' },
       ]
     },
     {

@@ -34,6 +34,7 @@ import { HrStaffListPage } from './pages/HrStaffListPage';
 import { FaDashboardPage } from './pages/FaDashboardPage';
 import { HrMcPage } from './pages/HrMcPage';
 import { EventMktDashboardPage } from './pages/EventMktDashboardPage';
+import { AuditLogPage } from './pages/AuditLogPage';
 import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
 
 export default function App() {
@@ -114,6 +115,9 @@ export default function App() {
           } />
           <Route path="/admin/devices" element={
             <RequirePermission dashboard="admin"><DeviceManagerPage /></RequirePermission>
+          } />
+          <Route path="/admin/audit-log" element={
+            <RequirePermission dashboard="admin"><AuditLogPage /></RequirePermission>
           } />
           {/* Regional Manager */}
           <Route path="/leads-dashboard" element={
