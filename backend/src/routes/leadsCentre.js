@@ -120,6 +120,50 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
   }
 });
 
+// GET /api/leads-centre/export — CSV export with same filters, no pagination
+router.get('/export', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr']), async (req, res, next) => {
+  try {
+    const { search = '', lead_source = '', region = '', branch = '', date_from = '', date_to = '' } = req.query;
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+
+    if (search) {
+      const sanitizedSearch = sanitizeSearchTerm(search);
+      conditions.push(`(LOWER(full_name) LIKE $${idx} OR LOWER(email) LIKE $${idx} OR LOWER(phone_number) LIKE $${idx})`);
+      params.push(`%${sanitizedSearch.toLowerCase()}%`);
+      idx++;
+    }
+    if (lead_source) { conditions.push(`lead_source = $${idx++}`); params.push(lead_source); }
+    if (region && REGION_BRANCHES[region]) { conditions.push(`TRIM(clean_branch) ILIKE ANY($${idx++})`); params.push(REGION_BRANCHES[region]); }
+    if (branch) { conditions.push(`clean_branch = $${idx++}`); params.push(branch); }
+    if (date_from) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`); params.push(date_from); }
+    if (date_to) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`); params.push(date_to); }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const { rows } = await pool.query(
+      `SELECT full_name, email, phone_number, lead_source, clean_branch,
+              (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
+       FROM master_leads_powerbi ${where}
+       ORDER BY submitted_at DESC`,
+      params,
+    );
+
+    // Build CSV
+    const header = 'Name,Email,Phone,Source,Branch,Submitted At';
+    const csvRows = rows.map(r => {
+      const esc = (v) => `"${(v || '').replace(/"/g, '""')}"`;
+      const dt = r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur' }) : '';
+      return [esc(r.full_name), esc(r.email), esc(r.phone_number), esc(r.lead_source), esc(r.clean_branch), esc(dt)].join(',');
+    });
+    const csv = [header, ...csvRows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="leads-export-${new Date().toISOString().split('T')[0]}.csv"`);
+    return res.send(csv);
+  } catch (err) { return next(err); }
+});
+
 // GET /api/leads-centre/email-source — email → lead_source mapping for cross-reference
 router.get('/email-source', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (_req, res, next) => {
   try {

@@ -205,9 +205,27 @@ export function LeadsCentrePage() {
             )}
           </p>
         </div>
-        <button className="btn btnSecondary" onClick={() => refetch()}>
-          ↻ Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btnSecondary" onClick={() => {
+            const params = new URLSearchParams(
+              Object.fromEntries(Object.entries({ ...filters, search: debouncedSearch }).filter(([, v]) => v))
+            );
+            const token = localStorage.getItem('token');
+            fetch(`/api/leads-centre/export?${params}`, { headers: { Authorization: `Bearer ${token}` } })
+              .then(r => r.blob())
+              .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click(); URL.revokeObjectURL(url);
+              });
+          }}>
+            Export CSV
+          </button>
+          <button className="btn btnSecondary" onClick={() => refetch()}>
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
