@@ -210,7 +210,7 @@ export function LeadsCentrePage() {
             const params = new URLSearchParams(
               Object.fromEntries(Object.entries({ ...filters, search: debouncedSearch }).filter(([, v]) => v))
             );
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('dashboard_token');
             fetch(`/api/leads-centre/export?${params}`, { headers: { Authorization: `Bearer ${token}` } })
               .then(r => r.blob())
               .then(blob => {
