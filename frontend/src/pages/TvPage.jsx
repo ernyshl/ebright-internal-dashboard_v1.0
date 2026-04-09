@@ -16,6 +16,7 @@ import { GhlLeadsCentrePage } from './GhlLeadsCentrePage';
 import { PlatformBreakdownPage } from './PlatformBreakdownPage';
 import { FinanceDashboardPage } from './FinanceDashboardPage';
 import { HrOnbOfbDashboardPage } from './HrOnbOfbDashboardPage';
+import { FaDashboardPage } from './FaDashboardPage';
 
 const INTERNAL_COMPONENTS = {
   'branch-ranking':        BranchRankingPage,
@@ -30,6 +31,7 @@ const INTERNAL_COMPONENTS = {
   'platform-breakdown':    PlatformBreakdownPage,
   'finance':               FinanceDashboardPage,
   'hr-onb-ofb':            HrOnbOfbDashboardPage,
+  'fa-dashboard':          FaDashboardPage,
 };
 
 // Schedule a reload at the next 3:00 AM

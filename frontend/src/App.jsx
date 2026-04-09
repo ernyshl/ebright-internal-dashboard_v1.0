@@ -32,6 +32,8 @@ import { TallyPage } from './pages/TallyPage';
 import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
 import { HrStaffListPage } from './pages/HrStaffListPage';
 import { FaDashboardPage } from './pages/FaDashboardPage';
+import { HrMcPage } from './pages/HrMcPage';
+import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
 
 export default function App() {
   return (
@@ -83,7 +85,13 @@ export default function App() {
             <RequirePermission dashboard="hr"><HrOnbOfbDashboardPage /></RequirePermission>
           } />
           <Route path="/hr-staff-list" element={
-            <RequirePermission dashboard="hr"><HrStaffListPage /></RequirePermission>
+            <RequirePermission dashboard="hr_crud"><HrStaffListPage /></RequirePermission>
+          } />
+          <Route path="/hr-mc" element={
+            <RequirePermission dashboard="hr_crud"><HrMcPage /></RequirePermission>
+          } />
+          <Route path="/hr-annual-leave" element={
+            <RequirePermission dashboard="hr_crud"><HrAnnualLeavePage /></RequirePermission>
           } />
 
           <Route path="/executive-summary" element={

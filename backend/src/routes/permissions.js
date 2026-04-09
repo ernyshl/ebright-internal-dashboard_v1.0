@@ -17,16 +17,17 @@ const DASHBOARDS = [
   { id: 'admin', name: 'Admin', icon: '🔧' },
   { id: 'testing', name: 'Testing (dnft)', icon: '🧪' },
   { id: 'rm_dashboard', name: 'Regional Manager', icon: '📊' },
+  { id: 'hr_crud', name: 'CRUD HR Data', icon: '📋' },
 ];
 
 // Role-based default permissions
 const ROLE_DEFAULTS = {
-  super_admin: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr', 'events', 'admin', 'testing', 'rm_dashboard'],
+  super_admin: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr', 'events', 'admin', 'testing', 'rm_dashboard', 'hr_crud'],
   ceo: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr', 'events'],
   rm: ['operations', 'academy', 'rm_dashboard'],
   marketing: ['marketing', 'academy'],
   od: ['operations', 'academy'],
-  hr: ['department', 'hr'],
+  hr: ['department', 'hr', 'hr_crud'],
   academy: ['academy', 'events'],
   finance: ['finance'],
 };
