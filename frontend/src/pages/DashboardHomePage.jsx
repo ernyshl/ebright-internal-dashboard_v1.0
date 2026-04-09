@@ -35,8 +35,17 @@ export function DashboardHomePage() {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
-        { label: '🎪 Event Dashboard', path: '/events', dashboard: 'events' },
         { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+      ]
+    },
+    {
+      id: 'event_mkt',
+      name: 'Event Marketing',
+      icon: '🎪',
+      color: '#f43f5e',
+      links: [
+        { label: 'Event Dashboard', path: '/events', dashboard: 'events' },
+        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'events' },
       ]
     },
     {

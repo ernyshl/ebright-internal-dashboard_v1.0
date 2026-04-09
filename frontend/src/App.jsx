@@ -33,6 +33,7 @@ import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
 import { HrStaffListPage } from './pages/HrStaffListPage';
 import { FaDashboardPage } from './pages/FaDashboardPage';
 import { HrMcPage } from './pages/HrMcPage';
+import { EventMktDashboardPage } from './pages/EventMktDashboardPage';
 import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
 
 export default function App() {
@@ -51,6 +52,9 @@ export default function App() {
           } />
           <Route path="/event-entry" element={
             <RequirePermission dashboard="events"><EventEntryPage /></RequirePermission>
+          } />
+          <Route path="/event-mkt-dashboard" element={
+            <RequirePermission dashboard="events"><EventMktDashboardPage /></RequirePermission>
           } />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leads-centre" element={
