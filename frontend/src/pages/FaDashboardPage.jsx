@@ -28,15 +28,13 @@ const ALL_BRANCHES_RAW = [
   { code: 'TSG',  backlog: 0,   active: 8,   inv1: 3,  inv2: 5  },
   { code: 'KW',   backlog: 0,   active: 5,   inv1: 2,  inv2: 3  },
   { code: 'KTG',  backlog: 0,   active: 6,   inv1: 2,  inv2: 4  },
+  { code: 'DPU',  backlog: 0,   active: 0,   inv1: 0,  inv2: 0  },
 ];
 
 const REGIONS = {
-  'Central':  ['SA', 'AMP', 'SHA', 'DA', 'SP'],
-  'North':    ['KD', 'BTHO', 'EGR', 'BSP', 'RBY', 'TSG'],
-  'South':    ['CJY', 'BBB', 'DK', 'KLG', 'PJY'],
-  'East':     ['KW', 'KTG'],
-  'Online':   ['ONL'],
-  'Flagship': ['ST'],
+  'Region A': ['RBY', 'KLG', 'SHA', 'SA', 'DA', 'EGR', 'ST'],
+  'Region B': ['DK', 'KD', 'AMP', 'SP', 'BTHO', 'KTG', 'TSG'],
+  'Region C': ['PJY', 'KW', 'BBB', 'CJY', 'BSP', 'DPU', 'ONL'],
 };
 
 const GRADE_DATA = [
@@ -67,7 +65,7 @@ function CustomBacklogTooltip({ active, payload }) {
     }}>
       <strong>{d.code}</strong>
       <div style={{ color: 'var(--textSecondary)', marginTop: 2 }}>
-        Backlog: <strong style={{ color: '#0d9488' }}>{d.backlog}</strong>
+        Backlog: <strong style={{ color: '#39ff14' }}>{d.backlog}</strong>
       </div>
     </div>
   );
@@ -111,7 +109,7 @@ function BranchCard({ branch, filtered }) {
     }}>
       {/* Card Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #0d9488 0%, #0891b2 100%)',
+        background: 'linear-gradient(135deg, #1a6b00 0%, #2d9e00 100%)',
         padding: '10px 14px 8px',
         display: 'flex',
         alignItems: 'center',
@@ -214,7 +212,7 @@ function BranchCard({ branch, filtered }) {
           <div style={{
             fontSize: 9,
             fontWeight: 700,
-            color: '#0d9488',
+            color: '#39ff14',
             textTransform: 'uppercase',
             letterSpacing: 0.6,
             textAlign: 'center',
@@ -290,11 +288,11 @@ export function FaDashboardPage() {
 
   /* Dynamic bar color for backlog chart */
   const backlogBarColor = (code) => {
-    if (!filteredCodes) return '#0d9488';
-    return filteredCodes.has(code) ? '#0d9488' : '#cbd5e1';
+    if (!filteredCodes) return '#39ff14';
+    return filteredCodes.has(code) ? '#39ff14' : '#cbd5e1';
   };
 
-  const gradeBarColor = '#be185d';
+  const gradeBarColor = '#ed1c24';
 
   const selectStyle = {
     padding: '7px 32px 7px 12px',
@@ -349,7 +347,7 @@ export function FaDashboardPage() {
           }}>
             Backlog FA to Invite by Branch
           </h3>
-          <ResponsiveContainer width="100%" height={420}>
+          <ResponsiveContainer width="100%" height={560}>
             <BarChart
               data={backlogChartData}
               layout="vertical"
@@ -370,7 +368,7 @@ export function FaDashboardPage() {
                 tick={{ fontSize: 11, fill: 'var(--textSecondary)', fontWeight: 600 }}
                 tickLine={false}
                 axisLine={false}
-                width={44}
+                width={48}
               />
               <Tooltip content={<CustomBacklogTooltip />} cursor={{ fill: 'var(--borderLight)' }} />
               <Bar dataKey="backlog" radius={[0, 4, 4, 0]} maxBarSize={18}>
@@ -482,7 +480,7 @@ export function FaDashboardPage() {
                 marginLeft: 8,
                 padding: '2px 8px',
                 background: 'rgba(13,148,136,0.12)',
-                color: '#0d9488',
+                color: '#39ff14',
                 borderRadius: 20,
                 fontWeight: 700,
               }}>
