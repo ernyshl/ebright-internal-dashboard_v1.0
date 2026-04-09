@@ -347,7 +347,7 @@ export function FaDashboardPage() {
           }}>
             Backlog FA to Invite by Branch
           </h3>
-          <ResponsiveContainer width="100%" height={420}>
+          <ResponsiveContainer width="100%" height={560}>
             <BarChart
               data={backlogChartData}
               layout="vertical"
@@ -368,7 +368,7 @@ export function FaDashboardPage() {
                 tick={{ fontSize: 11, fill: 'var(--textSecondary)', fontWeight: 600 }}
                 tickLine={false}
                 axisLine={false}
-                width={44}
+                width={48}
               />
               <Tooltip content={<CustomBacklogTooltip />} cursor={{ fill: 'var(--borderLight)' }} />
               <Bar dataKey="backlog" radius={[0, 4, 4, 0]} maxBarSize={18}>
