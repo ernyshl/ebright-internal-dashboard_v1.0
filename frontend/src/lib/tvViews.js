@@ -96,6 +96,12 @@ export const TV_VIEWS = [
     path: '/fa-dashboard',
   },
   {
+    key: 'event-mkt-dashboard',
+    label: 'Event MKT Dashboard',
+    type: 'internal',
+    path: '/event-mkt-dashboard',
+  },
+  {
     key: 'looker-3',
     label: 'Looker Studio (Yesterday)',
     type: 'iframe',

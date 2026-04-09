@@ -17,6 +17,7 @@ import { PlatformBreakdownPage } from './PlatformBreakdownPage';
 import { FinanceDashboardPage } from './FinanceDashboardPage';
 import { HrOnbOfbDashboardPage } from './HrOnbOfbDashboardPage';
 import { FaDashboardPage } from './FaDashboardPage';
+import { EventMktDashboardPage } from './EventMktDashboardPage';
 
 const INTERNAL_COMPONENTS = {
   'branch-ranking':        BranchRankingPage,
@@ -32,6 +33,7 @@ const INTERNAL_COMPONENTS = {
   'finance':               FinanceDashboardPage,
   'hr-onb-ofb':            HrOnbOfbDashboardPage,
   'fa-dashboard':          FaDashboardPage,
+  'event-mkt-dashboard':   EventMktDashboardPage,
 };
 
 // Schedule a reload at the next 3:00 AM

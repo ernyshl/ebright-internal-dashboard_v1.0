@@ -18,6 +18,7 @@ const { ghlStagesRouter } = require('./routes/ghlStages');
 const { telegramBotRouter } = require('./routes/telegramBot');
 const { hrStaffMovementsRouter } = require('./routes/hrStaffMovements');
 const { hrMcRouter } = require('./routes/hrMc');
+const { eventMktRouter } = require('./routes/eventMkt');
 const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 
 const jwt = require('jsonwebtoken');
@@ -160,6 +161,7 @@ function createApp() {
   app.use('/api/hr-staff-movements', applyRoleBasedRateLimit, hrStaffMovementsRouter);
   app.use('/api/hr-mc', applyRoleBasedRateLimit, hrMcRouter);
   app.use('/api/hr-annual-leave', applyRoleBasedRateLimit, hrAnnualLeaveRouter);
+  app.use('/api/event-mkt', applyRoleBasedRateLimit, eventMktRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
