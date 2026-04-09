@@ -31,6 +31,7 @@ import { GhlDashboardPage } from './pages/GhlDashboardPage';
 import { TallyPage } from './pages/TallyPage';
 import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
 import { HrStaffListPage } from './pages/HrStaffListPage';
+import { FaDashboardPage } from './pages/FaDashboardPage';
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/tv" element={<TvPage />} />
+      <Route path="/fa-dashboard" element={<FaDashboardPage />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>

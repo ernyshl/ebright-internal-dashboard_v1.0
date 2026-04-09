@@ -33,6 +33,7 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
     { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr'] },
     { to: '/leads-ghl-view', label: 'Leads GHL View', icon: '🔍', roles: ['super_admin', 'rm'] },
     { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },
+    { to: '/fa-dashboard', label: 'FA Dashboard', icon: '🎓', dashboard: 'academy' },
   ];
 
   const adminNavItems = [

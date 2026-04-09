@@ -35,7 +35,8 @@ export function DashboardHomePage() {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
-        { label: '🎪 Event Dashboard', path: '/events', dashboard: 'events' }
+        { label: '🎪 Event Dashboard', path: '/events', dashboard: 'events' },
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
       ]
     },
     {
