@@ -23,8 +23,13 @@ function parseCSV(text) {
     values.push(cur.trim());
     return values;
   };
-  const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
-  return lines.slice(1).map(line => {
+  // Find the header row (the one containing "CONFIRMATION")
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    if (lines[i].toUpperCase().includes('CONFIRMATION')) { headerIdx = i; break; }
+  }
+  const headers = parseRow(lines[headerIdx]).map(h => h.replace(/^"|"$/g, '').trim());
+  return lines.slice(headerIdx + 1).map(line => {
     const vals = parseRow(line);
     const row = {};
     headers.forEach((h, i) => { row[h] = (vals[i] || '').replace(/^"|"$/g, '').trim(); });
