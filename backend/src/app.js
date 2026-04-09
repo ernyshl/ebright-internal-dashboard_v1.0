@@ -19,6 +19,7 @@ const { telegramBotRouter } = require('./routes/telegramBot');
 const { hrStaffMovementsRouter } = require('./routes/hrStaffMovements');
 const { hrMcRouter } = require('./routes/hrMc');
 const { eventMktRouter } = require('./routes/eventMkt');
+const { auditLogRouter, writeLog } = require('./routes/auditLog');
 const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 
 const jwt = require('jsonwebtoken');
@@ -162,6 +163,28 @@ function createApp() {
   app.use('/api/hr-mc', applyRoleBasedRateLimit, hrMcRouter);
   app.use('/api/hr-annual-leave', applyRoleBasedRateLimit, hrAnnualLeaveRouter);
   app.use('/api/event-mkt', applyRoleBasedRateLimit, eventMktRouter);
+  app.use('/api/audit-log', applyRoleBasedRateLimit, auditLogRouter);
+
+  // Audit logging middleware — log POST/PUT/DELETE operations
+  app.use((req, res, next) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.path.startsWith('/api/')) {
+      const origEnd = res.end;
+      res.end = function (...args) {
+        const userEmail = req.user?.email || req.user?.deviceName || 'anonymous';
+        const logType = res.statusCode >= 400 ? 'error' : 'change';
+        writeLog({
+          log_type: logType,
+          message: `${req.method} ${req.path} → ${res.statusCode}`,
+          user_email: userEmail,
+          details: res.statusCode >= 400 ? JSON.stringify(req.body || {}).slice(0, 500) : '',
+          endpoint: req.path,
+          method: req.method,
+        });
+        origEnd.apply(res, args);
+      };
+    }
+    next();
+  });
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
@@ -172,6 +195,16 @@ function createApp() {
         details: err.issues,
       });
     }
+
+    // Log errors
+    writeLog({
+      log_type: 'error',
+      message: err.message || 'Internal server error',
+      user_email: _req.user?.email || 'system',
+      details: err.stack ? err.stack.slice(0, 1000) : '',
+      endpoint: _req.path,
+      method: _req.method,
+    });
 
     // eslint-disable-next-line no-console
     console.error(err);
