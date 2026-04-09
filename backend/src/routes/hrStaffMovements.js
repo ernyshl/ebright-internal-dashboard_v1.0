@@ -24,7 +24,7 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
        WHERE end_date IS NOT NULL
          AND end_date >= CURRENT_DATE
          AND end_date <= CURRENT_DATE + INTERVAL '6 months'
-       ORDER BY end_date DESC`
+       ORDER BY end_date ASC`
     );
 
     return res.json({ onboarding, offboarding });
