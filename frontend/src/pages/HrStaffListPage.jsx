@@ -135,7 +135,7 @@ export function HrStaffListPage() {
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
-          <h1 className="pageHeaderTitle">Staff List (ONB/OFB)</h1>
+          <h1 className="pageHeaderTitle">Staff List</h1>
           <p className="headerSubtitle">{total} records</p>
         </div>
         <button className="btn btnPrimary btnSmall" onClick={handleAdd} style={{ marginLeft: 'auto' }}>+ Add Staff</button>

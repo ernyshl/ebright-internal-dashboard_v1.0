@@ -86,8 +86,18 @@ export function DashboardHomePage() {
       color: '#ec4899',
       links: [
         { label: 'HR Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
-        { label: 'ONB/OFB Dashboard', path: '/hr-onb-ofb', dashboard: 'hr' },
-        { label: 'Staff List (ONB/OFB)', path: '/hr-staff-list', dashboard: 'hr' }
+        { label: 'HR Overview Dashboard', path: '/hr-onb-ofb', dashboard: 'hr' },
+      ]
+    },
+    {
+      id: 'hr_crud',
+      name: 'CRUD HR Data',
+      icon: '📋',
+      color: '#a855f7',
+      links: [
+        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
+        { label: 'MC (Medical Certificate)', path: '/hr-mc', dashboard: 'hr_crud' },
+        { label: 'Annual Leave', path: '/hr-annual-leave', dashboard: 'hr_crud' },
       ]
     },
     {

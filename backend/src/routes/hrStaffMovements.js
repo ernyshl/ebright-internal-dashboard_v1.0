@@ -13,8 +13,8 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
       `SELECT id, name, position, department_branch, start_date, end_date
        FROM hr_staff_movements
        WHERE start_date IS NOT NULL
-         AND start_date >= CURRENT_DATE - INTERVAL '14 days'
-         AND start_date <= CURRENT_DATE + INTERVAL '2 months'
+         AND start_date >= CURRENT_DATE
+         AND start_date <= CURRENT_DATE + INTERVAL '6 months'
        ORDER BY start_date ASC`
     );
 
@@ -22,8 +22,8 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
       `SELECT id, name, position, department_branch, start_date, end_date
        FROM hr_staff_movements
        WHERE end_date IS NOT NULL
-         AND end_date >= CURRENT_DATE - INTERVAL '14 days'
-         AND end_date <= CURRENT_DATE + INTERVAL '2 months'
+         AND end_date >= CURRENT_DATE
+         AND end_date <= CURRENT_DATE + INTERVAL '6 months'
        ORDER BY end_date DESC`
     );
 
