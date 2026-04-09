@@ -125,7 +125,7 @@ export function LeadsCentrePage() {
     },
     retry: 1,
     staleTime: 0,
-    keepPreviousData: true,
+    refetchOnWindowFocus: true,
   });
 
   const handleFilterChange = (key, value) => {
