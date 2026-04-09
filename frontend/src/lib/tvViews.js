@@ -90,6 +90,12 @@ export const TV_VIEWS = [
     path: '/hr-onb-ofb',
   },
   {
+    key: 'fa-dashboard',
+    label: 'FA Dashboard',
+    type: 'internal',
+    path: '/fa-dashboard',
+  },
+  {
     key: 'looker-3',
     label: 'Looker Studio (Yesterday)',
     type: 'iframe',
