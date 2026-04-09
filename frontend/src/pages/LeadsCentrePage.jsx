@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
@@ -102,12 +102,13 @@ export function LeadsCentrePage() {
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [datePreset, setDatePreset] = useState('');
+  const searchTimer = useRef(null);
 
-  // Debounce search
+  // Debounce search — only triggers API call after 500ms of no typing
   const handleSearchChange = useCallback((value) => {
     setFilters(f => ({ ...f, search: value }));
-    const timeout = setTimeout(() => setDebouncedSearch(value), 400);
-    return () => clearTimeout(timeout);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => { setDebouncedSearch(value); setPage(1); }, 500);
   }, []);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -123,8 +124,8 @@ export function LeadsCentrePage() {
       return await apiFetch(`/api/leads-centre?${params}`);
     },
     retry: 1,
-    staleTime: 0, // Always fetch fresh data when filters change
-    refetchOnWindowFocus: true,
+    staleTime: 0,
+    keepPreviousData: true,
   });
 
   const handleFilterChange = (key, value) => {
