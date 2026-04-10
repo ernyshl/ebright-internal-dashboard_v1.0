@@ -99,6 +99,18 @@ export function DashboardHomePage() {
       ]
     },
     {
+      id: 'hr_db',
+      name: 'HR Employee Database',
+      icon: '🗄️',
+      color: '#0891b2',
+      links: [
+        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
+        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr' },
+        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr' },
+        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
+      ]
+    },
+    {
       id: 'hr_crud',
       name: 'CRUD HR Data',
       icon: '📋',
