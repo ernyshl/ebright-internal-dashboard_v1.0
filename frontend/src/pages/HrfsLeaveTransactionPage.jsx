@@ -62,15 +62,16 @@ export function HrfsLeaveTransactionPage() {
       ) : (
         <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
           <table className="dataTable">
-            <thead><tr><th>#</th><th>Employee Code</th><th>Leave Type</th><th>Apply Date</th><th>Leave Date</th><th>Days</th><th>Reason</th><th>Status</th><th>Remark</th></tr></thead>
+            <thead><tr><th>#</th><th>Employee Code</th><th>Employee Name</th><th>Leave Type</th><th>Apply Date</th><th>Leave Date</th><th>Days</th><th>Reason</th><th>Status</th><th>Remark</th></tr></thead>
             <tbody>
-              {records.length === 0 ? (<tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
+              {records.length === 0 ? (<tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
               ) : records.map((r, i) => {
                 const sc = STATUS_COLORS[r.ApplyStatus] || {};
                 return (
                   <tr key={r.id}>
                     <td style={{ color: 'var(--muted)', fontSize: 11 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td><strong>{r.EmployeeCode}</strong></td>
+                    <td>{r.employee_name || '—'}</td>
                     <td>{r.LeaveTypeCode || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.ApplyDate)}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.LeaveDate)}</td>

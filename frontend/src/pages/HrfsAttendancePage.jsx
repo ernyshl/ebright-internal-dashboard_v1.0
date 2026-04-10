@@ -57,16 +57,17 @@ export function HrfsAttendancePage() {
       ) : (
         <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
           <table className="dataTable">
-            <thead><tr><th>#</th><th>Employee No</th><th>Employee Name</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Status</th></tr></thead>
+            <thead><tr><th>#</th><th>Employee No</th><th>Employee Name</th><th>Branch</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Status</th></tr></thead>
             <tbody>
-              {records.length === 0 ? (<tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
+              {records.length === 0 ? (<tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
               ) : records.map((r, i) => {
                 const st = emailStatus(r.clockInEmailSent, r.clockOutEmailSent);
                 return (
                   <tr key={r.id}>
                     <td style={{ color: 'var(--muted)', fontSize: 11 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td><strong>{r.empNo}</strong></td>
-                    <td>{r.empName}</td>
+                    <td>{r.empName || r.staff_name || '—'}</td>
+                    <td style={{ fontSize: 12 }}>{r.branch || '—'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.date)}</td>
                     <td>{fmtTime(r.clockInTime)}</td>
                     <td>{fmtTime(r.clockOutTime)}</td>

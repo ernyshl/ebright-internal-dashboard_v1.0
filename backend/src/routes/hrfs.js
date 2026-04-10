@@ -12,23 +12,27 @@ router.get('/attendance', requireAuth, requireRole(ALLOWED_ROLES), async (req, r
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
-      conditions.push(`("empNo" ILIKE $${idx} OR "empName" ILIKE $${idx})`);
+      conditions.push(`(a."empNo" ILIKE $${idx} OR a."empName" ILIKE $${idx} OR bs."name" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
-    if (date_from) { conditions.push(`"date" >= $${idx++}::date`); params.push(date_from); }
-    if (date_to) { conditions.push(`"date" <= $${idx++}::date`); params.push(date_to); }
+    if (date_from) { conditions.push(`a."date" >= $${idx++}::date`); params.push(date_from); }
+    if (date_to) { conditions.push(`a."date" <= $${idx++}::date`); params.push(date_to); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."AttendanceLog" ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM hrfs."AttendanceLog" a LEFT JOIN hrfs."BranchStaff" bs ON a."empNo" = bs."employeeId" ${where}`, params),
       pool.query(
-        `SELECT id, date, "empNo", "empName", "clockInTime", "clockOutTime",
-                "clockInSerialNo", "clockOutSerialNo", "clockInEmailSent",
-                "clockOutEmailSent", "createdAt", "updatedAt"
-         FROM hrfs."AttendanceLog" ${where}
-         ORDER BY "createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        `SELECT a.id, a.date, a."empNo", COALESCE(NULLIF(a."empName",''), bs."name", a."empNo") AS "empName",
+                a."clockInTime", a."clockOutTime",
+                a."clockInSerialNo", a."clockOutSerialNo", a."clockInEmailSent",
+                a."clockOutEmailSent", a."createdAt", a."updatedAt",
+                bs."name" AS staff_name, bs."department", bs."branch"
+         FROM hrfs."AttendanceLog" a
+         LEFT JOIN hrfs."BranchStaff" bs ON a."empNo" = bs."employeeId"
+         ${where}
+         ORDER BY a."createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
       ),
     ]);
@@ -91,28 +95,31 @@ router.get('/leave-transactions', requireAuth, requireRole(ALLOWED_ROLES), async
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
-      conditions.push(`("EmployeeCode" ILIKE $${idx})`);
+      conditions.push(`(lt."EmployeeCode" ILIKE $${idx} OR bs."name" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
-    if (status) { conditions.push(`"ApplyStatus" = $${idx++}`); params.push(status); }
-    if (leave_type) { conditions.push(`"LeaveTypeCode" = $${idx++}`); params.push(leave_type); }
-    if (date_from) { conditions.push(`"ApplyDate" >= $${idx++}::date`); params.push(date_from); }
-    if (date_to) { conditions.push(`"ApplyDate" <= $${idx++}::date`); params.push(date_to); }
+    if (status) { conditions.push(`lt."ApplyStatus" = $${idx++}`); params.push(status); }
+    if (leave_type) { conditions.push(`lt."LeaveTypeCode" = $${idx++}`); params.push(leave_type); }
+    if (date_from) { conditions.push(`lt."ApplyDate" >= $${idx++}::date`); params.push(date_from); }
+    if (date_to) { conditions.push(`lt."ApplyDate" <= $${idx++}::date`); params.push(date_to); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."LeaveTransaction" ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM hrfs."LeaveTransaction" lt LEFT JOIN hrfs."BranchStaff" bs ON lt."EmployeeCode" = bs."employeeId" ${where}`, params),
       pool.query(
-        `SELECT id, "EmployeeCode", "LeaveTypeCode", "LeaveTransId",
-                "ApplyDate", "ApplyReason", "ApplyStatus", "Attachment",
-                "DayNo", "HourNo", "Days", "Source", "LeaveAdjustmentId",
-                "LeaveDate", "FromTime", "ToTime", "IsHourly", "IsAdjustment",
-                "LeaveCreditId", "ActionRemark", "RequiredThirdParty",
-                "WorkingHours", "created_at"
-         FROM hrfs."LeaveTransaction" ${where}
-         ORDER BY "created_at" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        `SELECT lt.id, lt."EmployeeCode", lt."LeaveTypeCode", lt."LeaveTransId",
+                lt."ApplyDate", lt."ApplyReason", lt."ApplyStatus", lt."Attachment",
+                lt."DayNo", lt."HourNo", lt."Days", lt."Source", lt."LeaveAdjustmentId",
+                lt."LeaveDate", lt."FromTime", lt."ToTime", lt."IsHourly", lt."IsAdjustment",
+                lt."LeaveCreditId", lt."ActionRemark", lt."RequiredThirdParty",
+                lt."WorkingHours", lt."created_at",
+                bs."name" AS employee_name, bs."department", bs."branch"
+         FROM hrfs."LeaveTransaction" lt
+         LEFT JOIN hrfs."BranchStaff" bs ON lt."EmployeeCode" = bs."employeeId"
+         ${where}
+         ORDER BY lt."created_at" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
       ),
     ]);
