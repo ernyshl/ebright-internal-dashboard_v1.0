@@ -122,6 +122,17 @@ export function DashboardHomePage() {
       ]
     },
     {
+      id: 'hr_testing',
+      name: 'HR Testing Data',
+      icon: '🧪',
+      color: '#14b8a6',
+      links: [
+        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'testing' },
+        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'testing' },
+        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'testing' },
+      ]
+    },
+    {
       id: 'admin',
       name: 'Admin',
       icon: '🔧',
