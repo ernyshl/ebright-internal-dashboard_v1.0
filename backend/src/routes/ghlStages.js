@@ -375,8 +375,8 @@ router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res,
       rawParams,
     );
 
-    // GHL leads
-    const ghlConditions = [];
+    // GHL leads — only NL stage
+    const ghlConditions = [`stage_key = 'NL'`];
     const ghlParams = [];
     let gidx = 1;
     if (date_from) { ghlConditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${gidx++}::date`); ghlParams.push(date_from); }
