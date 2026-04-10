@@ -84,15 +84,20 @@ function InfoTooltip({ tooltip }) {
 }
 
 function SourceCard({ source, counts, color }) {
-  // Ensure all counts are numbers
   const today = typeof counts?.count_today === 'string' ? parseInt(counts.count_today, 10) : (counts?.count_today || 0);
   const yesterday = typeof counts?.count_yesterday === 'string' ? parseInt(counts.count_yesterday, 10) : (counts?.count_yesterday || 0);
   const days7 = typeof counts?.count_7_days === 'string' ? parseInt(counts.count_7_days, 10) : (counts?.count_7_days || 0);
   const days30 = typeof counts?.count_30_days === 'string' ? parseInt(counts.count_30_days, 10) : (counts?.count_30_days || 0);
-  
+
   const trend = today - yesterday;
   const trendPercent = yesterday ? ((trend / yesterday) * 100).toFixed(1) : 0;
-  
+
+  // Determine if this is a region card (name matches Region A/B/C or empty for total)
+  const isRegion = !source.name || source.name.startsWith('Region');
+  const linkFn = (period) => isRegion
+    ? getLeadCentreUrl('', period, source.name)
+    : getLeadCentreUrl(source.name, period);
+
   return (
     <div className="sourceCard" style={{ '--source-color': color }}>
       <div className="sourceCardHeader">
@@ -108,26 +113,26 @@ function SourceCard({ source, counts, color }) {
         </span>
       </div>
       <div className="sourceCardTotal">
-        <Link to={getLeadCentreUrl(source.name, 'today')} className="sourceCardTotalLink">
+        <Link to={linkFn('today')} className="sourceCardTotalLink">
           <span className="sourceCardTotalValue">{formatNumber(today)}</span>
         </Link>
         <span className="sourceCardTotalLabel">Today's Leads</span>
       </div>
       <div className="sourceCardStats">
         <div className="sourceStat">
-          <Link to={getLeadCentreUrl(source.name, 'yesterday')} className="sourceStatLink">
+          <Link to={linkFn('yesterday')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(yesterday)}</span>
           </Link>
           <span className="sourceStatLabel"><span className="labelDesktop">Yesterday</span><span className="labelMobile">-1 day</span></span>
         </div>
         <div className="sourceStat">
-          <Link to={getLeadCentreUrl(source.name, '7days')} className="sourceStatLink">
+          <Link to={linkFn('7days')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(days7)}</span>
           </Link>
           <span className="sourceStatLabel"><span className="labelDesktop">Last 7 Days</span><span className="labelMobile">-7 days</span></span>
         </div>
         <div className="sourceStat">
-          <Link to={getLeadCentreUrl(source.name, '30days')} className="sourceStatLink">
+          <Link to={linkFn('30days')} className="sourceStatLink">
             <span className="sourceStatValue">{formatNumber(days30)}</span>
           </Link>
           <span className="sourceStatLabel"><span className="labelDesktop">Last 30 Days</span><span className="labelMobile">-30 days</span></span>
@@ -414,24 +419,40 @@ export function LeadsBreakdownPage() {
             </div>
           </div>
 
-          {/* Regions */}
+          {/* Regions — same layout as Lead Sources */}
           <div className="section">
             <h3 className="sectionTitle">🗺️ Regional Breakdown</h3>
             <p className="sectionSubtitle">Lead distribution across mapped regions</p>
-            <div className="regionsGrid">
-              {q.data?.regions?.map((region, idx) => (
-                <RegionCard 
-                  key={region.region || idx}
-                  region={{ name: region.region || 'Unknown' }}
-                  counts={{
-                    count_today: region.count_today,
-                    count_yesterday: region.count_yesterday,
-                    count_7_days: region.count_7_days,
-                    count_30_days: region.count_30_days
-                  }}
-                  color={regionColors[idx % regionColors.length]}
-                />
-              ))}
+            <div className="sourcesGrid">
+              {(() => {
+                const regions = q.data?.regions || [];
+                const totalCounts = {
+                  count_today: regions.reduce((s, r) => s + (parseInt(r.count_today) || 0), 0),
+                  count_yesterday: regions.reduce((s, r) => s + (parseInt(r.count_yesterday) || 0), 0),
+                  count_7_days: regions.reduce((s, r) => s + (parseInt(r.count_7_days) || 0), 0),
+                  count_30_days: regions.reduce((s, r) => s + (parseInt(r.count_30_days) || 0), 0),
+                };
+                const cards = [
+                  { key: 'Total', icon: '📊', color: '#3b82f6', counts: totalCounts, regionName: '',
+                    tooltip: { title: 'Total', desc: 'Combined leads from all regions.' } },
+                  ...regions.map((r, idx) => ({
+                    key: r.region,
+                    icon: ['🔵', '🟢', '🟡'][idx] || '⚪',
+                    color: regionColors[idx % regionColors.length],
+                    counts: r,
+                    regionName: r.region,
+                    tooltip: { title: r.region, desc: (REGION_BRANCHES[r.region] || []).join(', ') },
+                  })),
+                ];
+                return cards.map(card => (
+                  <SourceCard
+                    key={card.key}
+                    source={{ name: card.regionName || '', icon: card.icon, displayName: card.key, tooltip: card.tooltip }}
+                    counts={card.counts}
+                    color={card.color}
+                  />
+                ));
+              })()}
             </div>
           </div>
 
