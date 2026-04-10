@@ -35,6 +35,8 @@ import { FaDashboardPage } from './pages/FaDashboardPage';
 import { HrMcPage } from './pages/HrMcPage';
 import { EventMktDashboardPage } from './pages/EventMktDashboardPage';
 import { AuditLogPage } from './pages/AuditLogPage';
+import { HrAttendancePage } from './pages/HrAttendancePage';
+import { HrHiringPage } from './pages/HrHiringPage';
 import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
 
 export default function App() {
@@ -97,6 +99,12 @@ export default function App() {
           } />
           <Route path="/hr-annual-leave" element={
             <RequirePermission dashboard="hr_crud"><HrAnnualLeavePage /></RequirePermission>
+          } />
+          <Route path="/hr-attendance" element={
+            <RequirePermission dashboard="hr"><HrAttendancePage /></RequirePermission>
+          } />
+          <Route path="/hr-hiring" element={
+            <RequirePermission dashboard="hr"><HrHiringPage /></RequirePermission>
           } />
 
           <Route path="/executive-summary" element={
