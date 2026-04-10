@@ -75,7 +75,7 @@ function InfoTooltip({ tooltip }) {
       {show && (
         <div className="infoTooltip" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
           <div className="infoTooltipTitle">{tooltip.title}</div>
-          <div className="infoTooltipDesc">{tooltip.desc}</div>
+          <div className="infoTooltipDesc" style={{ whiteSpace: 'pre-line' }}>{tooltip.desc}</div>
           {tooltip.url && <a href={tooltip.url} target="_blank" rel="noopener noreferrer" className="infoTooltipUrl">{tooltip.url}</a>}
         </div>
       )}
@@ -441,7 +441,7 @@ export function LeadsBreakdownPage() {
                     color: regionColors[idx % regionColors.length],
                     counts: r,
                     regionName: r.region,
-                    tooltip: { title: r.region, desc: (REGION_BRANCHES[r.region] || []).join(', ') },
+                    tooltip: { title: r.region, desc: (REGION_BRANCHES[r.region] || []).join('\n') },
                   })),
                 ];
                 return cards.map(card => (
