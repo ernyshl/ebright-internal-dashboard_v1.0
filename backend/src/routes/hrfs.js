@@ -12,27 +12,23 @@ router.get('/attendance', requireAuth, requireRole(ALLOWED_ROLES), async (req, r
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
-      conditions.push(`(a."empNo" ILIKE $${idx} OR a."empName" ILIKE $${idx} OR bs."name" ILIKE $${idx})`);
+      conditions.push(`("empNo" ILIKE $${idx} OR "empName" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
-    if (date_from) { conditions.push(`a."date" >= $${idx++}::date`); params.push(date_from); }
-    if (date_to) { conditions.push(`a."date" <= $${idx++}::date`); params.push(date_to); }
+    if (date_from) { conditions.push(`"date" >= $${idx++}::date`); params.push(date_from); }
+    if (date_to) { conditions.push(`"date" <= $${idx++}::date`); params.push(date_to); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."AttendanceLog" a LEFT JOIN hrfs."BranchStaff" bs ON a."empNo" = bs."employeeId" ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM hrfs."AttendanceLog" ${where}`, params),
       pool.query(
-        `SELECT a.id, a.date, a."empNo", COALESCE(NULLIF(a."empName",''), bs."name", a."empNo") AS "empName",
-                a."clockInTime", a."clockOutTime",
-                a."clockInSerialNo", a."clockOutSerialNo", a."clockInEmailSent",
-                a."clockOutEmailSent", a."createdAt", a."updatedAt",
-                bs."name" AS staff_name, bs."department", bs."branch"
-         FROM hrfs."AttendanceLog" a
-         LEFT JOIN hrfs."BranchStaff" bs ON a."empNo" = bs."employeeId"
-         ${where}
-         ORDER BY a."createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        `SELECT id, date, "empNo", "empName", "clockInTime", "clockOutTime",
+                "clockInSerialNo", "clockOutSerialNo", "clockInEmailSent",
+                "clockOutEmailSent", "createdAt", "updatedAt"
+         FROM hrfs."AttendanceLog" ${where}
+         ORDER BY "createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
       ),
     ]);
