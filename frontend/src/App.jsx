@@ -41,7 +41,6 @@ import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
 import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
-import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
 
 export default function App() {
   return (
@@ -59,6 +58,9 @@ export default function App() {
           } />
           <Route path="/event-entry" element={
             <RequirePermission dashboard="events" roles={['super_admin', 'academy', 'marketing', 'od', 'rm']}><EventEntryPage /></RequirePermission>
+          } />
+          <Route path="/event-mkt-dashboard" element={
+            <RequirePermission dashboard="events"><EventMktDashboardPage /></RequirePermission>
           } />
           <Route path="/event-mkt-dashboard" element={
             <RequirePermission dashboard="events"><EventMktDashboardPage /></RequirePermission>
