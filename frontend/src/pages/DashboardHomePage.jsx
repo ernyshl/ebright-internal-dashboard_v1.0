@@ -119,6 +119,7 @@ export function DashboardHomePage() {
         { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
         { label: 'MC (Medical Certificate)', path: '/hr-mc', dashboard: 'hr_crud' },
         { label: 'Annual Leave', path: '/hr-annual-leave', dashboard: 'hr_crud' },
+<<<<<<< HEAD
       ]
     },
     {
@@ -130,6 +131,8 @@ export function DashboardHomePage() {
         { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'testing' },
         { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'testing' },
         { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'testing' },
+=======
+>>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
       ]
     },
     {
