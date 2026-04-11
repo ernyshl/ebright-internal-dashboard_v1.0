@@ -38,12 +38,9 @@ import { AuditLogPage } from './pages/AuditLogPage';
 import { HrAttendancePage } from './pages/HrAttendancePage';
 import { HrHiringPage } from './pages/HrHiringPage';
 import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
-<<<<<<< HEAD
 import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
-=======
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
 
 export default function App() {
   return (
