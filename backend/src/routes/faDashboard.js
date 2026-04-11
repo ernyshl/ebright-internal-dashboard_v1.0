@@ -6,8 +6,8 @@ const router = express.Router();
 
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'od', 'academy', 'tv'];
 
-// GET /api/fa-dashboard — fetch all 20 branch rows
-router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
+// GET /api/fa-dashboard — fetch all 20 branch rows (public, no auth needed for read)
+router.get('/', async (_req, res, next) => {
   try {
     const rows = await prisma.fa_dashboard_data.findMany({
       select: {
