@@ -45,44 +45,40 @@ router.get('/attendance', requireAuth, requireRole(ALLOWED_ROLES), async (req, r
 // GET /api/hrfs/attendance-dashboard — summary for dashboard cards
 router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT
-        date,
-        "empNo",
-        "empName",
-        "clockInTime",
-        "clockOutTime",
-        CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime" > '09:00:00' THEN true ELSE false END AS is_late
-      FROM hrfs."AttendanceLog"
-      WHERE date::date >= CURRENT_DATE - 1 AND date::date <= CURRENT_DATE
-      ORDER BY date DESC, "clockInTime" ASC
-    `);
+    const fetchDay = async (dateExpr) => {
+      const { rows } = await pool.query(`
+        SELECT
+          "empNo",
+          "empName",
+          "clockInTime",
+          "clockOutTime",
+          CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time > '09:00:00' THEN true ELSE false END AS is_late
+        FROM hrfs."AttendanceLog"
+        WHERE date::date = ${dateExpr}
+        ORDER BY "clockInTime" ASC
+      `);
+      return {
+        total: rows.length,
+        on_time: rows.filter(r => !r.is_late && r.clockInTime).length,
+        late: rows.filter(r => r.is_late).length,
+        no_clock_in: rows.filter(r => !r.clockInTime).length,
+        no_clock_out: rows.filter(r => r.clockInTime && !r.clockOutTime).length,
+        records: rows.map(r => ({
+          empNo: r.empNo,
+          empName: r.empName,
+          clockIn: r.clockInTime ? String(r.clockInTime).slice(0, 5) : null,
+          clockOut: r.clockOutTime ? String(r.clockOutTime).slice(0, 5) : null,
+          isLate: r.is_late,
+        })),
+      };
+    };
 
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const [today, yesterday] = await Promise.all([
+      fetchDay('CURRENT_DATE'),
+      fetchDay('CURRENT_DATE - 1'),
+    ]);
 
-    const todayRecords = rows.filter(r => r.date && r.date.toISOString().split('T')[0] === today);
-    const yesterdayRecords = rows.filter(r => r.date && r.date.toISOString().split('T')[0] === yesterday);
-
-    const summarize = (records) => ({
-      total: records.length,
-      on_time: records.filter(r => !r.is_late && r.clockInTime).length,
-      late: records.filter(r => r.is_late).length,
-      no_clock_in: records.filter(r => !r.clockInTime).length,
-      no_clock_out: records.filter(r => r.clockInTime && !r.clockOutTime).length,
-      records: records.map(r => ({
-        empNo: r.empNo,
-        empName: r.empName,
-        clockIn: r.clockInTime ? String(r.clockInTime).slice(0, 5) : null,
-        clockOut: r.clockOutTime ? String(r.clockOutTime).slice(0, 5) : null,
-        isLate: r.is_late,
-      })),
-    });
-
-    return res.json({
-      today: summarize(todayRecords),
-      yesterday: summarize(yesterdayRecords),
-    });
+    return res.json({ today, yesterday });
   } catch (err) { return next(err); }
 });
 
