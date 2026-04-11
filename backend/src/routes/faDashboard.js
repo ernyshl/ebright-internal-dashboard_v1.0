@@ -1,5 +1,5 @@
 const express = require('express');
-const { pool } = require('../db');
+const { prisma } = require('../prismaClient');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,11 +9,18 @@ const ALLOWED_ROLES = ['super_admin', 'ceo', 'od', 'academy', 'tv'];
 // GET /api/fa-dashboard — fetch all 20 branch rows
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT branch_code, fa_active, inv_apr1819, inv_apr2526, backlog, updated_at, updated_by
-       FROM fa_dashboard_data
-       ORDER BY branch_code ASC`
-    );
+    const rows = await prisma.fa_dashboard_data.findMany({
+      select: {
+        branch_code: true,
+        fa_active: true,
+        inv_apr1819: true,
+        inv_apr2526: true,
+        backlog: true,
+        updated_at: true,
+        updated_by: true,
+      },
+      orderBy: { branch_code: 'asc' },
+    });
     return res.json({ data: rows });
   } catch (err) {
     return next(err);
@@ -22,55 +29,67 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next)
 
 // POST /api/fa-dashboard/save — upsert all 20 rows at once
 router.post('/save', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
-  const { rows } = req.body; // array of { branch_code, fa_active, inv_apr1819, inv_apr2526 }
+  const { rows } = req.body;
   const updatedBy = req.user?.email || req.user?.sub || 'unknown';
 
   if (!Array.isArray(rows) || rows.length === 0) {
     return res.status(400).json({ error: 'rows array is required' });
   }
 
-  try {
-    // Upsert each row in a single transaction
-    await pool.query('BEGIN');
-
-    for (const row of rows) {
-      const { branch_code, fa_active, inv_apr1819, inv_apr2526 } = row;
-
-      // Validate
-      if (
-        typeof branch_code !== 'string' ||
-        !Number.isInteger(fa_active) || fa_active < 0 ||
-        !Number.isInteger(inv_apr1819) || inv_apr1819 < 0 ||
-        !Number.isInteger(inv_apr2526) || inv_apr2526 < 0
-      ) {
-        await pool.query('ROLLBACK');
-        return res.status(400).json({ error: `Invalid data for branch: ${branch_code}` });
-      }
-
-      await pool.query(
-        `INSERT INTO fa_dashboard_data (branch_code, fa_active, inv_apr1819, inv_apr2526, updated_at, updated_by)
-         VALUES ($1, $2, $3, $4, NOW(), $5)
-         ON CONFLICT (branch_code) DO UPDATE SET
-           fa_active   = EXCLUDED.fa_active,
-           inv_apr1819 = EXCLUDED.inv_apr1819,
-           inv_apr2526 = EXCLUDED.inv_apr2526,
-           updated_at  = NOW(),
-           updated_by  = EXCLUDED.updated_by`,
-        [branch_code, fa_active, inv_apr1819, inv_apr2526, updatedBy]
-      );
+  // Validate all rows first
+  for (const row of rows) {
+    const { branch_code, fa_active, inv_apr1819, inv_apr2526 } = row;
+    if (
+      typeof branch_code !== 'string' ||
+      !Number.isInteger(fa_active) || fa_active < 0 ||
+      !Number.isInteger(inv_apr1819) || inv_apr1819 < 0 ||
+      !Number.isInteger(inv_apr2526) || inv_apr2526 < 0
+    ) {
+      return res.status(400).json({ error: `Invalid data for branch: ${branch_code}` });
     }
+  }
 
-    await pool.query('COMMIT');
-
-    // Return the updated data
-    const { rows: updated } = await pool.query(
-      `SELECT branch_code, fa_active, inv_apr1819, inv_apr2526, backlog, updated_at, updated_by
-       FROM fa_dashboard_data ORDER BY branch_code ASC`
+  try {
+    // Upsert each row using Prisma in a transaction
+    await prisma.$transaction(
+      rows.map(({ branch_code, fa_active, inv_apr1819, inv_apr2526 }) =>
+        prisma.fa_dashboard_data.upsert({
+          where: { branch_code },
+          update: {
+            fa_active,
+            inv_apr1819,
+            inv_apr2526,
+            updated_at: new Date(),
+            updated_by: updatedBy,
+          },
+          create: {
+            branch_code,
+            fa_active,
+            inv_apr1819,
+            inv_apr2526,
+            updated_at: new Date(),
+            updated_by: updatedBy,
+          },
+        })
+      )
     );
+
+    // Return updated data
+    const updated = await prisma.fa_dashboard_data.findMany({
+      select: {
+        branch_code: true,
+        fa_active: true,
+        inv_apr1819: true,
+        inv_apr2526: true,
+        backlog: true,
+        updated_at: true,
+        updated_by: true,
+      },
+      orderBy: { branch_code: 'asc' },
+    });
 
     return res.json({ ok: true, data: updated });
   } catch (err) {
-    await pool.query('ROLLBACK').catch(() => {});
     return next(err);
   }
 });

@@ -1,0 +1,1119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ActivityLog {
+  id             String       @id
+  subaccount_id  String
+  contact_id     String?
+  opportunity_id String?
+  staff_id       String?
+  event_type     ActivityType
+  description    String
+  metadata       Json?
+  created_at     DateTime     @default(now())
+  Contact        Contact?     @relation(fields: [contact_id], references: [id])
+  Opportunity    Opportunity? @relation(fields: [opportunity_id], references: [id])
+  StaffMember    StaffMember? @relation(fields: [staff_id], references: [id])
+
+  @@index([contact_id, created_at(sort: Desc)])
+  @@index([opportunity_id, created_at(sort: Desc)])
+  @@index([subaccount_id, created_at(sort: Desc)])
+}
+
+model Agency {
+  id          String        @id
+  name        String
+  slug        String        @unique
+  logo_url    String?
+  plan        AgencyPlan    @default(STARTER)
+  created_at  DateTime      @default(now())
+  updated_at  DateTime
+  ApiKey      ApiKey[]
+  AuditLog    AuditLog[]
+  CustomValue CustomValue[]
+  StaffMember StaffMember[]
+  Subaccount  Subaccount[]
+}
+
+model ApiKey {
+  id            String      @id
+  agency_id     String
+  subaccount_id String?
+  name          String
+  key_hash      String      @unique
+  key_preview   String
+  last_used_at  DateTime?
+  expires_at    DateTime?
+  is_active     Boolean     @default(true)
+  created_by_id String
+  created_at    DateTime    @default(now())
+  Agency        Agency      @relation(fields: [agency_id], references: [id])
+  Subaccount    Subaccount? @relation(fields: [subaccount_id], references: [id])
+}
+
+model AuditLog {
+  id            String   @id
+  agency_id     String
+  subaccount_id String?
+  user_id       String?
+  action        String
+  resource_type String
+  resource_id   String
+  old_value     Json?
+  new_value     Json?
+  ip_address    String?
+  user_agent    String?
+  created_at    DateTime @default(now())
+  Agency        Agency   @relation(fields: [agency_id], references: [id])
+
+  @@index([agency_id, created_at(sort: Desc)])
+  @@index([resource_type, resource_id])
+  @@index([subaccount_id, created_at(sort: Desc)])
+}
+
+model Automation {
+  id                  String                @id
+  subaccount_id       String
+  name                String
+  is_active           Boolean               @default(false)
+  trigger_type        TriggerType
+  trigger_config      Json
+  created_at          DateTime              @default(now())
+  updated_at          DateTime
+  trigger_stage_id    String?
+  Subaccount          Subaccount            @relation(fields: [subaccount_id], references: [id])
+  PipelineStage       PipelineStage?        @relation(fields: [trigger_stage_id], references: [id])
+  AutomationAction    AutomationAction[]
+  AutomationExecution AutomationExecution[]
+}
+
+model AutomationAction {
+  id            String     @id
+  automation_id String
+  sort_order    Int
+  action_type   ActionType
+  config        Json
+  Automation    Automation @relation(fields: [automation_id], references: [id], onDelete: Cascade)
+}
+
+model AutomationExecution {
+  id             String     @id
+  automation_id  String
+  contact_id     String?
+  opportunity_id String?
+  status         ExecStatus @default(RUNNING)
+  error          String?
+  started_at     DateTime   @default(now())
+  completed_at   DateTime?
+  Automation     Automation @relation(fields: [automation_id], references: [id])
+}
+
+model CTReminder {
+  id             String         @id
+  opportunity_id String
+  subaccount_id  String
+  remind_at      DateTime
+  offset_label   String
+  job_id         String?
+  channel        String         @default("email")
+  status         ReminderStatus @default(PENDING)
+  sent_at        DateTime?
+  created_at     DateTime       @default(now())
+  Opportunity    Opportunity    @relation(fields: [opportunity_id], references: [id])
+  Subaccount     Subaccount     @relation(fields: [subaccount_id], references: [id])
+
+  @@index([status, remind_at])
+}
+
+model Contact {
+  id                  String               @id
+  subaccount_id       String
+  first_name          String
+  last_name           String?
+  email               String?
+  phone               String?
+  source              LeadSource           @default(MANUAL)
+  status              ContactStatus        @default(ACTIVE)
+  assigned_to_id      String?
+  custom_values_cache Json?
+  deleted_at          DateTime?
+  created_at          DateTime             @default(now())
+  updated_at          DateTime
+  ActivityLog         ActivityLog[]
+  StaffMember         StaffMember?         @relation(fields: [assigned_to_id], references: [id])
+  Subaccount          Subaccount           @relation(fields: [subaccount_id], references: [id])
+  ContactCustomValue  ContactCustomValue[]
+  ContactTag          ContactTag[]
+  ContactTransfer     ContactTransfer[]
+  Opportunity         Opportunity[]
+
+  @@index([subaccount_id, deleted_at])
+  @@index([subaccount_id, email])
+  @@index([subaccount_id, phone])
+  @@index([subaccount_id, source])
+}
+
+model ContactCustomValue {
+  id                    String                @id
+  contact_id            String
+  field_def_id          String
+  value_text            String?
+  value_number          Decimal?
+  value_date            DateTime?
+  value_boolean         Boolean?
+  updated_at            DateTime
+  Contact               Contact               @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  CustomFieldDefinition CustomFieldDefinition @relation(fields: [field_def_id], references: [id])
+
+  @@unique([contact_id, field_def_id])
+}
+
+model ContactTag {
+  contact_id String
+  tag_id     String
+  created_at DateTime @default(now())
+  Contact    Contact  @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  Tag        Tag      @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([contact_id, tag_id])
+}
+
+model ContactTransfer {
+  id                 String   @id
+  contact_id         String
+  from_subaccount_id String
+  to_subaccount_id   String
+  transferred_by_id  String
+  reason             String?
+  created_at         DateTime @default(now())
+  Contact            Contact  @relation(fields: [contact_id], references: [id])
+}
+
+model CustomFieldDefinition {
+  id                 String               @id
+  subaccount_id      String
+  entity_type        EntityType           @default(CONTACT)
+  name               String
+  field_key          String
+  field_type         FieldType            @default(TEXT)
+  options            Json?
+  is_required        Boolean              @default(false)
+  is_system          Boolean              @default(false)
+  sort_order         Int                  @default(0)
+  created_at         DateTime             @default(now())
+  ContactCustomValue ContactCustomValue[]
+  Subaccount         Subaccount           @relation(fields: [subaccount_id], references: [id])
+
+  @@unique([subaccount_id, field_key, entity_type])
+}
+
+model CustomValue {
+  id            String   @id
+  agency_id     String
+  subaccount_id String?
+  name          String
+  key           String
+  value         String
+  created_at    DateTime @default(now())
+  Agency        Agency   @relation(fields: [agency_id], references: [id])
+
+  @@unique([agency_id, key])
+}
+
+model EmailLog {
+  id            String      @id
+  subaccount_id String
+  contact_id    String?
+  staff_id      String?
+  resend_id     String?
+  subject       String
+  body          String
+  to_email      String
+  from_email    String
+  status        EmailStatus @default(PENDING)
+  email_type    EmailType   @default(MANUAL)
+  sent_at       DateTime?
+  created_at    DateTime    @default(now())
+  Subaccount    Subaccount  @relation(fields: [subaccount_id], references: [id])
+
+  @@index([contact_id])
+  @@index([subaccount_id, created_at(sort: Desc)])
+}
+
+model Integration {
+  id            String          @id
+  subaccount_id String
+  type          IntegrationType
+  credentials   Json?
+  config        Json?
+  is_active     Boolean         @default(false)
+  created_at    DateTime        @default(now())
+  updated_at    DateTime
+
+  @@unique([subaccount_id, type])
+}
+
+model Opportunity {
+  id             String            @id
+  subaccount_id  String
+  contact_id     String
+  title          String
+  stage_id       String
+  assigned_to_id String?
+  trial_date     DateTime?
+  notes          String?
+  status         OpportunityStatus @default(OPEN)
+  sne_last_week  Boolean           @default(false)
+  sne_this_week  Boolean           @default(false)
+  deleted_at     DateTime?
+  created_at     DateTime          @default(now())
+  updated_at     DateTime
+  ActivityLog    ActivityLog[]
+  CTReminder     CTReminder[]
+  Contact        Contact           @relation(fields: [contact_id], references: [id])
+  PipelineStage  PipelineStage     @relation(fields: [stage_id], references: [id])
+  Subaccount     Subaccount        @relation(fields: [subaccount_id], references: [id])
+
+  @@index([subaccount_id, deleted_at])
+  @@index([subaccount_id, stage_id])
+  @@index([subaccount_id, trial_date])
+}
+
+model PipelineStage {
+  id            String        @id
+  subaccount_id String?
+  name          String
+  code          String
+  sort_order    Int
+  color         String        @default("#6366f1")
+  is_won        Boolean       @default(false)
+  is_lost       Boolean       @default(false)
+  created_at    DateTime      @default(now())
+  Automation    Automation[]
+  Opportunity   Opportunity[]
+  Subaccount    Subaccount?   @relation(fields: [subaccount_id], references: [id])
+
+  @@unique([subaccount_id, code])
+}
+
+model StaffMember {
+  id                   String                 @id
+  user_id              String                 @unique
+  agency_id            String
+  role                 StaffRole              @default(ADMIN)
+  is_active            Boolean                @default(true)
+  invited_at           DateTime               @default(now())
+  accepted_at          DateTime?
+  created_at           DateTime               @default(now())
+  updated_at           DateTime
+  ActivityLog          ActivityLog[]
+  Contact              Contact[]
+  Agency               Agency                 @relation(fields: [agency_id], references: [id])
+  User                 User                   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  SubaccountMembership SubaccountMembership[]
+}
+
+model Subaccount {
+  id                    String                  @id
+  agency_id             String
+  name                  String
+  slug                  String
+  sort_order            Int                     @default(0)
+  address               String?
+  phone                 String?
+  email                 String?
+  logo_url              String?
+  timezone              String                  @default("Asia/Kuala_Lumpur")
+  created_at            DateTime                @default(now())
+  updated_at            DateTime
+  ApiKey                ApiKey[]
+  Automation            Automation[]
+  CTReminder            CTReminder[]
+  Contact               Contact[]
+  CustomFieldDefinition CustomFieldDefinition[]
+  EmailLog              EmailLog[]
+  Opportunity           Opportunity[]
+  PipelineStage         PipelineStage[]
+  Agency                Agency                  @relation(fields: [agency_id], references: [id])
+  SubaccountMembership  SubaccountMembership[]
+  Tag                   Tag[]
+  WhatsAppLog           WhatsAppLog[]
+
+  @@unique([agency_id, slug])
+}
+
+model SubaccountMembership {
+  id            String      @id
+  staff_id      String
+  subaccount_id String
+  granted_at    DateTime    @default(now())
+  StaffMember   StaffMember @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  Subaccount    Subaccount  @relation(fields: [subaccount_id], references: [id])
+
+  @@unique([staff_id, subaccount_id])
+}
+
+model Tag {
+  id            String       @id
+  subaccount_id String
+  name          String
+  color         String       @default("#6366f1")
+  created_at    DateTime     @default(now())
+  ContactTag    ContactTag[]
+  Subaccount    Subaccount   @relation(fields: [subaccount_id], references: [id])
+
+  @@unique([subaccount_id, name])
+}
+
+model User {
+  id            String       @id
+  name          String
+  email         String       @unique
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime
+  StaffMember   StaffMember?
+  account       account[]
+  session       session[]
+}
+
+model WhatsAppLog {
+  id            String          @id
+  subaccount_id String
+  contact_id    String?
+  staff_id      String?
+  message       String
+  to_phone      String
+  status        WhatsAppStatus  @default(DORMANT)
+  message_type  WhatsAppMsgType @default(MANUAL)
+  sent_at       DateTime?
+  created_at    DateTime        @default(now())
+  Subaccount    Subaccount      @relation(fields: [subaccount_id], references: [id])
+
+  @@index([subaccount_id, created_at(sort: Desc)])
+}
+
+model account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+  User                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model attendance_log {
+  id            Int       @id @default(autoincrement())
+  employee_code String?   @db.VarChar(50)
+  clock_time    DateTime? @db.Timestamp(6)
+  clock_type    String?   @db.VarChar(50)
+  unique_hash   String?   @unique @db.VarChar(255)
+  synced_at     DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model audit_log {
+  id         Int      @id @default(autoincrement())
+  log_type   String   @default("info")
+  message    String?  @default("")
+  user_email String?  @default("")
+  details    String?  @default("")
+  endpoint   String?  @default("")
+  method     String?  @default("")
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at], map: "idx_audit_log_created")
+  @@index([log_type], map: "idx_audit_log_type")
+}
+
+model autocount_debtors {
+  id        String    @id
+  sync_time DateTime? @default(now()) @db.Timestamp(6)
+  data      Json?
+}
+
+model autocount_invoices {
+  doc_no        String    @id
+  doc_date      DateTime? @db.Timestamp(6)
+  debtor_code   String?
+  total_amount  Decimal?  @db.Decimal
+  last_modified DateTime? @default(now()) @db.Timestamp(6)
+  data          Json?
+  branches      String?
+  doc_type      String?
+}
+
+model autocount_raw {
+  id             Int       @id @default(autoincrement())
+  source         String?
+  resource       String?
+  record_id      String?
+  doctype        String?
+  doc_no         String?
+  doc_date       DateTime? @db.Timestamp(6)
+  sales_location String?
+  amount         Decimal?  @db.Decimal
+  raw_data       Json?
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+  branches       String?   @db.VarChar
+}
+
+model branch {
+  branch_code   String @id
+  branch_name   String
+  source_system String
+}
+
+model branch_map_autocount {
+  branch_code String  @id @db.VarChar(10)
+  branch_name String? @db.VarChar(100)
+}
+
+model branch_mapping {
+  id            Int     @id @default(autoincrement())
+  keyword       String? @unique
+  official_name String?
+  region        String?
+
+  @@index([keyword], map: "idx_mapping_keyword")
+}
+
+model branch_mapping_std {
+  raw_branch   String @id
+  clean_branch String
+}
+
+model branch_master {
+  id          Int       @id @default(autoincrement())
+  branch_name String    @unique @db.VarChar(150)
+  branch_code String    @unique @db.VarChar(20)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model dashboard_devices {
+  id          Int       @id @default(autoincrement())
+  device_name String    @db.VarChar(100)
+  api_key     String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  view_key    String    @db.VarChar(100)
+  is_active   Boolean?  @default(true)
+  last_seen   DateTime? @db.Timestamp(6)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model event_mkt_venues {
+  id           Int       @id @default(autoincrement())
+  venue_name   String
+  date_from    DateTime? @db.Date
+  date_to      DateTime? @db.Date
+  sheet_gids   String?   @default("")
+  actual_count Int?      @default(0)
+  sort_order   Int?      @default(0)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model events {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_name String
+  date_from  DateTime @db.Date
+  date_to    DateTime @db.Date
+  location   String?
+  organizers String?
+  remarks    String?
+  created_by String?  @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users?   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_by])
+  @@index([date_from])
+}
+
+model excluded_invoices {
+  doc_no      String    @id
+  reason      String?
+  excluded_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model fa_dashboard_data {
+  id          Int      @id @default(autoincrement())
+  branch_code String   @unique @db.VarChar(10)
+  fa_active   Int      @default(0)
+  inv_apr1819 Int      @default(0)
+  inv_apr2526 Int      @default(0)
+  backlog     Int?     @default(dbgenerated("GREATEST(((fa_active - inv_apr1819) - inv_apr2526), 0)"))
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_by  String?
+}
+
+model ghl_stages {
+  id            Int      @id @default(autoincrement())
+  email         String   @default("")
+  last_name     String   @default("")
+  phone         String   @default("")
+  stage_raw     String   @default("")
+  stage_key     String   @default("")
+  pipeline_name String   @default("")
+  branch        String   @default("")
+  student_name  String   @default("")
+  contact_type  String   @default("lead")
+  fingerprint   String   @unique
+  received_at   DateTime @default(now()) @db.Timestamptz(6)
+  lead_source   String   @default("")
+
+  @@index([email], map: "idx_ghl_stages_email")
+  @@index([pipeline_name], map: "idx_ghl_stages_pipeline")
+  @@index([received_at], map: "idx_ghl_stages_received")
+  @@index([stage_key], map: "idx_ghl_stages_stage_key")
+}
+
+model google_spend {
+  id            Int       @id @default(autoincrement())
+  account_id    String?
+  campaign_name String?
+  spend         Decimal?  @db.Decimal
+  leads         Decimal?  @db.Decimal
+  data_date     DateTime? @db.Date
+  conversions   Decimal?  @default(0) @db.Decimal
+
+  @@unique([account_id, campaign_name, data_date])
+}
+
+model hr_annual_leave {
+  id                Int      @id @default(autoincrement())
+  name              String
+  position          String
+  department_branch String
+  al_date           DateTime @db.Date
+  al_duration       String
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([al_date], map: "idx_hr_al_date")
+}
+
+model hr_attendance_live {
+  id                        BigInt    @id @default(autoincrement())
+  company_id                String    @db.VarChar(100)
+  employee_code             String    @db.VarChar(50)
+  attendance_date           DateTime  @db.Date
+  clock_in                  DateTime? @db.Timestamp(6)
+  clock_out                 DateTime? @db.Timestamp(6)
+  attendance_status         String    @db.VarChar(10)
+  time_attendance_id        String?
+  time_attendance_master_id String?
+  last_synced_at            DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([company_id, employee_code, attendance_date])
+}
+
+model hr_hiring_data {
+  contact_id      String    @id @db.VarChar(50)
+  first_name      String?   @db.VarChar(100)
+  last_name       String?   @db.VarChar(100)
+  tags            String?
+  employment_type String?   @db.VarChar(50)
+  synced_at       DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model hr_mc {
+  id                Int      @id @default(autoincrement())
+  name              String
+  position          String
+  department_branch String
+  mc_date           DateTime @db.Date
+  reason            String?  @default("")
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([mc_date], map: "idx_hr_mc_date")
+}
+
+model hr_recruitment_funnel {
+  candidate_id     Int       @id @default(autoincrement())
+  candidate_name   String?   @db.VarChar(255)
+  position_type    String?   @db.VarChar(50)
+  application_date DateTime? @db.Date
+  status           String?   @db.VarChar(50)
+  interview_date   DateTime? @db.Date
+  hire_date        DateTime? @db.Date
+  rejection_reason String?   @db.VarChar(255)
+}
+
+model hr_staff_movements {
+  id                Int       @id @default(autoincrement())
+  name              String
+  position          String
+  department_branch String
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  start_date        DateTime? @db.Date
+  end_date          DateTime? @db.Date
+}
+
+model inventory_extras {
+  doc_no            String    @id
+  custom_barcode_id String?
+  sk_prep           String?
+  er_prep           String?
+  barcode_sk        String?
+  barcode_eg        String?
+  sk_prep_date      DateTime? @db.Date
+}
+
+model inventory_tracking {
+  doc_no                String    @db.VarChar(255)
+  student_name          String    @db.VarChar(255)
+  sk_prep               Boolean?  @default(false)
+  sk_prep_date          DateTime? @db.Timestamp(6)
+  er_prep               Boolean?  @default(false)
+  er_prep_date          DateTime? @db.Timestamp(6)
+  bm_pickup             Boolean?  @default(false)
+  bm_pickup_date        DateTime? @db.Timestamp(6)
+  student_received      Boolean?  @default(false)
+  student_received_date DateTime? @db.Timestamp(6)
+
+  @@id([doc_no, student_name])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model invoice_data {
+  source                  String   @db.VarChar(255)
+  doc_no                  String   @db.VarChar(50)
+  doc_date                DateTime @db.Date
+  branches_sales_location String   @db.VarChar(255)
+  amount                  Decimal  @db.Decimal(10, 2)
+  created_at              DateTime @default(now()) @db.Timestamp(6)
+
+  @@ignore
+}
+
+model leads {
+  id                 BigInt    @id @default(autoincrement())
+  ghl_contact_id     String?
+  ghl_opportunity_id String?   @unique
+  opportunity_name   String?
+  parent_name        String?
+  email              String?
+  phone              String?
+  source             String?
+  pipeline_id        String?
+  pipeline_stage     String?
+  stage_code         String?
+  branch             String?
+  created_at         DateTime? @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+  branch_code        String?
+  type               String?   @db.VarChar(100)
+  last_name          String?
+}
+
+model leads_master {
+  id              Int       @id @default(autoincrement())
+  lead_id         BigInt    @unique
+  source_platform String    @default("Meta/TikTok") @db.VarChar(50)
+  created_time    DateTime  @db.Timestamptz(6)
+  full_name       String?   @db.VarChar(255)
+  email           String?   @db.VarChar(255)
+  phone_number    String?   @db.VarChar(50)
+  form_name       String?   @db.VarChar(255)
+  campaign_name   String?   @db.VarChar(255)
+  ad_name         String?   @db.VarChar(255)
+  adset_name      String?   @db.VarChar(255)
+  student_name    String?   @db.VarChar(255)
+  student_age     Int?
+  branch_option   String?   @db.VarChar(255)
+  stage           String?   @default("New Lead") @db.VarChar(100)
+  tags            String?   @db.VarChar(255)
+  remarks         String?
+  updated_date    DateTime? @db.Timestamptz(6)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model leads_summary {
+  id               BigInt?
+  opportunity_name String?
+  parent_name      String?
+  email            String?
+  phone            String?
+  source           String?
+  branch           String?
+  pipeline_stage   String?
+  created_at       DateTime? @db.Timestamp(6)
+
+  @@ignore
+}
+
+model manpower_assignments {
+  id           Int       @id @default(autoincrement())
+  day_of_week  String    @db.VarChar(20)
+  time_slot    String    @db.VarChar(50)
+  staff_column String    @db.VarChar(5)
+  staff_name   String?   @db.VarChar(100)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([day_of_week, time_slot, staff_column], map: "unique_assignment")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model master_leads_base {
+  id              BigInt?
+  source          String?
+  full_name       String?
+  email           String?
+  phone           String?
+  branch          String?
+  submission_date DateTime? @db.Timestamptz(6)
+
+  @@ignore
+}
+
+model meta_leads {
+  id                Int       @id @default(autoincrement())
+  platform          String?   @default("meta") @db.VarChar(50)
+  form_id           String?   @db.VarChar(100)
+  lead_id           String?   @unique @db.VarChar(100)
+  raw_data          Json?
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  form_name         String?
+  lead_created_time DateTime? @db.Timestamp(6)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model meta_leads_summary {
+  id         Int?
+  platform   String?   @db.VarChar(50)
+  created_at DateTime? @db.Timestamp(6)
+  lead_name  String?
+  email      String?
+  phone      String?
+  branch     String?
+  inbox_link String?
+
+  @@ignore
+}
+
+model meta_spend {
+  id            Int       @id @default(autoincrement())
+  account_id    String?   @db.VarChar(100)
+  campaign_name String?   @db.VarChar(255)
+  spend         Decimal?  @db.Decimal(10, 2)
+  impressions   Int?
+  clicks        Int?
+  data_date     DateTime? @db.Date
+  leads         Int?      @default(0)
+  account_name  String?   @db.VarChar(255)
+  conversions   Int?      @default(0)
+
+  @@unique([account_id, campaign_name, data_date])
+}
+
+model opportunities_snapshot {
+  opportunity_id String    @id
+  contact_name   String?
+  current_stage  String?
+  status         String?
+  last_updated   DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model opportunity_history {
+  id             Int       @id @default(autoincrement())
+  opportunity_id String?   @db.VarChar(100)
+  contact_name   String?   @db.VarChar(255)
+  previous_stage String?   @db.VarChar(100)
+  new_stage      String?   @db.VarChar(100)
+  moved_at       DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model password_history {
+  id            Int       @id @default(autoincrement())
+  user_id       String    @db.Uuid
+  password_hash String    @db.VarChar(255)
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_password_history_user_id")
+}
+
+model pipeline_state {
+  platform          String    @db.VarChar(50)
+  source_id         String    @db.VarChar(100)
+  last_created_time BigInt?
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@id([platform, source_id])
+}
+
+model raw_roadshow_leads {
+  id              String   @id
+  submitted_at    DateTime @default(now()) @db.Timestamptz(6)
+  full_name       String?
+  phone_number    String?
+  email           String?
+  children_count  Int?
+  raw_branch_text String?
+}
+
+model raw_wix_leads {
+  id               String    @id
+  submitted_at     DateTime? @db.Timestamptz(6)
+  full_name        String?
+  phone_number     String?
+  email            String?
+  children_count   Int?
+  raw_branch_text  String?
+  lead_source      String    @default("Trial Class Form")
+  children_details String?
+}
+
+model scan_log {
+  scan_id         Int       @id @default(autoincrement())
+  scanned_barcode String    @db.VarChar(255)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  scan_stage      String?   @db.VarChar(50)
+  scanned_by      String?   @db.VarChar(100)
+}
+
+model session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model social_posts {
+  id         Int       @id @default(autoincrement())
+  platform   String?   @db.VarChar(50)
+  source_id  String?   @db.VarChar(100)
+  raw_data   Json?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  unique_key String?
+
+  @@index([platform, created_at(sort: Desc)], map: "ix_social_posts_platform_created_at")
+  @@index([source_id, created_at(sort: Desc)], map: "ix_social_posts_source_id_created_at")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model temp_invoices {
+  dockey         String?
+  docno          String?
+  docdate        DateTime? @db.Date
+  debcode        String?
+  debtorname     String?
+  currencycode   String?
+  amount         Decimal?  @db.Decimal
+  email          String?
+  delivercontact String?
+  deliverphone   String?
+  deliverfax     String?
+  deliveraddress String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tiktok_leads_summary {
+  id         Int?
+  platform   String?   @db.VarChar(50)
+  lead_name  String?
+  email      String?
+  phone      String?
+  branch     String?
+  created_at DateTime? @db.Timestamp(6)
+
+  @@ignore
+}
+
+model tiktok_spend {
+  id            Int       @id @default(autoincrement())
+  campaign_name String?
+  spend         Decimal?  @db.Decimal
+  leads         Int?
+  data_date     DateTime? @db.Date
+}
+
+model user_permissions {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  dashboard  String   @db.VarChar(50)
+  can_view   Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, dashboard])
+  @@index([user_id], map: "idx_user_permissions_user_id")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model users {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String             @unique
+  full_name        String?
+  role             String             @default("executive")
+  password_hash    String
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  events           events[]
+  password_history password_history[]
+  user_permissions user_permissions[]
+}
+
+model verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+}
+
+enum ActionType {
+  SEND_EMAIL
+  SEND_WHATSAPP
+  ADD_TAG
+  REMOVE_TAG
+  ASSIGN_STAFF
+  MOVE_STAGE
+}
+
+enum ActivityType {
+  CONTACT_CREATED
+  CONTACT_UPDATED
+  STAGE_CHANGED
+  NOTE_ADDED
+  EMAIL_SENT
+  WHATSAPP_SENT
+  TAG_ADDED
+  TAG_REMOVED
+  LEAD_TRANSFERRED
+  OPPORTUNITY_CREATED
+  REMINDER_SENT
+  AUTOMATION_FIRED
+}
+
+enum AgencyPlan {
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum ContactStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+enum EmailType {
+  MANUAL
+  CT_REMINDER
+  STAFF_INVITE
+  AUTOMATION
+  SGL_TEMPLATE
+}
+
+enum EntityType {
+  CONTACT
+  OPPORTUNITY
+}
+
+enum ExecStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  SELECT
+  MULTISELECT
+  URL
+  PHONE
+  EMAIL
+}
+
+enum IntegrationType {
+  META
+  TIKTOK
+  WIX
+  WHATSAPP
+}
+
+enum LeadSource {
+  MANUAL
+  META
+  TIKTOK
+  WEBSITE_CONVERSION
+  WEBSITE_ORGANIC
+  ROADSHOW
+  SGL
+  WALK_IN
+  OTHERS
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+enum StaffRole {
+  SUPERADMIN
+  ADMIN
+}
+
+enum TriggerType {
+  STAGE_CHANGE
+  CONTACT_CREATED
+  TAG_ADDED
+}
+
+enum WhatsAppMsgType {
+  MANUAL
+  CT_REMINDER
+  AUTOMATION
+}
+
+enum WhatsAppStatus {
+  DORMANT
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
