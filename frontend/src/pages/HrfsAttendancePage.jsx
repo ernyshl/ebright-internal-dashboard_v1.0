@@ -5,6 +5,15 @@ import { apiFetch } from '../lib/api';
 
 const PAGE_SIZE = 50;
 
+function fmtToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtYesterday() {
+  const d = new Date(); d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 export function HrfsAttendancePage() {
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -42,6 +51,23 @@ export function HrfsAttendancePage() {
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}><h1 className="pageHeaderTitle">Attendance Log</h1><p className="headerSubtitle">{total} records</p></div>
+        <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
+      </div>
+
+      <div className="ldFilterBar" style={{ marginBottom: 12 }}>
+        {[
+          { key: 'today', label: 'Today' },
+          { key: 'yesterday', label: 'Yesterday' },
+          { key: 'custom', label: 'Custom Range' },
+        ].map(p => (
+          <button key={p.key} className={`btn ${(p.key === 'today' && dateFrom === fmtToday() && dateTo === fmtToday()) || (p.key === 'yesterday' && dateFrom === fmtYesterday() && dateTo === fmtYesterday()) || (p.key === 'custom' && dateFrom !== fmtToday() && dateFrom !== fmtYesterday() && (dateFrom || dateTo)) ? 'btnPrimary' : 'btnGhost'} btnSmall`}
+            onClick={() => {
+              if (p.key === 'today') { setDateFrom(fmtToday()); setDateTo(fmtToday()); }
+              else if (p.key === 'yesterday') { setDateFrom(fmtYesterday()); setDateTo(fmtYesterday()); }
+              else { setDateFrom(''); setDateTo(''); }
+            }}
+          >{p.label}</button>
+        ))}
         <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
       </div>
 

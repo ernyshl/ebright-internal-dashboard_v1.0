@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
-function SummaryCard({ title, icon, color, summary }) {
+function SummaryCard({ title, icon, color, summary, active, onClick }) {
   return (
-    <div className="sourceCard" style={{ '--source-color': color }}>
+    <div className="sourceCard" style={{ '--source-color': color, cursor: 'pointer', outline: active ? '2px solid ' + color : 'none', outlineOffset: 2 }} onClick={onClick}>
       <div className="sourceCardHeader">
         <span className="sourceCardIcon">{icon}</span>
         <span className="sourceCardName">{title}</span>
@@ -108,8 +108,8 @@ export function HrfsAttendanceDashboardPage() {
         <>
           {/* Summary Cards */}
           <div className="sourcesGrid" style={{ marginBottom: 16 }}>
-            <SummaryCard title="Today" icon="📅" color="#3b82f6" summary={today} />
-            <SummaryCard title="Yesterday" icon="📆" color="#f59e0b" summary={yesterday} />
+            <SummaryCard title="Today" icon="📅" color="#3b82f6" summary={today} active={view === 'today'} onClick={() => setView('today')} />
+            <SummaryCard title="Yesterday" icon="📆" color="#f59e0b" summary={yesterday} active={view === 'yesterday'} onClick={() => setView('yesterday')} />
           </div>
 
           {/* Toggle */}
