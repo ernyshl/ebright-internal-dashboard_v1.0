@@ -10,11 +10,14 @@ RUN apk add --no-cache postgresql-client curl
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (including dev for prisma generate)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
