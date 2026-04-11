@@ -41,6 +41,7 @@ import { HrAnnualLeavePage } from './pages/HrAnnualLeavePage';
 import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
+import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
 
 export default function App() {
   return (
@@ -159,6 +160,9 @@ export default function App() {
           } />
           <Route path="/hrfs-leave-transactions" element={
             <RequirePermission dashboard="testing"><HrfsLeaveTransactionPage /></RequirePermission>
+          } />
+          <Route path="/hrfs-attendance-dashboard" element={
+            <RequirePermission dashboard="testing"><HrfsAttendanceDashboardPage /></RequirePermission>
           } />
         </Route>
       </Route>
