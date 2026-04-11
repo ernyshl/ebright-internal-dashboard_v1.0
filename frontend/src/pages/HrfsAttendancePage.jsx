@@ -29,7 +29,7 @@ export function HrfsAttendancePage() {
   const totalPages = data?.totalPages || 1;
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-  const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const fmtTime = (d) => d ? String(d).slice(0, 5) : '—';
 
   const emailStatus = (inSent, outSent) => {
     if (inSent && outSent) return { label: 'Both Sent', bg: 'var(--successLight)', color: 'var(--success)' };
