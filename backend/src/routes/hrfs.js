@@ -15,8 +15,8 @@ router.get('/attendance', requireAuth, requireRole(ALLOWED_ROLES), async (req, r
       conditions.push(`("empNo" ILIKE $${idx} OR "empName" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
-    if (date_from) { conditions.push(`"date" >= $${idx++}::date`); params.push(date_from); }
-    if (date_to) { conditions.push(`"date" <= $${idx++}::date`); params.push(date_to); }
+    if (date_from) { conditions.push(`"date"::date >= $${idx++}::date`); params.push(date_from); }
+    if (date_to) { conditions.push(`"date"::date <= $${idx++}::date`); params.push(date_to); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
