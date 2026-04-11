@@ -24,6 +24,7 @@ const { hrAttendanceRouter } = require('./routes/hrAttendance');
 const { hrHiringRouter } = require('./routes/hrHiring');
 const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 const { faDashboardRouter } = require('./routes/faDashboard');
+const { hrfsRouter } = require('./routes/hrfs');
 
 const jwt = require('jsonwebtoken');
 
@@ -170,6 +171,7 @@ function createApp() {
   app.use('/api/hr-attendance', applyRoleBasedRateLimit, hrAttendanceRouter);
   app.use('/api/hr-hiring', applyRoleBasedRateLimit, hrHiringRouter);
   app.use('/api/fa-dashboard', applyRoleBasedRateLimit, faDashboardRouter);
+  app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
 
   // Audit logging middleware — log POST/PUT/DELETE operations
   app.use((req, res, next) => {
