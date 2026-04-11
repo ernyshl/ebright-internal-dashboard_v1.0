@@ -39,11 +39,9 @@ const REGIONS = {
 
 const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GB1','GB2'];
 
-<<<<<<< HEAD
 const BRANCH_LIST = ['ONL','ST','CJY','SA','PJY','AMP','BBB','DK','KLG','KD','SHA','DA','SP','BSP','EGR','BTHO','RBY','TSG','KW','KTG'];
 
 =======
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
 /* ─────────────────────────── Helpers ─────────────────────────── */
 
 function getBacklogColor(backlog, active) {
@@ -67,7 +65,6 @@ function CustomBacklogTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div style={{
-<<<<<<< HEAD
       background: '#fff', border: '1px solid #e2e8f0',
       borderRadius: 10, padding: '8px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
       fontSize: 13, color: '#1e293b',
@@ -75,7 +72,6 @@ function CustomBacklogTooltip({ active, payload }) {
       background: 'var(--panel)', border: '1px solid var(--border)',
       borderRadius: 10, padding: '8px 14px', boxShadow: 'var(--shadow-md)',
       fontSize: 13, color: 'var(--text)',
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
     }}>
       <strong>{d.code}</strong>
       <div style={{ color: '#64748b', marginTop: 2 }}>
@@ -90,7 +86,6 @@ function CustomGradeTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div style={{
-<<<<<<< HEAD
       background: '#fff', border: '1px solid #e2e8f0',
       borderRadius: 10, padding: '8px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
       fontSize: 13, color: '#1e293b',
@@ -104,7 +99,6 @@ function CustomGradeTooltip({ active, payload }) {
     }}>
       <strong>{d.grade}</strong>
       <div style={{ color: 'var(--textSecondary)', marginTop: 2 }}>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
         Students: <strong style={{ color: '#ed1c24' }}>{d.count}</strong>
       </div>
     </div>
@@ -122,7 +116,6 @@ function BranchCard({ branch, filtered }) {
   return (
     <div style={{
       background: 'var(--panel)',
-<<<<<<< HEAD
       border: `1.5px solid ${filtered ? '#6366f1' : 'var(--border)'}`,
       borderRadius: 14,
       overflow: 'hidden',
@@ -132,7 +125,6 @@ function BranchCard({ branch, filtered }) {
       borderRadius: 14,
       overflow: 'hidden',
       boxShadow: filtered ? '0 0 0 2px rgba(57,255,20,0.18), var(--shadow-md)' : 'var(--shadow-sm)',
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
       transition: 'all 0.2s',
       display: 'flex',
       flexDirection: 'column',
@@ -216,7 +208,6 @@ function BranchCard({ branch, filtered }) {
           overflow: 'hidden', display: 'flex', flexDirection: 'column',
         }}>
           <div style={{
-<<<<<<< HEAD
             fontSize: 11, fontWeight: 800, color: '#818cf8',
             textTransform: 'uppercase', letterSpacing: 0.8,
             textAlign: 'center', padding: '5px 6px 3px',
@@ -228,7 +219,6 @@ function BranchCard({ branch, filtered }) {
             textAlign: 'center', padding: '5px 6px 3px',
             borderBottom: '1px solid var(--border)',
             background: 'rgba(57,255,20,0.06)',
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
           }}>
             FA Invited
           </div>
@@ -354,13 +344,11 @@ function CrudeTable({ savedData, onSave }) {
           disabled={!hasPending}
           style={{
             padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-<<<<<<< HEAD
             background: hasPending ? '#4f46e5' : 'var(--border)',
             color: hasPending ? '#fff' : 'var(--muted)',
 =======
             background: hasPending ? '#39ff14' : 'var(--border)',
             color: hasPending ? '#000' : 'var(--muted)',
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
             border: 'none', cursor: hasPending ? 'pointer' : 'not-allowed',
             transition: 'all 0.2s',
           }}
@@ -424,11 +412,9 @@ function CrudeTable({ savedData, onSave }) {
                             onKeyDown={e => handleKey(e, row.code, f.key)}
                             style={{
                               width: 72, padding: '4px 8px', borderRadius: 6,
-<<<<<<< HEAD
                               border: '2px solid #6366f1', background: 'var(--inputBg)',
 =======
                               border: '2px solid #39ff14', background: 'var(--inputBg)',
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
                               color: 'var(--text)', fontSize: 13, outline: 'none',
                             }}
                           />
@@ -464,7 +450,6 @@ function CrudeTable({ savedData, onSave }) {
   );
 }
 
-<<<<<<< HEAD
 /* ─────────────────────────── Grade Management Table ─────────────────────────── */
 
 let _gradeNextId = 1;
@@ -608,7 +593,6 @@ function GradeManagementTable({ students, setStudents }) {
 }
 
 =======
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
 /* ─────────────────────────── Main Page ─────────────────────────── */
 
 /* Map DB row → internal shape */
@@ -629,10 +613,8 @@ export function FaDashboardPage() {
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [showCrude, setShowCrude] = useState(false);
-<<<<<<< HEAD
   const [students, setStudents]     = useState([]);
 =======
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
 
   /* Load from DB on mount */
   useEffect(() => {
@@ -700,7 +682,6 @@ export function FaDashboardPage() {
     return [...branchData].sort((a, b) => a.backlog - b.backlog);
   }, [branchData]);
 
-<<<<<<< HEAD
   /* Grade chart data — computed live from students table */
   const gradeChartData = useMemo(() => {
     return GRADE_OPTIONS.map(g => ({
@@ -727,7 +708,6 @@ export function FaDashboardPage() {
   const backlogBarColor = (code) => {
     if (!filteredCodes) return '#39ff14';
     return filteredCodes.has(code) ? '#39ff14' : '#cbd5e1';
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
   };
 
   const selectStyle = {
@@ -741,7 +721,6 @@ export function FaDashboardPage() {
 
   return (
     <div className="dashboardPage">
-<<<<<<< HEAD
       <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '0 32px' }}>
       {/* Header */}
       <div style={{
@@ -860,12 +839,10 @@ export function FaDashboardPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
                 CRUDE Academy Data
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-<<<<<<< HEAD
                 Edit branch values · Backlog auto-calculates · Save to update charts &amp; cards
               </p>
             </div>
@@ -893,12 +870,10 @@ export function FaDashboardPage() {
             </div>
           </div>
           <CrudeTable savedData={sortedAlpha} onSave={handleSave} />
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
         </div>
       )}
 
       {/* Charts Row */}
-<<<<<<< HEAD
       <div style={{
         background: '#f1f5f9',
         borderRadius: 16,
@@ -958,13 +933,11 @@ export function FaDashboardPage() {
                 ))}
                 <LabelList dataKey="backlog" position="right"
                   style={{ fontSize: 10, fill: 'var(--textSecondary)', fontWeight: 600 }} />
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-<<<<<<< HEAD
         {/* Right — Grade Chart */}
         <div style={{
           background: '#ffffff',
@@ -979,7 +952,6 @@ export function FaDashboardPage() {
         {/* Right — Grade Chart with filters */}
         <div className="card" style={{ padding: '20px 20px 12px' }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
             <select value={selectedRegion} onChange={e => { setSelectedRegion(e.target.value); setSelectedBranch(''); }} style={selectStyle}>
               <option value="">Region ▾</option>
               {Object.keys(REGIONS).map(r => <option key={r} value={r}>{r}</option>)}
@@ -990,16 +962,13 @@ export function FaDashboardPage() {
             </select>
             {(selectedRegion || selectedBranch) && (
               <button onClick={() => { setSelectedRegion(''); setSelectedBranch(''); }}
-<<<<<<< HEAD
                 style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, fontWeight: 600 }}>
 =======
                 style={{ fontSize: 11, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, fontWeight: 600 }}>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
                 ✕ Clear
               </button>
             )}
           </div>
-<<<<<<< HEAD
 
           <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
             Student's Grade
@@ -1049,14 +1018,12 @@ export function FaDashboardPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
         </div>
       </div>
 
       {/* Statistics Cards */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-<<<<<<< HEAD
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>Statistics</h2>
           <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>
             {cardBranches.length} branch{cardBranches.length !== 1 ? 'es' : ''}
@@ -1068,7 +1035,6 @@ export function FaDashboardPage() {
             {cardBranches.length} branch{cardBranches.length !== 1 ? 'es' : ''}
             {(selectedRegion || selectedBranch) && (
               <span style={{ marginLeft: 8, padding: '2px 8px', background: 'rgba(57,255,20,0.12)', color: '#39ff14', borderRadius: 20, fontWeight: 700 }}>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
                 {selectedBranch || selectedRegion}
               </span>
             )}
@@ -1079,11 +1045,9 @@ export function FaDashboardPage() {
             No branches match the current filter.
           </div>
         ) : (
-<<<<<<< HEAD
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
 =======
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
             {cardBranches.map(branch => (
               <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} />
             ))}
@@ -1098,11 +1062,9 @@ export function FaDashboardPage() {
         <span><span style={{ color: '#f59e0b', fontWeight: 700 }}>● Yellow</span> — 20% to 50%</span>
         <span><span style={{ color: '#ef4444', fontWeight: 700 }}>● Red</span> — above 50%</span>
       </div>
-<<<<<<< HEAD
 
       </div>{/* end max-width wrapper */}
 =======
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
     </div>
   );
 }

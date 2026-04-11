@@ -109,11 +109,9 @@ export function HrOnbOfbDashboardPage() {
             highlightBg="var(--successLight)"
           />
           <DashTable
-<<<<<<< HEAD
             title="Offboarding (today to +1 month)"
 =======
             title="Offboarding (today to +6 months)"
->>>>>>> caa6553c91a86f7966f15752bfd9b69d935d5374
             titleColor="var(--brand)"
             records={offboarding}
             dateField="end_date"
