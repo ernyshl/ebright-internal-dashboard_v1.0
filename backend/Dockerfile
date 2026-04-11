@@ -5,7 +5,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install system dependencies for PostgreSQL client and curl (for healthcheck)
-RUN apk add --no-cache postgresql-client curl
+RUN apk add --no-cache postgresql-client curl openssl
 
 # Copy package files
 COPY package*.json ./
