@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import { BackButton } from '../components/BackButton';
+import { apiFetch } from '../lib/api';
 
 /* ─────────────────────────── Initial Data (20 branches, NO DPU) ─────────────────────────── */
 
@@ -430,16 +431,56 @@ function CrudeTable({ savedData, onSave }) {
 
 /* ─────────────────────────── Main Page ─────────────────────────── */
 
+/* Map DB row → internal shape */
+function dbToRow(r) {
+  return {
+    code:    r.branch_code,
+    active:  r.fa_active,
+    inv1:    r.inv_apr1819,
+    inv2:    r.inv_apr2526,
+    backlog: r.backlog,
+  };
+}
+
 export function FaDashboardPage() {
-  /* savedData = committed/finalized data; used by charts & cards */
   const [savedData, setSavedData]   = useState(INITIAL_DATA);
+  const [dbLoaded, setDbLoaded]     = useState(false);
+  const [loadError, setLoadError]   = useState(null);
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [showCrude, setShowCrude] = useState(false);
 
-  /* Called by CrudeTable when user hits Save */
-  function handleSave(committed) {
-    setSavedData(committed);
+  /* Load from DB on mount */
+  useEffect(() => {
+    apiFetch('/api/fa-dashboard')
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          setSavedData(res.data.map(dbToRow));
+        }
+        setDbLoaded(true);
+      })
+      .catch(err => {
+        setLoadError(err.message);
+        setDbLoaded(true); // fall back to INITIAL_DATA
+      });
+  }, []);
+
+  /* Save to DB, then update local state */
+  async function handleSave(committed) {
+    const rows = committed.map(b => ({
+      branch_code: b.code,
+      fa_active:   b.active,
+      inv_apr1819: b.inv1,
+      inv_apr2526: b.inv2,
+    }));
+    try {
+      const res = await apiFetch('/api/fa-dashboard/save', { method: 'POST', body: { rows } });
+      if (res.data) setSavedData(res.data.map(dbToRow));
+      else setSavedData(committed);
+    } catch {
+      // Still update local state even if DB save fails
+      setSavedData(committed);
+    }
   }
 
   /* alias used throughout the render */
@@ -512,8 +553,10 @@ export function FaDashboardPage() {
           >
             {showCrude ? '▲ Hide' : '▼ Edit Data'}
           </button>
-          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>LIVE DATA</span>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.25)' }} />
+          <span style={{ fontSize: 12, color: loadError ? '#ef4444' : 'var(--muted)', fontWeight: 600 }}>
+            {!dbLoaded ? 'Loading…' : loadError ? 'DB Error (local data)' : 'LIVE DATA'}
+          </span>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: !dbLoaded ? '#f59e0b' : loadError ? '#ef4444' : '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.25)' }} />
         </div>
       </div>
 
