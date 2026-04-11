@@ -166,6 +166,9 @@ export default function App() {
           <Route path="/hrfs-leave-transactions" element={
             <RequirePermission dashboard="testing"><HrfsLeaveTransactionPage /></RequirePermission>
           } />
+          <Route path="/hrfs-attendance-dashboard" element={
+            <RequirePermission dashboard="testing"><HrfsAttendanceDashboardPage /></RequirePermission>
+          } />
         </Route>
       </Route>
 
