@@ -32,7 +32,7 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
     { to: '/executive-summary', label: 'Executive Summary', icon: '📊', roles: ['super_admin', 'ceo'] },
     { to: '/leads-centre', label: 'Leads Centre', icon: '📋', roles: ['super_admin', 'ceo', 'rm', 'marketing', 'od', 'hr'] },
     { to: '/leads-ghl-view', label: 'Leads GHL View', icon: '🔍', roles: ['super_admin', 'rm'] },
-    { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events' },
+    { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events', hideForRoles: ['ceo'] },
     { to: '/fa-dashboard', label: 'FA Dashboard', icon: '🎓', dashboard: 'academy' },
   ];
 
@@ -45,6 +45,9 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
   const visibleNavItems = isSuperAdmin
     ? [...navItems, ...adminNavItems]
     : navItems.filter(item => {
+      if (item.hideForRoles && item.hideForRoles.includes(user?.role)) {
+        return false;
+      }
       if (item.roles !== null && item.roles !== undefined) {
         return item.roles.includes(user?.role);
       }

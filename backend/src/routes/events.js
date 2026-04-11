@@ -33,7 +33,7 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'mark
 });
 
 // POST /api/events - Create new event
-router.post('/', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing']), async (req, res, next) => {
+router.post('/', requireAuth, requireRole(['super_admin', 'academy', 'marketing']), async (req, res, next) => {
   try {
     const data = eventSchema.parse(req.body);
 
@@ -72,7 +72,7 @@ router.get('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'm
 });
 
 // PUT /api/events/:id - Update event
-router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing']), async (req, res, next) => {
+router.put('/:id', requireAuth, requireRole(['super_admin', 'academy', 'marketing']), async (req, res, next) => {
   try {
     const data = eventSchema.parse(req.body);
 
@@ -86,9 +86,9 @@ router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'm
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Allow if: super_admin, ceo, academy, marketing, or creator
+    // Allow if: super_admin, academy, marketing, or creator
     const isCreator = checkResult.rows[0].created_by === req.user.sub;
-    const isAllowedRole = ['super_admin', 'ceo', 'academy', 'marketing'].includes(req.user.role);
+    const isAllowedRole = ['super_admin', 'academy', 'marketing'].includes(req.user.role);
 
     if (!isCreator && !isAllowedRole) {
       return res.status(403).json({ error: 'Not authorized to update this event' });
@@ -110,7 +110,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'm
 });
 
 // DELETE /api/events/:id - Delete event
-router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy', 'marketing']), async (req, res, next) => {
+router.delete('/:id', requireAuth, requireRole(['super_admin', 'academy', 'marketing']), async (req, res, next) => {
   try {
     // Check if event exists
     const checkResult = await pool.query(
@@ -122,9 +122,9 @@ router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'academy',
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Allow if: super_admin, ceo, academy, marketing, or creator
+    // Allow if: super_admin, academy, marketing, or creator
     const isCreator = checkResult.rows[0].created_by === req.user.sub;
-    const isAllowedRole = ['super_admin', 'ceo', 'academy', 'marketing'].includes(req.user.role);
+    const isAllowedRole = ['super_admin', 'academy', 'marketing'].includes(req.user.role);
 
     if (!isCreator && !isAllowedRole) {
       return res.status(403).json({ error: 'Not authorized to delete this event' });
