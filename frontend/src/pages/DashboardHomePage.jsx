@@ -1,17 +1,57 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 
+const DAYS = ['wed', 'thu', 'fri', 'sat', 'sun'];
+
+function calcOkrMetrics(r) {
+  if (!r) return null;
+  const totalAttended = DAYS.reduce((s, d) => s + (parseFloat(r[`${d}_attended`]) || 0), 0);
+  const totalAbsent = DAYS.reduce((s, d) => s + (parseFloat(r[`${d}_absent`]) || 0), 0);
+  const totalFrozen = DAYS.reduce((s, d) => s + (parseFloat(r[`${d}_frozen`]) || 0), 0);
+  const totalReplaced = DAYS.reduce((s, d) => s + (parseFloat(r[`${d}_replaced`]) || 0), 0);
+  const totalAttendance = totalAttended + totalFrozen + totalReplaced;
+  const attendanceRate = (totalAttended + totalAbsent) > 0
+    ? (totalAttended / (totalAttended + totalAbsent)) * 100 : 0;
+  const attendanceRateWithFreeze = (totalAttended + totalFrozen + totalAbsent) > 0
+    ? ((totalAttended + totalFrozen) / (totalAttended + totalFrozen + totalAbsent)) * 100 : 0;
+  return { totalAttendance, attendanceRate, attendanceRateWithFreeze };
+}
+
 export function DashboardHomePage() {
   const navigate = useNavigate();
   const { permissions, dashboards, isLoading } = usePermissions();
+  const [okrBranch, setOkrBranch] = useState('');
+  const [okrWeek, setOkrWeek] = useState('');
 
   // Fetch recent events for dashboard overview
   const { data: eventsData } = useQuery({
     queryKey: ['events'],
     queryFn: () => apiFetch('/api/events'),
   });
+
+  // OKR: branches list
+  const { data: branchesData } = useQuery({
+    queryKey: ['okr-branches'],
+    queryFn: () => apiFetch('/api/okr-attendance/branches'),
+  });
+  const okrBranches = branchesData?.branches ?? [];
+
+  // OKR: latest record for selected branch
+  const { data: okrData } = useQuery({
+    queryKey: ['okr-home', okrBranch, okrWeek],
+    queryFn: () => {
+      const params = new URLSearchParams({ limit: '1' });
+      if (okrBranch) params.set('branch', okrBranch);
+      if (okrWeek) params.set('week_date', okrWeek);
+      return apiFetch(`/api/okr-attendance?${params}`);
+    },
+    enabled: !!okrBranch,
+  });
+  const okrRecord = okrData?.records?.[0] ?? null;
+  const okrMetrics = useMemo(() => calcOkrMetrics(okrRecord), [okrRecord]);
 
   const visibleDashboards = getAccessibleDashboards(permissions, dashboards);
 
@@ -201,6 +241,81 @@ export function DashboardHomePage() {
       <div className="dashboardHomeHeader">
         <h1 className="pageHeaderTitle">Welcome to Ebright Dashboard</h1>
         <p>{visibleDashboards.length} accessible dashboards</p>
+      </div>
+
+      {/* OKR Attendance Summary */}
+      <div className="homeOkrPanel">
+        <div className="homeOkrPanelHeader">
+          <div>
+            <h2 className="homeOkrTitle">OKR Attendance</h2>
+            <p className="homeOkrSubtitle">Weekly student attendance at a glance</p>
+          </div>
+          <button className="btnSecondary" onClick={() => navigate('/okr-attendance')}>
+            Open Full Dashboard
+          </button>
+        </div>
+
+        <div className="homeOkrFilters">
+          <div className="formGroup">
+            <label>Branch</label>
+            <select value={okrBranch} onChange={e => setOkrBranch(e.target.value)}>
+              <option value="">Select branch...</option>
+              {okrBranches.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          <div className="formGroup">
+            <label>Week Date (optional)</label>
+            <input type="date" value={okrWeek} onChange={e => setOkrWeek(e.target.value)} />
+          </div>
+        </div>
+
+        {!okrBranch ? (
+          <p className="homeOkrEmpty">Select a branch above to see its latest OKR summary.</p>
+        ) : !okrRecord ? (
+          <p className="homeOkrEmpty">No OKR data found for this branch. <button className="linkBtn" onClick={() => navigate('/okr-attendance')}>Add data</button></p>
+        ) : (
+          <div className="homeOkrStats">
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Branch</span>
+              <strong className="homeOkrStatValue">{okrRecord.branch}</strong>
+            </div>
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Week</span>
+              <strong className="homeOkrStatValue">{okrRecord.week_date?.slice(0, 10)}</strong>
+            </div>
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Total Attendance</span>
+              <strong className="homeOkrStatValue">{okrMetrics.totalAttendance}</strong>
+            </div>
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Attendance Rate</span>
+              <strong className={`homeOkrStatValue ${okrMetrics.attendanceRate >= 80 ? 'okrGood' : 'okrBad'}`}>
+                {okrMetrics.attendanceRate.toFixed(1)}%
+              </strong>
+            </div>
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Rate w/ Freeze</span>
+              <strong className={`homeOkrStatValue ${okrMetrics.attendanceRateWithFreeze >= 80 ? 'okrGood' : 'okrBad'}`}>
+                {okrMetrics.attendanceRateWithFreeze.toFixed(1)}%
+              </strong>
+            </div>
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Active Students</span>
+              <strong className="homeOkrStatValue">{okrRecord.active_students ?? '-'}</strong>
+            </div>
+            <div className="homeOkrStat">
+              <span className="homeOkrStatLabel">Outstanding Inv.</span>
+              <strong className={`homeOkrStatValue ${parseFloat(okrRecord.outstanding_invoice_pct) <= 25 ? 'okrGood' : 'okrBad'}`}>
+                {parseFloat(okrRecord.outstanding_invoice_pct || 0).toFixed(1)}%
+              </strong>
+            </div>
+            <div className="homeOkrStat homeOkrStatAction">
+              <button className="btnPrimary" onClick={() => navigate('/okr-attendance')}>
+                Full View
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="dashboardHomeGrid">
