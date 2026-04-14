@@ -42,6 +42,7 @@ import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
+import { OkrAttendancePage } from './pages/OkrAttendancePage';
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/tv" element={<TvPage />} />
       <Route path="/fa-dashboard" element={<FaDashboardPage />} />
+      <Route path="/okr-preview" element={<OkrAttendancePage />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
@@ -163,6 +165,9 @@ export default function App() {
           } />
           <Route path="/hrfs-attendance-dashboard" element={
             <RequirePermission dashboard="testing"><HrfsAttendanceDashboardPage /></RequirePermission>
+          } />
+          <Route path="/okr-attendance" element={
+            <RequirePermission roles={['super_admin', 'ceo', 'od', 'rm', 'academy', 'hr']}><OkrAttendancePage /></RequirePermission>
           } />
         </Route>
       </Route>
