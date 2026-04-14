@@ -385,7 +385,7 @@ export function LeadsBreakdownPage() {
 
           {/* Lead Sources — 4 fixed cards */}
           <div className="section">
-            <h3 className="sectionTitle">📊 Lead Sources</h3>
+            <h3 className="sectionTitle">📊 Lead Sources (without siblings)</h3>
             <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
             <div className="sourcesGrid">
               {[
@@ -421,7 +421,7 @@ export function LeadsBreakdownPage() {
 
           {/* Regions — same layout as Lead Sources */}
           <div className="section">
-            <h3 className="sectionTitle">🗺️ Regional Breakdown</h3>
+            <h3 className="sectionTitle">🗺️ Regional Breakdown (with siblings)</h3>
             <p className="sectionSubtitle">Lead distribution across mapped regions</p>
             <div className="sourcesGrid">
               {(() => {
