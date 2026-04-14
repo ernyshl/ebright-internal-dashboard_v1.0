@@ -177,7 +177,7 @@ export function HrOnbOfbDashboardPage() {
         </div>
       ) : detailView === 'onboarding' ? (
         <DetailView
-          title="Onboarding (today to +6 months)"
+          title="Onboarding (-1 month to +6 months)"
           color="var(--success)"
           lightColor="var(--successLight)"
           records={onboarding}
@@ -187,7 +187,7 @@ export function HrOnbOfbDashboardPage() {
         />
       ) : detailView === 'offboarding' ? (
         <DetailView
-          title="Offboarding (today to +1 month)"
+          title="Offboarding (-1 week to +2 months)"
           color="var(--brand)"
           lightColor="var(--brandLight)"
           records={offboarding}
@@ -200,7 +200,7 @@ export function HrOnbOfbDashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <SummaryCard
               title="ONBOARDING"
-              subtitle="Today → +6 months"
+              subtitle="-1 month → +6 months"
               color="var(--success)"
               lightColor="var(--successLight)"
               todayCount={onbToday}
@@ -212,14 +212,14 @@ export function HrOnbOfbDashboardPage() {
             />
             <SummaryCard
               title="OFFBOARDING"
-              subtitle="Today → +1 month"
+              subtitle="-1 week → +2 months"
               color="var(--brand)"
               lightColor="var(--brandLight)"
               todayCount={ofbToday}
               twoWeekCount={ofb2w}
               totalCount={offboarding.length}
               twoWeekLabel="+2 Weeks"
-              totalLabel="+1 Month"
+              totalLabel="+2 Months"
               onClick={() => setDetailView('offboarding')}
             />
           </div>
@@ -227,7 +227,7 @@ export function HrOnbOfbDashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <InlineCard
               title="MC"
-              subtitle="Today"
+              subtitle="-1 week to today"
               color="var(--warning)"
               lightColor="var(--warningLight)"
               records={mcRecords}
@@ -237,7 +237,7 @@ export function HrOnbOfbDashboardPage() {
             />
             <InlineCard
               title="ANNUAL LEAVE"
-              subtitle="Today"
+              subtitle="-2 weeks to today"
               color="#7c3aed"
               lightColor="rgba(124, 58, 237, 0.08)"
               records={alRecords}
