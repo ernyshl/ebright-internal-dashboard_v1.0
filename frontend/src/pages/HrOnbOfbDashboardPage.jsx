@@ -53,7 +53,6 @@ function SummaryCard({ title, subtitle, color, lightColor, todayCount, twoWeekCo
 
 /* ─── Inline Card (MC / Annual Leave) ─── */
 function InlineCard({ title, subtitle, color, lightColor, records, dateField, nameField, extraField }) {
-  const todayRecords = records.filter(r => isToday(r[dateField]));
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
@@ -62,18 +61,19 @@ function InlineCard({ title, subtitle, color, lightColor, records, dateField, na
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', padding: '16px 20px', gap: 20 }}>
         <div style={{ background: lightColor, borderRadius: 10, padding: '14px 20px', textAlign: 'center', minWidth: 80 }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color, lineHeight: 1 }}>{todayRecords.length}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>Today</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color, lineHeight: 1 }}>{records.length}</div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
         </div>
-        <div style={{ flex: 1 }}>
-          {todayRecords.length === 0 ? (
-            <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No {title.toLowerCase()} for today</div>
+        <div style={{ flex: 1, maxHeight: '150px', overflowY: 'auto' }}>
+          {records.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No {title.toLowerCase()} records</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {todayRecords.map((r, i) => (
+              {records.map((r, i) => (
                 <div key={i} style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: isToday(r[dateField]) ? color : 'var(--muted)', flexShrink: 0 }} />
                   <strong>{r.name}</strong>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>{fmtDate(r[dateField])}</span>
                   <span style={{ color: 'var(--muted)', fontSize: 11 }}>{r.department_branch}</span>
                   {extraField && <span style={{ color: 'var(--muted)', fontSize: 11 }}>— {r[extraField]}</span>}
                 </div>
