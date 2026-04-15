@@ -258,7 +258,7 @@ export function HrOnbOfbDashboardPage() {
           />
           <DashCard
             title="ANNUAL LEAVE"
-            subtitle="-2 weeks → today"
+            subtitle="-2 weeks → +2 weeks"
             color="#7c3aed"
             lightColor="rgba(124, 58, 237, 0.08)"
             records={alRecords}
