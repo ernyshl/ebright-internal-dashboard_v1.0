@@ -175,8 +175,12 @@ export function HrOnbOfbDashboardPage() {
   const mcRecords = mcData?.records || [];
   const alRecords = alData?.records || [];
 
+  // Big number: today → +2 weeks (forward only)
   const onb2w = onboarding.filter(r => isInRange(r.start_date, 0, 14)).length;
   const ofb2w = offboarding.filter(r => isInRange(r.end_date, 0, 14)).length;
+  // Small number: today → +6 months / +2 months (forward only)
+  const onbTotal = onboarding.filter(r => { const d = daysFromNow(r.start_date); return d !== null && d >= 0; }).length;
+  const ofbTotal = offboarding.filter(r => { const d = daysFromNow(r.end_date); return d !== null && d >= 0; }).length;
 
   return (
     <div className="dashboardPage">
@@ -224,7 +228,7 @@ export function HrOnbOfbDashboardPage() {
             dateField="start_date"
             mainCount={onb2w}
             mainLabel="+2 Weeks"
-            smallCount={onboarding.length}
+            smallCount={onbTotal}
             smallLabel="+6 Months"
             onViewAll={() => setDetailView('onboarding')}
           />
@@ -237,7 +241,7 @@ export function HrOnbOfbDashboardPage() {
             dateField="end_date"
             mainCount={ofb2w}
             mainLabel="+2 Weeks"
-            smallCount={offboarding.length}
+            smallCount={ofbTotal}
             smallLabel="+2 Months"
             onViewAll={() => setDetailView('offboarding')}
           />
