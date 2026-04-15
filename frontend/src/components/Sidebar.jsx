@@ -34,7 +34,6 @@ export function Sidebar({ onNavigate, autoHide, onToggleAutoHide }) {
     { to: '/leads-ghl-view', label: 'Leads GHL View', icon: '🔍', roles: ['super_admin', 'rm'] },
     { to: '/event-entry', label: 'Event Entry', icon: '📝', dashboard: 'events', hideForRoles: ['ceo'] },
     { to: '/fa-dashboard', label: 'FA Dashboard', icon: '🎓', dashboard: 'academy' },
-    { to: '/okr-attendance', label: 'OKR Attendance', icon: '📋', roles: ['super_admin', 'ceo', 'od', 'rm', 'academy', 'hr'] },
   ];
 
   const adminNavItems = [

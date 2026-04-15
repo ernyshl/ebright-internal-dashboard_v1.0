@@ -25,7 +25,6 @@ const { hrHiringRouter } = require('./routes/hrHiring');
 const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 const { faDashboardRouter } = require('./routes/faDashboard');
 const { hrfsRouter } = require('./routes/hrfs');
-const { okrAttendanceRouter } = require('./routes/okrAttendance');
 
 const jwt = require('jsonwebtoken');
 
@@ -91,14 +90,6 @@ function createApp() {
     crossOriginEmbedderPolicy: false,
   }));
 
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    message: { error: 'Too many login attempts, please try again later.' },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
   const corsOptions = {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
@@ -139,7 +130,7 @@ function createApp() {
   });
 
   // Apply stricter rate limiting to auth routes
-  app.use('/api/auth', authLimiter, authRouter);
+  app.use('/api/auth', authRouter);
 
   const applyRoleBasedRateLimit = createRoleBasedRateLimiter();
 
@@ -163,7 +154,6 @@ function createApp() {
   app.use('/api/hr-hiring', applyRoleBasedRateLimit, hrHiringRouter);
   app.use('/api/fa-dashboard', applyRoleBasedRateLimit, faDashboardRouter);
   app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
-  app.use('/api/okr-attendance', applyRoleBasedRateLimit, okrAttendanceRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

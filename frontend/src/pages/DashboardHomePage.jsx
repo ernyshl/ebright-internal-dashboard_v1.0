@@ -3,7 +3,6 @@ import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permi
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 
-function calcOkrMetrics(r) {
 export function DashboardHomePage() {
   const navigate = useNavigate();
   const { permissions, dashboards, isLoading } = usePermissions();
