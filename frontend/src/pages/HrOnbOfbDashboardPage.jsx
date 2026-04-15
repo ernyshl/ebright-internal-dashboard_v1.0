@@ -17,106 +17,127 @@ function isInRange(dateStr, startDaysAgo, endDaysAhead) {
   return d >= start && d <= end;
 }
 
-function isToday(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr).toDateString();
-  return d === new Date().toDateString();
+function daysFromNow(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const today = new Date(new Date().toDateString());
+  return Math.round((d - today) / 86400000);
 }
 
-/* ─── Summary Card (Onboarding / Offboarding) ─── */
-function SummaryCard({ title, subtitle, color, lightColor, todayCount, twoWeekCount, totalCount, twoWeekLabel, totalLabel, onClick }) {
-  return (
-    <div className="card" onClick={onClick} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden', transition: 'transform 0.15s', border: '1px solid var(--border)' }}
-      onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-      onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color }}>{title}</div>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{subtitle}</div>
-      </div>
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, fontWeight: 800, color, lineHeight: 1 }}>{todayCount}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6, fontWeight: 600, textTransform: 'uppercase' }}>Today</div>
-      </div>
-      <div style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
-        <div style={{ flex: 1, padding: '12px 16px', textAlign: 'center', background: lightColor }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color }}>{twoWeekCount}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>{twoWeekLabel}</div>
-        </div>
-        <div style={{ flex: 1, padding: '12px 16px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{totalCount}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>{totalLabel}</div>
-        </div>
-      </div>
-    </div>
-  );
+function DaysLabel({ days }) {
+  if (days === null) return null;
+  if (days === 0) return <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--brand)', background: 'var(--brandLight)', padding: '1px 6px', borderRadius: 4 }}>Today</span>;
+  if (days < 0) return <span style={{ fontSize: 10, color: 'var(--muted)' }}>{Math.abs(days)}d ago</span>;
+  return <span style={{ fontSize: 10, color: 'var(--muted)' }}>in {days}d</span>;
 }
 
-/* ─── Inline Card (MC / Annual Leave) ─── */
-function InlineCard({ title, subtitle, color, lightColor, records, dateField, nameField, extraField }) {
+/* ─── Unified Dashboard Card ─── */
+function DashCard({ title, subtitle, color, lightColor, records, dateField, mainCount, mainLabel, smallCount, smallLabel, extraField, onViewAll, maxItems }) {
+  const displayRecords = records.slice(0, maxItems || 8);
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color }}>{title}</div>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{subtitle}</div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', padding: '16px 20px', gap: 20 }}>
-        <div style={{ background: lightColor, borderRadius: 10, padding: '14px 20px', textAlign: 'center', minWidth: 80 }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color, lineHeight: 1 }}>{records.length}</div>
-          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
+    <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, color, letterSpacing: '0.5px' }}>{title}</div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{subtitle}</div>
         </div>
-        <div style={{ flex: 1, maxHeight: '150px', overflowY: 'auto' }}>
-          {records.length === 0 ? (
-            <div style={{ color: 'var(--muted)', fontSize: 13, padding: '10px 0' }}>No {title.toLowerCase()} records</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {records.map((r, i) => (
-                <div key={i} style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: isToday(r[dateField]) ? color : 'var(--muted)', flexShrink: 0 }} />
-                  <strong>{r.name}</strong>
-                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>{fmtDate(r[dateField])}</span>
-                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>{r.department_branch}</span>
-                  {extraField && <span style={{ color: 'var(--muted)', fontSize: 11 }}>— {r[extraField]}</span>}
-                </div>
-              ))}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {smallCount !== undefined && (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{smallCount}</div>
+              <div style={{ fontSize: 8, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{smallLabel}</div>
             </div>
           )}
+          <div style={{ background: lightColor, borderRadius: 10, padding: '8px 16px', textAlign: 'center', minWidth: 60 }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{mainCount}</div>
+            <div style={{ fontSize: 8, color: 'var(--muted)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{mainLabel}</div>
+          </div>
         </div>
       </div>
+
+      {/* List */}
+      <div style={{ flex: 1, maxHeight: '200px', overflowY: 'auto', padding: '8px 0' }}>
+        {records.length === 0 ? (
+          <div style={{ color: 'var(--muted)', fontSize: 13, padding: '20px', textAlign: 'center' }}>No records in this period</div>
+        ) : (
+          displayRecords.map((r, i) => {
+            const within2w = isInRange(r[dateField], 0, 14);
+            const days = daysFromNow(r[dateField]);
+            return (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '6px 20px',
+                background: within2w ? lightColor : 'transparent',
+                borderLeft: within2w ? `3px solid ${color}` : '3px solid transparent',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: within2w ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', display: 'flex', gap: 6, marginTop: 1 }}>
+                    <span>{r.position || r.department_branch}</span>
+                    {r.position && r.department_branch && <span>· {r.department_branch}</span>}
+                    {extraField && r[extraField] && <span>· {r[extraField]}</span>}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 500 }}>{fmtDate(r[dateField])}</div>
+                  <DaysLabel days={days} />
+                </div>
+              </div>
+            );
+          })
+        )}
+        {records.length > (maxItems || 8) && (
+          <div style={{ textAlign: 'center', padding: '8px' }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>+{records.length - (maxItems || 8)} more</span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      {onViewAll && records.length > 0 && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 20px', textAlign: 'center' }}>
+          <button onClick={onViewAll} style={{ background: 'none', border: 'none', color, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '4px 12px' }}>
+            View All {records.length} Records →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ─── Detail Table (full view when card is clicked) ─── */
+/* ─── Detail Table ─── */
 function DetailView({ title, color, lightColor, records, dateField, dateLabel, onBack }) {
   return (
     <div>
-      <div style={{ background: color, color: '#fff', borderRadius: 10, padding: '16px 24px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 70%, black))`, color: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>{title} ({records.length})</div>
-          <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>Green = within 2 weeks</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
+          <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{records.length} staff · Highlighted = within 2 weeks</div>
         </div>
-        <button className="btn btnSmall" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }} onClick={onBack}>← Back</button>
+        <button className="btn btnSmall" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', backdropFilter: 'blur(4px)' }} onClick={onBack}>← Back</button>
       </div>
       <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
         <table className="dataTable">
           <thead>
-            <tr><th>#</th><th>Name</th><th>Position</th><th>Dept / Branch</th><th>{dateLabel}</th></tr>
+            <tr><th>#</th><th>Name</th><th>Position</th><th>Dept / Branch</th><th>{dateLabel}</th><th></th></tr>
           </thead>
           <tbody>
             {records.length === 0 ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
             ) : records.map((r, i) => {
               const within2w = isInRange(r[dateField], 0, 14);
+              const days = daysFromNow(r[dateField]);
               return (
                 <tr key={r.id} style={within2w ? { background: lightColor } : {}}>
                   <td style={{ color: 'var(--muted)', fontSize: 11 }}>{i + 1}</td>
                   <td style={{ fontSize: 13 }}>
-                    {within2w && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--success)', marginRight: 8 }} />}
+                    {within2w && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, marginRight: 8 }} />}
                     <strong>{r.name}</strong>
                   </td>
                   <td style={{ fontSize: 12 }}>{r.position}</td>
                   <td style={{ fontSize: 12 }}>{r.department_branch}</td>
                   <td style={{ whiteSpace: 'nowrap', fontSize: 12, fontWeight: within2w ? 600 : 400 }}>{fmtDate(r[dateField])}</td>
+                  <td><DaysLabel days={days} /></td>
                 </tr>
               );
             })}
@@ -128,7 +149,7 @@ function DetailView({ title, color, lightColor, records, dateField, dateLabel, o
 }
 
 export function HrOnbOfbDashboardPage() {
-  const [detailView, setDetailView] = useState(null); // 'onboarding' | 'offboarding' | null
+  const [detailView, setDetailView] = useState(null);
 
   const { data: staffData, isLoading: staffLoading } = useQuery({
     queryKey: ['hrOnbOfbDashboard'],
@@ -154,10 +175,7 @@ export function HrOnbOfbDashboardPage() {
   const mcRecords = mcData?.records || [];
   const alRecords = alData?.records || [];
 
-  // Counts
-  const onbToday = onboarding.filter(r => isToday(r.start_date)).length;
   const onb2w = onboarding.filter(r => isInRange(r.start_date, 0, 14)).length;
-  const ofbToday = offboarding.filter(r => isToday(r.end_date)).length;
   const ofb2w = offboarding.filter(r => isInRange(r.end_date, 0, 14)).length;
 
   return (
@@ -166,7 +184,7 @@ export function HrOnbOfbDashboardPage() {
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
           <h1 className="pageHeaderTitle">HR Overview Dashboard</h1>
-          <p className="headerSubtitle">Onboarding, Offboarding, MC, Annual Leave</p>
+          <p className="headerSubtitle">Onboarding · Offboarding · MC · Annual Leave</p>
         </div>
       </div>
 
@@ -177,7 +195,7 @@ export function HrOnbOfbDashboardPage() {
         </div>
       ) : detailView === 'onboarding' ? (
         <DetailView
-          title="Onboarding (-1 month to +6 months)"
+          title="Onboarding"
           color="var(--success)"
           lightColor="var(--successLight)"
           records={onboarding}
@@ -187,7 +205,7 @@ export function HrOnbOfbDashboardPage() {
         />
       ) : detailView === 'offboarding' ? (
         <DetailView
-          title="Offboarding (-1 week to +2 months)"
+          title="Offboarding"
           color="var(--brand)"
           lightColor="var(--brandLight)"
           records={offboarding}
@@ -196,57 +214,56 @@ export function HrOnbOfbDashboardPage() {
           onBack={() => setDetailView(null)}
         />
       ) : (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <SummaryCard
-              title="ONBOARDING"
-              subtitle="-1 month → +6 months"
-              color="var(--success)"
-              lightColor="var(--successLight)"
-              todayCount={onbToday}
-              twoWeekCount={onb2w}
-              totalCount={onboarding.length}
-              twoWeekLabel="+2 Weeks"
-              totalLabel="+6 Months"
-              onClick={() => setDetailView('onboarding')}
-            />
-            <SummaryCard
-              title="OFFBOARDING"
-              subtitle="-1 week → +2 months"
-              color="var(--brand)"
-              lightColor="var(--brandLight)"
-              todayCount={ofbToday}
-              twoWeekCount={ofb2w}
-              totalCount={offboarding.length}
-              twoWeekLabel="+2 Weeks"
-              totalLabel="+2 Months"
-              onClick={() => setDetailView('offboarding')}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <InlineCard
-              title="MC"
-              subtitle="-1 week to today"
-              color="var(--warning)"
-              lightColor="var(--warningLight)"
-              records={mcRecords}
-              dateField="mc_date"
-              nameField="name"
-              extraField="reason"
-            />
-            <InlineCard
-              title="ANNUAL LEAVE"
-              subtitle="-2 weeks to today"
-              color="#7c3aed"
-              lightColor="rgba(124, 58, 237, 0.08)"
-              records={alRecords}
-              dateField="al_date"
-              nameField="name"
-              extraField="al_duration"
-            />
-          </div>
-        </>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <DashCard
+            title="ONBOARDING"
+            subtitle="-1 month → +6 months"
+            color="var(--success)"
+            lightColor="var(--successLight)"
+            records={onboarding}
+            dateField="start_date"
+            mainCount={onb2w}
+            mainLabel="+2 Weeks"
+            smallCount={onboarding.length}
+            smallLabel="+6 Months"
+            onViewAll={() => setDetailView('onboarding')}
+          />
+          <DashCard
+            title="OFFBOARDING"
+            subtitle="-1 week → +2 months"
+            color="var(--brand)"
+            lightColor="var(--brandLight)"
+            records={offboarding}
+            dateField="end_date"
+            mainCount={ofb2w}
+            mainLabel="+2 Weeks"
+            smallCount={offboarding.length}
+            smallLabel="+2 Months"
+            onViewAll={() => setDetailView('offboarding')}
+          />
+          <DashCard
+            title="MC"
+            subtitle="-1 week → today"
+            color="var(--warning)"
+            lightColor="var(--warningLight)"
+            records={mcRecords}
+            dateField="mc_date"
+            mainCount={mcRecords.length}
+            mainLabel="Total"
+            extraField="reason"
+          />
+          <DashCard
+            title="ANNUAL LEAVE"
+            subtitle="-2 weeks → today"
+            color="#7c3aed"
+            lightColor="rgba(124, 58, 237, 0.08)"
+            records={alRecords}
+            dateField="al_date"
+            mainCount={alRecords.length}
+            mainLabel="Total"
+            extraField="al_duration"
+          />
+        </div>
       )}
     </div>
   );
