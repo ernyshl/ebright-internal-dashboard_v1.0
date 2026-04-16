@@ -150,7 +150,7 @@ export function UsersPage() {
     const role = selectedUser?.role || 'marketing';
     const roleDefaults = {
       super_admin: ['marketing', 'finance', 'operations', 'department'],
-      ceo: ['marketing', 'finance', 'operations', 'department'],
+      ceo: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr', 'events', 'testing', 'rm_dashboard', 'hr_crud'],
       rm: ['operations', 'academy'],
       marketing: ['marketing', 'academy'],
       od: ['operations', 'academy'],

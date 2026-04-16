@@ -11,7 +11,7 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
     const { rows } = await pool.query(
       `SELECT id, name, position, department_branch, mc_date, reason
        FROM hr_mc
-       WHERE mc_date >= CURRENT_DATE - INTERVAL '14 days'
+       WHERE mc_date >= CURRENT_DATE - INTERVAL '7 days'
          AND mc_date <= CURRENT_DATE
        ORDER BY mc_date DESC`
     );

@@ -24,8 +24,8 @@ LAST_MOD=$(stat -c %Y "$LOG_FILE" 2>/dev/null)
 NOW=$(date +%s)
 DIFF=$(( NOW - LAST_MOD ))
 
-# 15 minutes = 900 seconds
-if [ "$DIFF" -gt 900 ]; then
+# 30 minutes = 1800 seconds
+if [ "$DIFF" -gt 1800 ]; then
   # Only alert once per outage (don't spam)
   if [ ! -f "$ALERT_FLAG" ]; then
     MINS=$(( DIFF / 60 ))
