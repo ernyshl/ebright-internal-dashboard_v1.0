@@ -1,17 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from '../lib/api';
 
-export function DashboardHomePage() {
+export function DashboardHomePage({ previewMode = false }) {
   const navigate = useNavigate();
   const { permissions, dashboards, isLoading } = usePermissions();
 
-  // Fetch recent events for dashboard overview
-  const { data: eventsData } = useQuery({
-    queryKey: ['events'],
-    queryFn: () => apiFetch('/api/events'),
-  });
 
   const visibleDashboards = getAccessibleDashboards(permissions, dashboards);
 
@@ -65,7 +58,8 @@ export function DashboardHomePage() {
       color: '#3b82f6',
       links: [
         { label: 'GHL Dashboard', path: '/dashboard', dashboard: 'operations' },
-        { label: 'Branch Distribution', path: '/branch-distribution', dashboard: 'operations' }
+        { label: 'Branch Distribution', path: '/branch-distribution', dashboard: 'operations' },
+        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'operations' }
       ]
     },
     {
@@ -181,20 +175,29 @@ export function DashboardHomePage() {
     }
   ];
 
-  // Filter departments based on permissions
-  const filteredDepartments = departmentData
-      .map(dept => ({
-        ...dept,
-        gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
-        links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
-      }))
-      .filter(dept => {
-        const hasLinks = dept.links.length > 0;
-        const hasGaReports = !!dept.gaReports;
-        return hasLinks || hasGaReports;
-      });
+  // In preview mode, remap auth-protected routes to their preview equivalents
+  const PREVIEW_ROUTE_MAP = { '/okr-attendance': '/okr-preview' };
+  const resolvePreviewPath = (path) => previewMode ? (PREVIEW_ROUTE_MAP[path] ?? path) : path;
 
-  if (isLoading) {
+  // Filter departments based on permissions (skipped in preview mode)
+  const filteredDepartments = previewMode
+    ? departmentData.map(dept => ({
+        ...dept,
+        links: dept.links.map(link => ({ ...link, path: resolvePreviewPath(link.path) })),
+      }))
+    : departmentData
+        .map(dept => ({
+          ...dept,
+          gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
+          links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
+        }))
+        .filter(dept => {
+          const hasLinks = dept.links.length > 0;
+          const hasGaReports = !!dept.gaReports;
+          return hasLinks || hasGaReports;
+        });
+
+  if (!previewMode && isLoading) {
     return (
       <div className="dashboardHomePage">
         <div className="dashboardHomeHeader">

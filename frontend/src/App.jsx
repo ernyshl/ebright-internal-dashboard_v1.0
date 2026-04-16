@@ -43,6 +43,7 @@ import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
+import { OkrAttendancePage } from './pages/OkrAttendancePage';
 
 export default function App() {
   return (
@@ -51,6 +52,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/tv" element={<TvPage />} />
       <Route path="/fa-dashboard" element={<FaDashboardPage />} />
+      <Route path="/okr-preview" element={<OkrAttendancePage />} />
+      <Route path="/home-preview" element={<DashboardHomePage previewMode />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
@@ -167,6 +170,9 @@ export default function App() {
           } />
           <Route path="/student-database" element={
             <RequirePermission dashboard="student_db"><StudentDatabasePage /></RequirePermission>
+          } />
+          <Route path="/okr-attendance" element={
+            <RequirePermission dashboard="operations"><OkrAttendancePage /></RequirePermission>
           } />
         </Route>
       </Route>
