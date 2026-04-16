@@ -54,7 +54,7 @@ function StatCard({ title, value, icon, color, subtitle, to, bracketValue }) {
       <div className="statCardContent">
         <div className="statCardValue">
           {formatNumber(numValue)}
-          {bracketValue !== undefined && <span style={{ fontSize: '0.6em', color: 'var(--muted)', fontWeight: 500 }}>({formatNumber(bracketValue)})</span>}
+          {bracketValue !== undefined && <span style={{ fontSize: '0.6em', color: 'var(--muted)', fontWeight: 500 }}> | {formatNumber(bracketValue)}</span>}
         </div>
         <div className="statCardTitle">{title}</div>
         {subtitle && <div className="statCardSubtitle">{subtitle}</div>}
@@ -359,12 +359,12 @@ export function LeadsBreakdownPage() {
               to={getLeadCentreUrl('', '30days')}
             />
             <StatCard
-              title="Today's Leads"
-              value={todayTotal}
+              title="Today's Leads | Online"
+              value={todayTotal - onlineToday}
               bracketValue={onlineToday}
               icon="📅"
               color="#10b981"
-              subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday · Online: ${onlineToday}`}
+              subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`}
               to={getLeadCentreUrl('', 'today')}
             />
             <StatCard
