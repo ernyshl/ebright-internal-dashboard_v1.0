@@ -44,7 +44,7 @@ function formatNumber(num) {
   return new Intl.NumberFormat('en-MY').format(n);
 }
 
-function StatCard({ title, value, icon, color, subtitle, to }) {
+function StatCard({ title, value, icon, color, subtitle, to, bracketValue }) {
   // Ensure value is a number
   const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
 
@@ -52,7 +52,10 @@ function StatCard({ title, value, icon, color, subtitle, to }) {
     <div className="statCard" style={{ '--stat-color': color }}>
       <div className="statCardIcon">{icon}</div>
       <div className="statCardContent">
-        <div className="statCardValue">{formatNumber(numValue)}</div>
+        <div className="statCardValue">
+          {formatNumber(numValue)}
+          {bracketValue !== undefined && <span style={{ fontSize: '0.6em', color: 'var(--muted)', fontWeight: 500 }}>({formatNumber(bracketValue)})</span>}
+        </div>
         <div className="statCardTitle">{title}</div>
         {subtitle && <div className="statCardSubtitle">{subtitle}</div>}
       </div>
@@ -298,6 +301,10 @@ export function LeadsBreakdownPage() {
   const activeBranches = branches.filter(b => !inactiveBranches.includes(b.clean_branch));
   const branchCount = activeBranches.length;
 
+  // Online branch today count
+  const onlineBranch = branches.find(b => b.clean_branch && b.clean_branch.toLowerCase().includes('online'));
+  const onlineToday = parseInt(onlineBranch?.count_today) || 0;
+
   const leadSources = [
     { id: 'website', name: 'Website', icon: '🌐' },
     { id: 'trial class form', name: 'Trial Class Form', icon: '🌐' },
@@ -354,9 +361,10 @@ export function LeadsBreakdownPage() {
             <StatCard
               title="Today's Leads"
               value={todayTotal}
+              bracketValue={onlineToday}
               icon="📅"
               color="#10b981"
-              subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`}
+              subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday · Online: ${onlineToday}`}
               to={getLeadCentreUrl('', 'today')}
             />
             <StatCard
