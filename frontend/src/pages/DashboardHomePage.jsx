@@ -134,6 +134,15 @@ export function DashboardHomePage() {
       ]
     },
     {
+      id: 'student_db',
+      name: 'Student Database',
+      icon: '📚',
+      color: '#7c3aed',
+      links: [
+        { label: 'Student Database', path: '/student-database', dashboard: 'student_db' },
+      ]
+    },
+    {
       id: 'admin',
       name: 'Admin',
       icon: '🔧',
