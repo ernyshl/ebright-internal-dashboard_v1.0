@@ -52,13 +52,15 @@ router.post('/save', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
   try {
     // Upsert each row using Prisma in a transaction
     await prisma.$transaction(
-      rows.map(({ branch_code, fa_active, inv_apr1819, inv_apr2526 }) =>
-        prisma.fa_dashboard_data.upsert({
+      rows.map(({ branch_code, fa_active, inv_apr1819, inv_apr2526 }) => {
+        const backlog = Math.max(0, fa_active - inv_apr1819 - inv_apr2526);
+        return prisma.fa_dashboard_data.upsert({
           where: { branch_code },
           update: {
             fa_active,
             inv_apr1819,
             inv_apr2526,
+            backlog,
             updated_at: new Date(),
             updated_by: updatedBy,
           },
@@ -67,11 +69,12 @@ router.post('/save', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
             fa_active,
             inv_apr1819,
             inv_apr2526,
+            backlog,
             updated_at: new Date(),
             updated_by: updatedBy,
           },
-        })
-      )
+        });
+      })
     );
 
     // Return updated data

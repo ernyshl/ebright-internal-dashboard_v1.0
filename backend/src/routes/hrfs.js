@@ -103,11 +103,11 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
       pool.query(`SELECT COUNT(*) FROM hrfs."BranchStaff" ${where}`, params),
       pool.query(
         `SELECT id, "name", "nickname", "nric", "email", "phone", "role",
-                "branch", "department", "position", "status", "employment_type",
-                "start_date", "end_date", "dob", "age", "gender", "nationality",
-                "home_address", "residential", "location", "university",
-                "emergency_name", "emergency_phone", "emergency_relation",
-                "signed_date", "probation", "rate", "employeeId",
+                "branch", "department", "position", "status", "employmentType",
+                "startDate", "endDate", "dob", "age", "gender", "nationality",
+                "homeAddress", "residential", "location", "university",
+                "emergencyName", "emergencyPhone", "emergencyRelation",
+                "signedDate", "probation", "rate", "employeeId",
                 "accessStatus", "createdAt", "updatedAt"
          FROM hrfs."BranchStaff" ${where}
          ORDER BY "createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,

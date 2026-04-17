@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList,
@@ -6,7 +6,15 @@ import {
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
-/* ─────────────────────────── Initial Data (20 branches, NO DPU) ─────────────────────────── */
+/* ─────────────────────────── Previous Snapshot (for Delta) ─────────────────────────── */
+
+const PREVIOUS_DATA = {
+  ONL: 680, ST: 550, CJY: 510, SA: 420, PJY: 285, AMP: 335,
+  BBB: 300, DK: 275, KLG: 265, KD: 255, SHA: 180, DA: 162,
+  SP: 138, BSP: 82,  EGR: 71,  BTHO: 69, RBY: 16, TSG: 2, KW: 1, KTG: 1,
+};
+
+/* ─────────────────────────── Initial Data (20 branches) ─────────────────────────── */
 
 const INITIAL_DATA = [
   { code: 'ONL',  active: 660, inv1: 8,  inv2: 6,  backlog: 646 },
@@ -38,7 +46,6 @@ const REGIONS = {
 };
 
 const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GB1','GB2'];
-
 const BRANCH_LIST = ['ONL','ST','CJY','SA','PJY','AMP','BBB','DK','KLG','KD','SHA','DA','SP','BSP','EGR','BTHO','RBY','TSG','KW','KTG'];
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
@@ -46,9 +53,9 @@ const BRANCH_LIST = ['ONL','ST','CJY','SA','PJY','AMP','BBB','DK','KLG','KD','SH
 function getBacklogColor(backlog, active) {
   if (active === 0) return '#6b7280';
   const pct = (backlog / active) * 100;
-  if (pct > 50) return '#ef4444';   // Red
-  if (pct >= 20) return '#f59e0b';  // Yellow
-  return '#22c55e';                  // Green
+  if (pct > 50) return '#ef4444';
+  if (pct >= 20) return '#f59e0b';
+  return '#22c55e';
 }
 
 function getProgressBarColor(pct) {
@@ -57,20 +64,51 @@ function getProgressBarColor(pct) {
   return '#22c55e';
 }
 
-/* ─────────────────────────── Tooltips ─────────────────────────── */
+/* ─────────────────────────── Health Bar Tooltip ─────────────────────────── */
 
 function CustomBacklogTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
-  const d = payload[0].payload;
+  const d = payload[0]?.payload;
+  if (!d) return null;
+  const delta = d.delta ?? 0;
+  const cleared = Math.max(0, -delta);
+  const added   = Math.max(0,  delta);
   return (
     <div style={{
-      background: '#fff', border: '1px solid #e2e8f0',
-      borderRadius: 10, padding: '8px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      fontSize: 13, color: '#1e293b',
+      background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+      border: '1px solid rgba(99,102,241,0.4)',
+      borderRadius: 12, padding: '10px 16px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      fontSize: 13, color: '#fff', minWidth: 190,
     }}>
-      <strong>{d.code}</strong>
-      <div style={{ color: '#64748b', marginTop: 2 }}>
-        Backlog: <strong style={{ color: '#4f46e5' }}>{d.backlog}</strong>
+      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: 6 }}>
+        {d.code}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>Current Backlog</span>
+          <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.backlog}</strong>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>Previous</span>
+          <strong style={{ color: '#94a3b8' }}>{d.prev}</strong>
+        </div>
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+        {delta === 0 && (
+          <div style={{ color: '#94a3b8', fontWeight: 600 }}>No change</div>
+        )}
+        {cleared > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+            <span style={{ color: 'rgba(255,255,255,0.65)' }}>Cleared (good)</span>
+            <strong style={{ color: '#22c55e' }}>↓ {cleared}</strong>
+          </div>
+        )}
+        {added > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+            <span style={{ color: 'rgba(255,255,255,0.65)' }}>Added (bad)</span>
+            <strong style={{ color: '#ef4444' }}>↑ {added}</strong>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -81,13 +119,15 @@ function CustomGradeTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div style={{
-      background: '#fff', border: '1px solid #e2e8f0',
-      borderRadius: 10, padding: '8px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      fontSize: 13, color: '#1e293b',
+      background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+      border: '1px solid rgba(239,68,68,0.4)',
+      borderRadius: 12, padding: '8px 14px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      fontSize: 13, color: '#fff',
     }}>
-      <strong>{d.grade}</strong>
-      <div style={{ color: '#64748b', marginTop: 2 }}>
-        Students: <strong style={{ color: '#ed1c24' }}>{d.count}</strong>
+      <strong style={{ fontSize: 14 }}>{d.grade}</strong>
+      <div style={{ color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+        Students: <strong style={{ color: '#fca5a5' }}>{d.count}</strong>
       </div>
     </div>
   );
@@ -100,6 +140,8 @@ function BranchCard({ branch, filtered }) {
   const pctRounded = Math.round(pct);
   const backlogNumColor = getBacklogColor(branch.backlog, branch.active);
   const progressColor = getProgressBarColor(pct);
+  const prev = PREVIOUS_DATA[branch.code] ?? branch.backlog;
+  const delta = branch.backlog - prev;
 
   return (
     <div style={{
@@ -107,61 +149,63 @@ function BranchCard({ branch, filtered }) {
       border: `1.5px solid ${filtered ? '#6366f1' : 'var(--border)'}`,
       borderRadius: 14,
       overflow: 'hidden',
-      boxShadow: filtered ? '0 0 0 2px rgba(99,102,241,0.25), var(--shadow-md)' : 'var(--shadow-sm)',
+      boxShadow: filtered ? '0 0 0 3px rgba(99,102,241,0.2), var(--shadow-md)' : 'var(--shadow-sm)',
       transition: 'all 0.2s',
       display: 'flex',
       flexDirection: 'column',
-    }}>
+      cursor: 'default',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = filtered ? '0 0 0 3px rgba(99,102,241,0.3), 0 8px 24px rgba(0,0,0,0.15)' : '0 8px 24px rgba(0,0,0,0.12)'; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = filtered ? '0 0 0 3px rgba(99,102,241,0.2), var(--shadow-md)' : 'var(--shadow-sm)'; }}
+    >
       {/* Card Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)',
+        background: pct > 50
+          ? 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)'
+          : pct >= 20
+          ? 'linear-gradient(135deg, #78350f 0%, #b45309 100%)'
+          : 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)',
         padding: '10px 14px 8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span style={{ color: '#fff', fontWeight: 800, fontSize: 18, letterSpacing: 0.5 }}>
           {branch.code}
         </span>
-        <span style={{
-          background: pct > 50 ? 'rgba(239,68,68,0.85)' : pct >= 20 ? 'rgba(245,158,11,0.85)' : 'rgba(34,197,94,0.85)',
-          color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 20, padding: '2px 8px',
-        }}>
-          {pctRounded}%
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {delta !== 0 && (
+            <span style={{
+              fontSize: 10, fontWeight: 800, color: delta < 0 ? '#86efac' : '#fca5a5',
+              background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '1px 6px',
+            }}>
+              {delta < 0 ? `↓${Math.abs(delta)}` : `↑${delta}`}
+            </span>
+          )}
+          <span style={{
+            background: 'rgba(0,0,0,0.2)',
+            color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 20, padding: '2px 8px',
+          }}>
+            {pctRounded}%
+          </span>
+        </div>
       </div>
 
-      {/* Main KPI — FA BACKLOG STATUS as fraction */}
+      {/* Main KPI */}
       <div style={{
-        padding: '14px 14px 10px',
-        borderBottom: '1px solid var(--border)',
-        textAlign: 'center',
+        padding: '14px 14px 10px', borderBottom: '1px solid var(--border)', textAlign: 'center',
       }}>
         <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>
           <span style={{ color: backlogNumColor }}>{branch.backlog}</span>
-          <span style={{ color: 'var(--muted)', fontSize: 18, fontWeight: 500 }}>
-            &nbsp;/&nbsp;{branch.active}
-          </span>
+          <span style={{ color: 'var(--muted)', fontSize: 18, fontWeight: 500 }}>&nbsp;/&nbsp;{branch.active}</span>
         </div>
-        <div style={{
-          fontSize: 10, fontWeight: 700, color: 'var(--textSecondary)',
-          textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4,
-        }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 }}>
           FA Backlog Status
         </div>
-        {/* Progress bar */}
-        <div style={{
-          height: 4, background: 'var(--border)', borderRadius: 99, marginTop: 8, overflow: 'hidden',
-        }}>
+        <div style={{ height: 5, background: 'var(--border)', borderRadius: 99, marginTop: 8, overflow: 'hidden' }}>
           <div style={{
-            height: '100%',
-            width: `${Math.min(pctRounded, 100)}%`,
-            background: progressColor,
-            borderRadius: 99,
-            transition: 'width 0.4s ease',
+            height: '100%', width: `${Math.min(pctRounded, 100)}%`,
+            background: progressColor, borderRadius: 99, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
           }} />
         </div>
-        {/* Color legend hint */}
         <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 4 }}>
           <span style={{ color: '#22c55e' }}>●</span> &lt;20%&nbsp;
           <span style={{ color: '#f59e0b' }}>●</span> 20–50%&nbsp;
@@ -170,33 +214,13 @@ function BranchCard({ branch, filtered }) {
       </div>
 
       {/* Footer Stats */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        padding: '10px 12px', gap: 8, flex: 1, alignItems: 'stretch',
-      }}>
-        {/* FA Aone Active */}
-        <div style={{
-          background: 'var(--bg)', borderRadius: 8, padding: '8px 10px',
-          textAlign: 'center', border: '1px solid var(--border)',
-        }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '10px 12px', gap: 8, flex: 1 }}>
+        <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', border: '1px solid var(--border)' }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{branch.active}</div>
-          <div style={{ fontSize: 10, color: 'var(--textSecondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            FA Aone Active
-          </div>
+          <div style={{ fontSize: 10, color: 'var(--textSecondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>FA Aone Active</div>
         </div>
-
-        {/* FA Invited */}
-        <div style={{
-          background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)',
-          overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 800, color: '#818cf8',
-            textTransform: 'uppercase', letterSpacing: 0.8,
-            textAlign: 'center', padding: '5px 6px 3px',
-            borderBottom: '1px solid var(--border)',
-            background: 'rgba(99,102,241,0.08)',
-          }}>
+        <div style={{ background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center', padding: '5px 6px 3px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.08)' }}>
             FA Invited
           </div>
           <div style={{ display: 'flex', flex: 1 }}>
@@ -218,21 +242,24 @@ function BranchCard({ branch, filtered }) {
 /* ─────────────────────────── CRUDE Table ─────────────────────────── */
 
 function CrudeTable({ savedData, onSave }) {
-  // draft = working copy; pendingKeys = set of "code-field" that are unsaved
-  const [draft, setDraft]           = useState(() => savedData.map(r => ({ ...r })));
-  const [pendingKeys, setPending]   = useState(new Set());
-  const [editCell, setEditCell]     = useState(null);
-  const [editVal, setEditVal]       = useState('');
-  const [toast, setToast]           = useState(false);
+  const [draft, setDraft]         = useState(() => savedData.map(r => ({ ...r })));
+  const [pendingKeys, setPending] = useState(new Set());
+  const [editCell, setEditCell]   = useState(null);
+  const [editVal, setEditVal]     = useState('');
+  const [toast, setToast]         = useState(null);
+  const [saving, setSaving]       = useState(false);
 
-  // Sync draft when savedData changes externally (e.g. parent reset)
-  const EDITABLE = ['active', 'inv1', 'inv2']; // backlog is read-only (auto-calc)
+  useEffect(() => {
+    setDraft(savedData.map(r => ({ ...r })));
+  }, [savedData]);
+
+  const EDITABLE = ['active', 'inv1', 'inv2'];
 
   const fields = [
-    { key: 'active',  label: 'FA Aone Active',     editable: true  },
-    { key: 'inv1',    label: 'Invited 18–19 Apr',  editable: true  },
-    { key: 'inv2',    label: 'Invited 25–26 Apr',  editable: true  },
-    { key: 'backlog', label: 'Backlog (Auto)',      editable: false },
+    { key: 'active',  label: 'FA Aone Active',    editable: true  },
+    { key: 'inv1',    label: 'Invited 18–19 Apr', editable: true  },
+    { key: 'inv2',    label: 'Invited 25–26 Apr', editable: true  },
+    { key: 'backlog', label: 'Backlog (Auto)',     editable: false },
   ];
 
   function calcBacklog(active, inv1, inv2) {
@@ -247,23 +274,18 @@ function CrudeTable({ savedData, onSave }) {
 
   function commitEdit(code, field) {
     const raw = editVal.replace(/[^0-9]/g, '');
-    const num = raw === '' ? 0 : parseInt(raw, 10);
-    const val = Math.max(0, num);
-
+    const val = raw === '' ? 0 : Math.max(0, parseInt(raw, 10));
     setDraft(prev => prev.map(row => {
       if (row.code !== code) return row;
       const updated = { ...row, [field]: val };
       updated.backlog = calcBacklog(updated.active, updated.inv1, updated.inv2);
       return updated;
     }));
-
-    const key = `${code}-${field}`;
-    setPending(prev => { const s = new Set(prev); s.add(key); return s; });
+    setPending(prev => { const s = new Set(prev); s.add(`${code}-${field}`); return s; });
     setEditCell(null);
   }
 
   function handleKey(e, code, field) {
-    // Only allow digits
     if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Enter','Escape'].includes(e.key)) {
       e.preventDefault();
     }
@@ -271,63 +293,85 @@ function CrudeTable({ savedData, onSave }) {
     if (e.key === 'Escape') setEditCell(null);
   }
 
-  function handleSave() {
-    onSave(draft);
-    setPending(new Set());
-    setToast(true);
-    setTimeout(() => setToast(false), 2500);
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(draft);
+      setPending(new Set());
+      setToast('success');
+    } catch {
+      setToast('error');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setToast(null), 3000);
+    }
   }
 
   const hasPending = pendingKeys.size > 0;
 
   const thStyle = {
-    padding: '10px 12px', fontSize: 11, fontWeight: 700,
-    color: 'var(--textSecondary)', textTransform: 'uppercase',
-    letterSpacing: 0.6, background: 'var(--tableHeaderBg)',
-    borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textAlign: 'left',
+    padding: '11px 14px', fontSize: 11, fontWeight: 700,
+    color: '#c7d2fe', textTransform: 'uppercase', letterSpacing: 0.8,
+    background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+    borderBottom: '2px solid rgba(99,102,241,0.3)', whiteSpace: 'nowrap', textAlign: 'left',
   };
   const tdStyle = {
-    padding: '8px 12px', fontSize: 13,
+    padding: '9px 14px', fontSize: 13,
     borderBottom: '1px solid var(--borderLight)', color: 'var(--text)',
   };
 
   return (
     <div>
-      {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed', top: 20, right: 20, zIndex: 9999,
-          background: '#22c55e', color: '#fff', fontWeight: 700,
-          padding: '12px 20px', borderRadius: 10,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-          fontSize: 14, display: 'flex', alignItems: 'center', gap: 8,
-          animation: 'fadeIn 0.2s ease',
+          background: toast === 'success'
+            ? 'linear-gradient(135deg, #14532d, #16a34a)'
+            : 'linear-gradient(135deg, #7f1d1d, #b91c1c)',
+          color: '#fff', fontWeight: 700,
+          padding: '12px 22px', borderRadius: 12,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          fontSize: 14, display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          ✅ Data successfully saved!
+          {toast === 'success' ? '✅ Data successfully saved!' : '❌ Save failed — check your login or try again.'}
         </div>
       )}
 
-      {/* Save bar */}
       <div style={{
         padding: '12px 16px', display: 'flex', alignItems: 'center',
         justifyContent: 'space-between', borderBottom: '1px solid var(--border)',
-        background: hasPending ? 'rgba(245,158,11,0.06)' : 'transparent',
+        background: hasPending
+          ? 'linear-gradient(90deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))'
+          : 'transparent',
       }}>
-        <div style={{ fontSize: 12, color: hasPending ? '#f59e0b' : 'var(--muted)', fontWeight: 600 }}>
-          {hasPending ? `⚠️ ${pendingKeys.size} unsaved change${pendingKeys.size > 1 ? 's' : ''}` : 'No unsaved changes'}
+        <div style={{ fontSize: 12, color: hasPending ? '#f59e0b' : 'var(--muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {hasPending ? (
+            <>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', boxShadow: '0 0 0 3px rgba(245,158,11,0.2)' }} />
+              {pendingKeys.size} unsaved change{pendingKeys.size > 1 ? 's' : ''}
+            </>
+          ) : (
+            <>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+              No unsaved changes
+            </>
+          )}
         </div>
         <button
           onClick={handleSave}
-          disabled={!hasPending}
+          disabled={!hasPending || saving}
           style={{
-            padding: '7px 18px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-            background: hasPending ? '#4f46e5' : 'var(--border)',
-            color: hasPending ? '#fff' : 'var(--muted)',
-            border: 'none', cursor: hasPending ? 'pointer' : 'not-allowed',
+            padding: '8px 20px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+            background: hasPending && !saving
+              ? 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+              : 'var(--border)',
+            color: hasPending && !saving ? '#fff' : 'var(--muted)',
+            border: 'none', cursor: hasPending && !saving ? 'pointer' : 'not-allowed',
             transition: 'all 0.2s',
+            boxShadow: hasPending && !saving ? '0 4px 12px rgba(79,70,229,0.35)' : 'none',
           }}
         >
-          💾 Save Data
+          {saving ? '⏳ Saving…' : '💾 Save Data'}
         </button>
       </div>
 
@@ -339,10 +383,10 @@ function CrudeTable({ savedData, onSave }) {
               {fields.map(f => (
                 <th key={f.key} style={thStyle}>
                   {f.label}
-                  {!f.editable && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 4 }}>(auto)</span>}
+                  {!f.editable && <span style={{ color: '#818cf8', fontWeight: 500, marginLeft: 4 }}>(auto)</span>}
                 </th>
               ))}
-              <th style={{ ...thStyle, color: 'var(--muted)' }}>% Backlog</th>
+              <th style={{ ...thStyle, color: '#818cf8' }}>% Backlog</th>
             </tr>
           </thead>
           <tbody>
@@ -350,8 +394,18 @@ function CrudeTable({ savedData, onSave }) {
               const pct = row.active > 0 ? ((row.backlog / row.active) * 100).toFixed(1) : '—';
               const backlogColor = getBacklogColor(row.backlog, row.active);
               return (
-                <tr key={row.code} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--tableWrapBg)' }}>
-                  <td style={{ ...tdStyle, fontWeight: 700 }}>{row.code}</td>
+                <tr
+                  key={row.code}
+                  style={{ background: i % 2 === 0 ? 'transparent' : 'var(--tableWrapBg)', transition: 'background 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--tableWrapBg)'}
+                >
+                  <td style={{ ...tdStyle, fontWeight: 800 }}>
+                    <span style={{
+                      background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+                      color: '#c7d2fe', padding: '2px 9px', borderRadius: 6, fontSize: 12,
+                    }}>{row.code}</span>
+                  </td>
                   {fields.map(f => {
                     const cellKey = `${row.code}-${f.key}`;
                     const isPending = pendingKeys.has(cellKey);
@@ -361,10 +415,11 @@ function CrudeTable({ savedData, onSave }) {
                       return (
                         <td key={f.key} style={tdStyle}>
                           <span style={{
-                            display: 'inline-block', minWidth: 40,
-                            padding: '2px 10px', borderRadius: 6,
-                            background: 'var(--borderLight)',
-                            color: backlogColor, fontWeight: 700, fontSize: 13,
+                            display: 'inline-block', minWidth: 44,
+                            padding: '3px 10px', borderRadius: 8,
+                            background: backlogColor + '22',
+                            border: `1.5px solid ${backlogColor}44`,
+                            color: backlogColor, fontWeight: 800, fontSize: 13,
                           }}>
                             {row.backlog}
                           </span>
@@ -377,26 +432,25 @@ function CrudeTable({ savedData, onSave }) {
                         onClick={() => !isEditing && startEdit(row.code, f.key, row[f.key])}>
                         {isEditing ? (
                           <input
-                            autoFocus
-                            type="text"
-                            inputMode="numeric"
-                            value={editVal}
+                            autoFocus type="text" inputMode="numeric" value={editVal}
                             onChange={e => setEditVal(e.target.value.replace(/[^0-9]/g, ''))}
                             onBlur={() => commitEdit(row.code, f.key)}
                             onKeyDown={e => handleKey(e, row.code, f.key)}
                             style={{
-                              width: 72, padding: '4px 8px', borderRadius: 6,
-                              border: '2px solid #6366f1', background: 'var(--inputBg)',
-                              color: 'var(--text)', fontSize: 13, outline: 'none',
+                              width: 72, padding: '5px 9px', borderRadius: 7,
+                              border: '2px solid #6366f1',
+                              background: 'var(--inputBg)', color: 'var(--text)',
+                              fontSize: 13, outline: 'none',
+                              boxShadow: '0 0 0 3px rgba(99,102,241,0.15)',
                             }}
                           />
                         ) : (
                           <span style={{
-                            display: 'inline-block', minWidth: 40,
-                            padding: '2px 10px', borderRadius: 6,
-                            background: isPending ? 'rgba(245,158,11,0.12)' : 'var(--bg)',
+                            display: 'inline-block', minWidth: 44,
+                            padding: '3px 10px', borderRadius: 8,
+                            background: isPending ? 'rgba(245,158,11,0.1)' : 'var(--bg)',
                             border: isPending ? '1.5px solid #f59e0b' : '1px solid var(--border)',
-                            fontSize: 13, color: 'var(--text)', fontWeight: 500,
+                            fontSize: 13, color: 'var(--text)', fontWeight: 600,
                             transition: 'all 0.2s',
                           }}>
                             {row[f.key]}
@@ -413,9 +467,12 @@ function CrudeTable({ savedData, onSave }) {
             })}
           </tbody>
         </table>
-        <div style={{ fontSize: 11, color: 'var(--muted)', padding: '10px 14px' }}>
-          Click any cell to edit · Enter to confirm · Esc to cancel ·
-          <span style={{ color: '#f59e0b', fontWeight: 600 }}> Yellow border = unsaved</span>
+        <div style={{
+          fontSize: 11, color: 'var(--muted)', padding: '10px 16px',
+          display: 'flex', gap: 16, flexWrap: 'wrap',
+        }}>
+          <span>Click any cell to edit · Enter to confirm · Esc to cancel</span>
+          <span style={{ color: '#f59e0b', fontWeight: 600 }}>● Yellow border = unsaved</span>
         </div>
       </div>
     </div>
@@ -432,62 +489,52 @@ function GradeManagementTable({ students, setStudents }) {
   function addStudent() {
     setStudents(prev => [...prev, { id: _gradeNextId++, name: '', branch: 'ONL', grade: 'G1' }]);
   }
-
   function updateStudent(id, field, value) {
     setStudents(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
   }
-
   function deleteStudent(id) {
     setStudents(prev => prev.filter(s => s.id !== id));
   }
 
-  const filtered = students.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
   const thStyle = {
-    padding: '10px 12px', fontSize: 11, fontWeight: 700,
-    color: 'var(--textSecondary)', textTransform: 'uppercase',
-    letterSpacing: 0.6, background: 'var(--tableHeaderBg)',
-    borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textAlign: 'left',
+    padding: '11px 14px', fontSize: 11, fontWeight: 700,
+    color: '#fca5a5', textTransform: 'uppercase', letterSpacing: 0.8,
+    background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+    borderBottom: '2px solid rgba(239,68,68,0.3)', whiteSpace: 'nowrap', textAlign: 'left',
   };
   const tdStyle = {
-    padding: '8px 12px', fontSize: 13,
+    padding: '8px 14px', fontSize: 13,
     borderBottom: '1px solid var(--borderLight)', color: 'var(--text)',
   };
   const inputStyle = {
-    padding: '4px 8px', borderRadius: 6,
+    padding: '5px 9px', borderRadius: 7,
     border: '1px solid var(--border)', background: 'var(--inputBg)',
     color: 'var(--text)', fontSize: 13, outline: 'none',
   };
 
   return (
     <div>
-      {/* Toolbar */}
       <div style={{
         padding: '12px 16px', display: 'flex', alignItems: 'center',
         gap: 12, borderBottom: '1px solid var(--border)', flexWrap: 'wrap',
       }}>
         <input
-          type="text"
-          placeholder="🔍 Search by student name..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          type="text" placeholder="🔍 Search by student name..."
+          value={search} onChange={e => setSearch(e.target.value)}
           style={{ ...inputStyle, flex: 1, minWidth: 200, padding: '7px 12px' }}
         />
-        <button
-          onClick={addStudent}
-          style={{
-            padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700,
-            background: '#ed1c24', color: '#fff', border: 'none', cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <button onClick={addStudent} style={{
+          padding: '7px 16px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+          background: 'linear-gradient(135deg, #b91c1c, #dc2626)',
+          color: '#fff', border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(185,28,28,0.3)',
+        }}>
           + Add New Student
         </button>
       </div>
 
-      {/* Table */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
           <thead>
@@ -503,53 +550,39 @@ function GradeManagementTable({ students, setStudents }) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', padding: 32 }}>
-                  {students.length === 0
-                    ? 'No students yet. Click "+ Add New Student" to begin.'
-                    : 'No results match your search.'}
+                  {students.length === 0 ? 'No students yet. Click "+ Add New Student" to begin.' : 'No results match your search.'}
                 </td>
               </tr>
             ) : (
               filtered.map((s, i) => (
-                <tr key={s.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--tableWrapBg)' }}>
+                <tr key={s.id}
+                  style={{ background: i % 2 === 0 ? 'transparent' : 'var(--tableWrapBg)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--tableWrapBg)'}
+                >
                   <td style={{ ...tdStyle, color: 'var(--muted)', fontSize: 12 }}>{i + 1}</td>
                   <td style={tdStyle}>
-                    <input
-                      type="text"
-                      value={s.name}
-                      onChange={e => updateStudent(s.id, 'name', e.target.value)}
-                      placeholder="Enter name..."
-                      style={{ ...inputStyle, width: '100%' }}
-                    />
+                    <input type="text" value={s.name} onChange={e => updateStudent(s.id, 'name', e.target.value)}
+                      placeholder="Enter name..." style={{ ...inputStyle, width: '100%' }} />
                   </td>
                   <td style={tdStyle}>
-                    <select
-                      value={s.branch}
-                      onChange={e => updateStudent(s.id, 'branch', e.target.value)}
-                      style={{ ...inputStyle, cursor: 'pointer' }}
-                    >
+                    <select value={s.branch} onChange={e => updateStudent(s.id, 'branch', e.target.value)}
+                      style={{ ...inputStyle, cursor: 'pointer' }}>
                       {BRANCH_LIST.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </td>
                   <td style={tdStyle}>
-                    <select
-                      value={s.grade}
-                      onChange={e => updateStudent(s.id, 'grade', e.target.value)}
-                      style={{ ...inputStyle, cursor: 'pointer', fontWeight: 700, color: '#ed1c24' }}
-                    >
+                    <select value={s.grade} onChange={e => updateStudent(s.id, 'grade', e.target.value)}
+                      style={{ ...inputStyle, cursor: 'pointer', fontWeight: 700, color: '#ef4444' }}>
                       {GRADE_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </td>
                   <td style={tdStyle}>
-                    <button
-                      onClick={() => deleteStudent(s.id)}
-                      style={{
-                        padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
-                        background: 'rgba(239,68,68,0.1)', color: '#ef4444',
-                        border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer',
-                      }}
-                    >
-                      ✕
-                    </button>
+                    <button onClick={() => deleteStudent(s.id)} style={{
+                      padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+                      background: 'rgba(239,68,68,0.1)', color: '#ef4444',
+                      border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer',
+                    }}>✕</button>
                   </td>
                 </tr>
               ))
@@ -557,8 +590,8 @@ function GradeManagementTable({ students, setStudents }) {
           </tbody>
         </table>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--muted)', padding: '8px 14px' }}>
-        {students.length} student{students.length !== 1 ? 's' : ''} total · Grade chart updates instantly as you edit
+      <div style={{ fontSize: 11, color: 'var(--muted)', padding: '8px 16px' }}>
+        {students.length} student{students.length !== 1 ? 's' : ''} total · Grade chart updates instantly
       </div>
     </div>
   );
@@ -566,7 +599,6 @@ function GradeManagementTable({ students, setStudents }) {
 
 /* ─────────────────────────── Main Page ─────────────────────────── */
 
-/* Map DB row → internal shape */
 function dbToRow(r) {
   return {
     code:    r.branch_code,
@@ -583,25 +615,18 @@ export function FaDashboardPage() {
   const [loadError, setLoadError]   = useState(null);
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
-  const [showCrude, setShowCrude] = useState(false);
+  const [showCrude, setShowCrude]   = useState(false);
   const [students, setStudents]     = useState([]);
 
-  /* Load from DB on mount */
   useEffect(() => {
     apiFetch('/api/fa-dashboard')
       .then(res => {
-        if (res.data && res.data.length > 0) {
-          setSavedData(res.data.map(dbToRow));
-        }
+        if (res.data && res.data.length > 0) setSavedData(res.data.map(dbToRow));
         setDbLoaded(true);
       })
-      .catch(err => {
-        setLoadError(err.message);
-        setDbLoaded(true); // fall back to INITIAL_DATA
-      });
+      .catch(err => { setLoadError(err.message); setDbLoaded(true); });
   }, []);
 
-  /* Save to DB, then update local state */
   async function handleSave(committed) {
     const rows = committed.map(b => ({
       branch_code: b.code,
@@ -609,20 +634,13 @@ export function FaDashboardPage() {
       inv_apr1819: b.inv1,
       inv_apr2526: b.inv2,
     }));
-    try {
-      const res = await apiFetch('/api/fa-dashboard/save', { method: 'POST', body: { rows } });
-      if (res.data) setSavedData(res.data.map(dbToRow));
-      else setSavedData(committed);
-    } catch {
-      // Still update local state even if DB save fails
-      setSavedData(committed);
-    }
+    const res = await apiFetch('/api/fa-dashboard/save', { method: 'POST', body: { rows } });
+    if (res.data) setSavedData(res.data.map(dbToRow));
+    else setSavedData(committed);
   }
 
-  /* alias used throughout the render */
   const branchData = savedData;
 
-  /* Filters */
   const availableBranches = useMemo(() => {
     if (!selectedRegion) return branchData.map(b => b.code).sort();
     return (REGIONS[selectedRegion] || []).sort();
@@ -634,31 +652,63 @@ export function FaDashboardPage() {
     return null;
   }, [selectedRegion, selectedBranch]);
 
-  /* A-Z sorted data — used by table and cards only */
-  const sortedAlpha = useMemo(() => {
-    return [...branchData].sort((a, b) => a.code.localeCompare(b.code));
-  }, [branchData]);
+  const sortedAlpha = useMemo(() => [...branchData].sort((a, b) => a.code.localeCompare(b.code)), [branchData]);
 
-  const cardBranches = useMemo(() => {
-    return sortedAlpha.filter(b => {
-      if (selectedBranch) return b.code === selectedBranch;
-      if (selectedRegion) return (REGIONS[selectedRegion] || []).includes(b.code);
-      return true;
-    });
-  }, [sortedAlpha, selectedRegion, selectedBranch]);
+  const cardBranches = useMemo(() => sortedAlpha.filter(b => {
+    if (selectedBranch) return b.code === selectedBranch;
+    if (selectedRegion) return (REGIONS[selectedRegion] || []).includes(b.code);
+    return true;
+  }), [sortedAlpha, selectedRegion, selectedBranch]);
 
-  /* Backlog chart — sorted ascending by value so highest is at top visually */
+  /* Backlog chart — health bar delta data */
   const backlogChartData = useMemo(() => {
-    return [...branchData].sort((a, b) => a.backlog - b.backlog);
+    return [...branchData].sort((a, b) => a.backlog - b.backlog).map(b => {
+      const prev  = PREVIOUS_DATA[b.code] ?? b.backlog;
+      const delta = b.backlog - prev;
+      // For stacked bars:
+      // mainBar  = the solid health-colored portion (min of current/prev)
+      // ghostBar = cleared amount (grey ghost, if improved)
+      // extraBar = regression amount (red, if worsened)
+      const mainBar  = Math.min(b.backlog, prev);
+      const ghostBar = Math.max(0, prev - b.backlog);
+      const extraBar = Math.max(0, b.backlog - prev);
+      return { ...b, prev, delta, mainBar, ghostBar, extraBar };
+    });
   }, [branchData]);
 
-  /* Grade chart data — computed live from students table */
-  const gradeChartData = useMemo(() => {
-    return GRADE_OPTIONS.map(g => ({
-      grade: g,
-      count: students.filter(s => s.grade === g).length,
-    }));
-  }, [students]);
+  /* Delta label renderer (closure over backlogChartData) */
+  const renderDeltaLabel = useCallback((props) => {
+    const { x, y, width, height, index } = props;
+    if (index === undefined || !backlogChartData[index]) return null;
+    const d = backlogChartData[index];
+    const delta = d.delta;
+    const currentVal = d.backlog;
+    const cx = x + (width ?? 0) + 6;
+    const cy = y + (height ?? 0) / 2;
+
+    if (delta === 0) {
+      return (
+        <g>
+          <text x={cx} y={cy + 4} fontSize={10} fontWeight={700} fill="#64748b">{currentVal}</text>
+          <text x={cx + 28} y={cy + 4} fontSize={9} fontWeight={700} fill="#94a3b8">—</text>
+        </g>
+      );
+    }
+    const sign = delta < 0 ? '↓' : '↑';
+    const amt  = Math.abs(delta);
+    const col  = delta < 0 ? '#16a34a' : '#dc2626';
+    return (
+      <g>
+        <text x={cx} y={cy + 4} fontSize={10} fontWeight={700} fill="#64748b">{currentVal}</text>
+        <text x={cx + 28} y={cy + 4} fontSize={9} fontWeight={800} fill={col}>{sign}{amt}</text>
+      </g>
+    );
+  }, [backlogChartData]);
+
+  const gradeChartData = useMemo(() => GRADE_OPTIONS.map(g => ({
+    grade: g,
+    count: students.filter(s => s.grade === g).length,
+  })), [students]);
 
   const gradeChartMax = useMemo(() => {
     const max = Math.max(...gradeChartData.map(d => d.count), 1);
@@ -667,15 +717,8 @@ export function FaDashboardPage() {
 
   const isFiltered = (code) => filteredCodes ? filteredCodes.has(code) : false;
 
-  const backlogBarColor = (entry) => {
-    const branch = branchData.find(b => b.code === entry.code);
-    if (!branch) return '#94a3b8';
-    if (filteredCodes && !filteredCodes.has(entry.code)) return '#e2e8f0';
-    return getBacklogColor(branch.backlog, branch.active);
-  };
-
   const selectStyle = {
-    padding: '7px 32px 7px 12px', borderRadius: 8,
+    padding: '7px 32px 7px 12px', borderRadius: 9,
     border: '1.5px solid var(--border)', background: 'var(--inputBg)',
     color: 'var(--text)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
     outline: 'none', appearance: 'none',
@@ -685,251 +728,356 @@ export function FaDashboardPage() {
 
   return (
     <div className="dashboardPage">
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '0 32px' }}>
-      {/* Header */}
+
+      {/* ── Full-width Header ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a5f 100%)',
-        borderRadius: 16,
-        padding: '24px 28px',
-        marginBottom: 24,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 16,
-        boxShadow: '0 4px 24px rgba(99,102,241,0.18)',
+        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+        padding: '20px 40px 24px',
+        marginBottom: 28,
+        borderBottom: '1px solid rgba(99,102,241,0.2)',
+        boxShadow: '0 4px 32px rgba(0,0,0,0.35)',
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        {/* Left — title block */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <BackButton to="/" label="Back to Home" />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: 14,
-              background: 'rgba(255,255,255,0.18)',
-              border: '1.5px solid rgba(255,255,255,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 36,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
-            }}>🎓</div>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: -0.5 }}>
-                FA Dashboard
-              </h1>
-              <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-                Formative Assessment tracking by branch
-              </p>
+        {/* Decorative glow blobs */}
+        <div style={{
+          position: 'absolute', top: -60, right: 120, width: 220, height: 220,
+          background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -40, left: 200, width: 160, height: 160,
+          background: 'radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ maxWidth: 1600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', position: 'relative' }}>
+          {/* Left */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <BackButton to="/" label="Back to Home" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10 }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: 16,
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.4))',
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 34, boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+              }}>🎓</div>
+              <div>
+                <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900, color: '#fff', letterSpacing: -0.5, lineHeight: 1.1 }}>
+                  FA Dashboard
+                </h1>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.2 }}>
+                  Academy Foundation Appraisal tracking by branch
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right — actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          {/* DB status pill */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '6px 14px', borderRadius: 20,
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.15)',
-          }}>
-            <span style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: !dbLoaded ? '#f59e0b' : loadError ? '#ef4444' : '#22c55e',
-              boxShadow: !dbLoaded ? 'none' : loadError ? 'none' : '0 0 0 3px rgba(34,197,94,0.3)',
-              flexShrink: 0,
-            }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>
-              {!dbLoaded ? 'Loading…' : loadError ? 'Local data' : 'Live data'}
-            </span>
+          {/* Right */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Summary pills */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { label: 'Total Active', val: branchData.reduce((s, b) => s + b.active, 0), color: '#818cf8' },
+                { label: 'Total Backlog', val: branchData.reduce((s, b) => s + b.backlog, 0), color: '#f87171' },
+              ].map(p => (
+                <div key={p.label} style={{
+                  padding: '6px 14px', borderRadius: 20,
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: p.color }}>{p.val.toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>{p.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* DB status pill */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '7px 14px', borderRadius: 20,
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                background: !dbLoaded ? '#f59e0b' : loadError ? '#ef4444' : '#22c55e',
+                boxShadow: !dbLoaded ? 'none' : loadError ? 'none' : '0 0 0 3px rgba(34,197,94,0.35)',
+              }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>
+                {!dbLoaded ? 'Loading…' : loadError ? 'Local data' : 'Live data'}
+              </span>
+            </div>
+
+            {/* Edit Data button */}
+            <button
+              onClick={() => setShowCrude(v => !v)}
+              style={{
+                padding: '9px 20px', borderRadius: 11, fontSize: 13, fontWeight: 700,
+                background: showCrude
+                  ? 'linear-gradient(135deg, #fff, #e0e7ff)'
+                  : 'linear-gradient(135deg, rgba(99,102,241,0.6), rgba(139,92,246,0.5))',
+                color: showCrude ? '#3730a3' : '#fff',
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              }}
+            >
+              {showCrude ? '▲ Hide Tables' : '✏️ Edit Data'}
+            </button>
           </div>
-
-          {/* Edit Data button */}
-          <button
-            onClick={() => setShowCrude(v => !v)}
-            style={{
-              padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-              background: showCrude ? '#fff' : 'rgba(255,255,255,0.12)',
-              color: showCrude ? '#3730a3' : '#fff',
-              border: '1.5px solid rgba(255,255,255,0.25)',
-              cursor: 'pointer', transition: 'all 0.2s',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {showCrude ? '▲ Hide Tables' : '✏️ Edit Data'}
-          </button>
         </div>
       </div>
 
-      {/* Edit Data Panel — CRUDE + Grade Management stacked */}
-      {showCrude && (
-        <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* CRUDE Table */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{
-              padding: '14px 16px', borderBottom: '1px solid var(--border)',
-              background: 'rgba(99,102,241,0.04)',
-            }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
-                CRUDE Academy Data
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                Edit branch values · Backlog auto-calculates · Save to update charts &amp; cards
-              </p>
+      {/* ── Content wrapper ── */}
+      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '0 28px 40px' }}>
+
+        {/* Edit Data Panel */}
+        {showCrude && (
+          <div style={{ marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1.5px solid rgba(99,102,241,0.25)', boxShadow: '0 4px 24px rgba(99,102,241,0.1)' }}>
+              <div style={{
+                padding: '14px 18px', borderBottom: '1px solid rgba(99,102,241,0.15)',
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.04))',
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 20 }}>📊</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>CRUDE — Academy Data</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                    Click any cell to edit · Backlog auto-calculates · Save to update charts & cards
+                  </p>
+                </div>
+              </div>
+              <CrudeTable savedData={sortedAlpha} onSave={handleSave} />
             </div>
-            <CrudeTable savedData={sortedAlpha} onSave={handleSave} />
-          </div>
 
-          {/* Grade Management Table */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{
-              padding: '14px 16px', borderBottom: '1px solid var(--border)',
-              background: 'rgba(237,28,36,0.04)',
-            }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>
-                Student Grade Management
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                Add students · Change grade · Grade chart updates instantly
-              </p>
+            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1.5px solid rgba(239,68,68,0.2)', boxShadow: '0 4px 24px rgba(239,68,68,0.08)' }}>
+              <div style={{
+                padding: '14px 18px', borderBottom: '1px solid rgba(239,68,68,0.15)',
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.06), rgba(185,28,28,0.03))',
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 20 }}>📚</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Student Grade Management</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                    Add students · Change grade · Grade chart updates instantly
+                  </p>
+                </div>
+              </div>
+              <GradeManagementTable students={students} setStudents={setStudents} />
             </div>
-            <GradeManagementTable students={students} setStudents={setStudents} />
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Charts Row */}
-      <div style={{
-        background: '#f1f5f9',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-        display: 'grid',
-        gridTemplateColumns: '1.4fr 1fr',
-        gap: 20,
-      }}>
-        {/* Left — Backlog Bar Chart */}
+        {/* ── Charts Row ── */}
         <div style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 16,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-          padding: '28px 28px 20px',
+          display: 'grid',
+          gridTemplateColumns: '3fr 2fr',
+          gap: 24,
+          marginBottom: 28,
         }}>
-          <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
-            Backlog FA to Invite by Branch
-          </h3>
-          <ResponsiveContainer width="100%" height={560}>
-            <BarChart data={backlogChartData} layout="vertical" margin={{ top: 0, right: 52, left: 8, bottom: 0 }}>
-              <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }}
-                tickLine={false} axisLine={{ stroke: '#e2e8f0' }}
-                domain={[0, 700]} ticks={[0, 100, 200, 300, 400, 500, 600, 700]} />
-              <YAxis dataKey="code" type="category"
-                tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }}
-                tickLine={false} axisLine={false} width={48} />
-              <Tooltip content={<CustomBacklogTooltip />} cursor={{ fill: '#f8fafc' }} />
-              <Bar dataKey="backlog" radius={[0, 4, 4, 0]} maxBarSize={18}>
-                {backlogChartData.map(entry => (
-                  <Cell key={entry.code} fill={backlogBarColor(entry)} />
-                ))}
-                <LabelList dataKey="backlog" position="right"
-                  style={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Right — Grade Chart */}
-        <div style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 16,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
-          padding: '28px 28px 20px',
-        }}>
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-            <select value={selectedRegion} onChange={e => { setSelectedRegion(e.target.value); setSelectedBranch(''); }} style={selectStyle}>
-              <option value="">Region ▾</option>
-              {Object.keys(REGIONS).map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} style={selectStyle}>
-              <option value="">Branch ▾</option>
-              {availableBranches.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-            {(selectedRegion || selectedBranch) && (
-              <button onClick={() => { setSelectedRegion(''); setSelectedBranch(''); }}
-                style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, fontWeight: 600 }}>
-                ✕ Clear
-              </button>
-            )}
-          </div>
-
-          <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
-            Student's Grade
-          </h3>
-
-          {/* Inner box around chart area */}
+          {/* Left — Health Bar Chart */}
           <div style={{
-            border: '1px solid #e2e8f0',
-            borderRadius: 12,
-            background: '#fafafa',
-            padding: '16px 8px 8px',
+            background: 'var(--panel)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            padding: '24px 24px 16px',
+            overflow: 'hidden',
           }}>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={gradeChartData} margin={{ top: 16, right: 16, left: -8, bottom: 8 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="grade" tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }}
-                  tickLine={false} axisLine={{ stroke: '#e2e8f0' }}
-                  label={{ value: 'Grade', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
-                  label={{ value: 'Students', angle: -90, position: 'insideLeft', offset: 16, fontSize: 11, fill: '#94a3b8' }}
-                  domain={[0, gradeChartMax]} />
-                <Tooltip content={<CustomGradeTooltip />} cursor={{ fill: '#f1f5f9' }} />
-                <Bar dataKey="count" fill="#ed1c24" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                  <LabelList dataKey="count" position="top"
-                    style={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }} />
+            {/* Chart header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
+                  Backlog FA to Invite by Branch
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                  Academy Foundation Appraisal
+                </p>
+              </div>
+              {/* Legend */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 10, fontWeight: 600, textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                  <span style={{ width: 18, height: 8, borderRadius: 4, background: 'rgba(148,163,184,0.4)', display: 'inline-block' }} />
+                  <span style={{ color: 'var(--muted)' }}>Cleared (improved)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                  <span style={{ width: 18, height: 8, borderRadius: 4, background: 'rgba(239,68,68,0.55)', display: 'inline-block' }} />
+                  <span style={{ color: 'var(--muted)' }}>Added (regressed)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                  <span style={{ color: '#16a34a', fontWeight: 800 }}>↓</span>
+                  <span style={{ color: 'var(--muted)' }}>Improvement</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                  <span style={{ color: '#dc2626', fontWeight: 800 }}>↑</span>
+                  <span style={{ color: 'var(--muted)' }}>Regression</span>
+                </div>
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={580}>
+              <BarChart
+                data={backlogChartData}
+                layout="vertical"
+                margin={{ top: 0, right: 80, left: 8, bottom: 0 }}
+                barCategoryGap="25%"
+              >
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={{ stroke: 'var(--border)' }}
+                  domain={[0, 720]}
+                  ticks={[0, 100, 200, 300, 400, 500, 600, 700]}
+                />
+                <YAxis
+                  dataKey="code"
+                  type="category"
+                  tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={48}
+                />
+                <Tooltip content={<CustomBacklogTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
+
+                {/* Bar 1: main health-colored bar (min of current vs previous) */}
+                <Bar dataKey="mainBar" stackId="health" maxBarSize={18} radius={[0, 0, 0, 0]}>
+                  {backlogChartData.map(entry => {
+                    if (filteredCodes && !filteredCodes.has(entry.code)) return <Cell key={entry.code} fill="#e2e8f0" />;
+                    return <Cell key={entry.code} fill={getBacklogColor(entry.backlog, entry.active)} />;
+                  })}
+                </Bar>
+
+                {/* Bar 2: ghost bar — cleared amount (grey, improvement) */}
+                <Bar dataKey="ghostBar" stackId="health" maxBarSize={18} fill="rgba(148,163,184,0.35)"
+                  radius={[0, 0, 0, 0]} />
+
+                {/* Bar 3: extra bar — regression amount (red) */}
+                <Bar dataKey="extraBar" stackId="health" maxBarSize={18} fill="rgba(239,68,68,0.55)"
+                  radius={[0, 4, 4, 0]} />
+
+                {/* Invisible bar anchoring the delta labels at the right edge */}
+                <Bar dataKey="labelBar" stackId="health" maxBarSize={18} fill="transparent"
+                  radius={[0, 0, 0, 0]}>
+                  <LabelList content={renderDeltaLabel} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>Statistics</h2>
-          <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>
-            {cardBranches.length} branch{cardBranches.length !== 1 ? 'es' : ''}
-            {(selectedRegion || selectedBranch) && (
-              <span style={{ marginLeft: 8, padding: '2px 8px', background: 'rgba(99,102,241,0.12)', color: '#818cf8', borderRadius: 20, fontWeight: 700 }}>
-                {selectedBranch || selectedRegion}
+          {/* Right — Grade Chart */}
+          <div style={{
+            background: 'var(--panel)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            padding: '24px 24px 16px',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select value={selectedRegion} onChange={e => { setSelectedRegion(e.target.value); setSelectedBranch(''); }} style={selectStyle}>
+                <option value="">Region ▾</option>
+                {Object.keys(REGIONS).map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} style={selectStyle}>
+                <option value="">Branch ▾</option>
+                {availableBranches.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+              {(selectedRegion || selectedBranch) && (
+                <button onClick={() => { setSelectedRegion(''); setSelectedBranch(''); }}
+                  style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, fontWeight: 700 }}>
+                  ✕ Clear
+                </button>
+              )}
+            </div>
+
+            <h3 style={{ margin: '0 0 14px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
+              Student's Grade
+            </h3>
+
+            <div style={{
+              border: '1px solid var(--border)', borderRadius: 14,
+              background: 'var(--bg)', padding: '16px 8px 8px', flex: 1,
+            }}>
+              <ResponsiveContainer width="100%" height={440}>
+                <BarChart data={gradeChartData} margin={{ top: 16, right: 16, left: -8, bottom: 8 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="grade" tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }}
+                    tickLine={false} axisLine={{ stroke: 'var(--border)' }}
+                    label={{ value: 'Grade', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
+                    label={{ value: 'Students', angle: -90, position: 'insideLeft', offset: 16, fontSize: 11, fill: '#94a3b8' }}
+                    domain={[0, gradeChartMax]} />
+                  <Tooltip content={<CustomGradeTooltip />} cursor={{ fill: 'rgba(239,68,68,0.06)' }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                    {gradeChartData.map((entry, i) => (
+                      <Cell key={entry.grade} fill={[
+                        '#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4',
+                        '#3b82f6','#6366f1','#8b5cf6','#ec4899','#f43f5e','#84cc16',
+                      ][i % 12]} />
+                    ))}
+                    <LabelList dataKey="count" position="top"
+                      style={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Statistics Cards ── */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
+              Branch Statistics
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>
+                {cardBranches.length} branch{cardBranches.length !== 1 ? 'es' : ''}
               </span>
-            )}
+              {(selectedRegion || selectedBranch) && (
+                <span style={{ padding: '3px 10px', background: 'rgba(99,102,241,0.12)', color: '#818cf8', borderRadius: 20, fontWeight: 700, fontSize: 12 }}>
+                  {selectedBranch || selectedRegion}
+                </span>
+              )}
+            </div>
           </div>
+
+          {cardBranches.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
+              No branches match the current filter.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
+              {cardBranches.map(branch => (
+                <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} />
+              ))}
+            </div>
+          )}
         </div>
-        {cardBranches.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-            No branches match the current filter.
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-            {cardBranches.map(branch => (
-              <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} />
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Color legend */}
-      <div className="card" style={{ padding: '12px 16px', fontSize: 12, color: 'var(--muted)', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-        <strong style={{ color: 'var(--text)' }}>Backlog % Legend:</strong>
-        <span><span style={{ color: '#22c55e', fontWeight: 700 }}>● Green</span> — below 20%</span>
-        <span><span style={{ color: '#f59e0b', fontWeight: 700 }}>● Yellow</span> — 20% to 50%</span>
-        <span><span style={{ color: '#ef4444', fontWeight: 700 }}>● Red</span> — above 50%</span>
+        {/* ── Legend ── */}
+        <div className="card" style={{
+          padding: '12px 18px', fontSize: 12, color: 'var(--muted)',
+          display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center',
+        }}>
+          <strong style={{ color: 'var(--text)' }}>Backlog % Legend:</strong>
+          <span><span style={{ color: '#22c55e', fontWeight: 700 }}>● Green</span> — below 20%</span>
+          <span><span style={{ color: '#f59e0b', fontWeight: 700 }}>● Yellow</span> — 20% to 50%</span>
+          <span><span style={{ color: '#ef4444', fontWeight: 700 }}>● Red</span> — above 50%</span>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 16 }}>
+            <span><strong style={{ color: '#22c55e' }}>↓</strong> Delta = improvement (backlog cleared)</span>
+            <span><strong style={{ color: '#ef4444' }}>↑</strong> Delta = regression (backlog increased)</span>
+          </span>
+        </div>
       </div>
-
-      </div>{/* end max-width wrapper */}
     </div>
   );
 }

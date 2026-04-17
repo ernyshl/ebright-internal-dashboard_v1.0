@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/user/Desktop/baltoratora/**)",
+      "Bash(node -e \":*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}
