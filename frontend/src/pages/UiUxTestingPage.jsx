@@ -38,191 +38,152 @@ function getLeadCentreUrl(leadSourceKey, period, region = '') {
 
 function formatNumber(num) {
   if (num === null || num === undefined) return '—';
-  // Ensure we're working with a number
   const n = typeof num === 'string' ? parseInt(num, 10) : num;
   if (isNaN(n)) return '—';
   return new Intl.NumberFormat('en-MY').format(n);
 }
 
+/* ─── SVG-style icon: colored circle with letter ─── */
+function Icon({ letter, color, size = 28 }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: size, height: size, borderRadius: '50%',
+      background: color, color: '#fff', fontSize: size * 0.45, fontWeight: 700,
+      flexShrink: 0, lineHeight: 1,
+    }}>{letter}</span>
+  );
+}
+
+/* ─── Stat Card — no emojis ─── */
 function StatCard({ title, value, icon, color, subtitle, to, bracketValue }) {
-  // Ensure value is a number
   const numValue = typeof value === 'string' ? parseInt(value, 10) : value;
 
   const inner = (
-    <div className="statCard" style={{ '--stat-color': color }}>
-      <div className="statCardIcon">{icon}</div>
-      <div className="statCardContent">
-        <div className="statCardValue">
+    <div style={{
+      background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+      padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14,
+      transition: 'transform 0.15s, box-shadow 0.15s', cursor: to ? 'pointer' : 'default',
+    }}
+    onMouseEnter={e => { if (to) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}}
+    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+      <Icon letter={icon} color={color} size={36} />
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
           {formatNumber(numValue)}
-          {bracketValue !== undefined && <span style={{ fontSize: '0.6em', color: 'var(--muted)', fontWeight: 500 }}> | {formatNumber(bracketValue)}</span>}
+          {bracketValue !== undefined && <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> | {formatNumber(bracketValue)}</span>}
         </div>
-        <div className="statCardTitle">{title}</div>
-        {subtitle && <div className="statCardSubtitle">{subtitle}</div>}
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--textSecondary)', marginTop: 2 }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{subtitle}</div>}
       </div>
     </div>
   );
 
-  return to ? <Link to={to} className="statCardLink">{inner}</Link> : inner;
+  return to ? <Link to={to} style={{ textDecoration: 'none' }}>{inner}</Link> : inner;
 }
 
+/* ─── Info Tooltip ─── */
 function InfoTooltip({ tooltip }) {
   const [show, setShow] = useState(false);
   const timer = useRef(null);
-
   const handleEnter = () => { clearTimeout(timer.current); setShow(true); };
   const handleLeave = () => { timer.current = setTimeout(() => setShow(false), 120); };
 
   return (
-    <span className="infoIconWrap" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-      <span className="infoIcon">ℹ</span>
+    <span style={{ position: 'relative', cursor: 'help', marginLeft: 6 }} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 16, height: 16, borderRadius: '50%', border: '1.5px solid var(--muted)',
+        fontSize: 10, fontWeight: 700, color: 'var(--muted)', lineHeight: 1,
+      }}>i</span>
       {show && (
-        <div className="infoTooltip" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-          <div className="infoTooltipTitle">{tooltip.title}</div>
-          <div className="infoTooltipDesc" style={{ whiteSpace: 'pre-line' }}>{tooltip.desc}</div>
-          {tooltip.url && <a href={tooltip.url} target="_blank" rel="noopener noreferrer" className="infoTooltipUrl">{tooltip.url}</a>}
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginBottom: 8, padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+          background: 'var(--panel)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)',
+          minWidth: 200, maxWidth: 280, zIndex: 100, whiteSpace: 'pre-line',
+        }} onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 4 }}>{tooltip.title}</div>
+          <div style={{ fontSize: 11, color: 'var(--textSecondary)', lineHeight: 1.5 }}>{tooltip.desc}</div>
+          {tooltip.url && <a href={tooltip.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--info)', marginTop: 6, display: 'block' }}>{tooltip.url}</a>}
         </div>
       )}
     </span>
   );
 }
 
+/* ─── Source/Region Card — proper dark mode, no emojis ─── */
 function SourceCard({ source, counts, color }) {
   const today = typeof counts?.count_today === 'string' ? parseInt(counts.count_today, 10) : (counts?.count_today || 0);
   const yesterday = typeof counts?.count_yesterday === 'string' ? parseInt(counts.count_yesterday, 10) : (counts?.count_yesterday || 0);
   const days7 = typeof counts?.count_7_days === 'string' ? parseInt(counts.count_7_days, 10) : (counts?.count_7_days || 0);
   const days30 = typeof counts?.count_30_days === 'string' ? parseInt(counts.count_30_days, 10) : (counts?.count_30_days || 0);
-
   const trend = today - yesterday;
   const trendPercent = yesterday ? ((trend / yesterday) * 100).toFixed(1) : 0;
 
-  // Determine if this is a region card (name matches Region A/B/C or empty for total)
   const isRegion = !source.name || source.name.startsWith('Region');
-  const linkFn = (period) => isRegion
-    ? getLeadCentreUrl('', period, source.name)
-    : getLeadCentreUrl(source.name, period);
+  const linkFn = (period) => isRegion ? getLeadCentreUrl('', period, source.name) : getLeadCentreUrl(source.name, period);
 
   return (
-    <div className="sourceCard" style={{ '--source-color': color }}>
-      <div className="sourceCardHeader">
-        <span className="sourceCardIcon">
-          {source.img
-            ? <img src={source.img} alt={source.name} style={{ width: '32px', height: '22px', objectFit: 'contain' }} />
-            : source.icon}
-        </span>
-        <span className="sourceCardName">
+    <div style={{
+      background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+      padding: 0, overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
+      {/* Header */}
+      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)' }}>
+        {source.img
+          ? <img src={source.img} alt={source.name} style={{ width: 28, height: 20, objectFit: 'contain' }} />
+          : <Icon letter={(source.displayName || source.name || 'T').charAt(0)} color={color} size={28} />
+        }
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
           {source.displayName || source.name}
-          {source.sublabel && <span className="sourceCardSublabel">{source.sublabel}</span>}
-          {source.tooltip && <InfoTooltip tooltip={source.tooltip} />}
+          {source.sublabel && <span style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 400, marginLeft: 4 }}>{source.sublabel}</span>}
         </span>
+        {source.tooltip && <InfoTooltip tooltip={source.tooltip} />}
       </div>
-      <div className="sourceCardTotal">
-        <Link to={linkFn('today')} className="sourceCardTotalLink">
-          <span className="sourceCardTotalValue">{formatNumber(today)}</span>
+
+      {/* Today big number */}
+      <div style={{ padding: '14px 16px', textAlign: 'center' }}>
+        <Link to={linkFn('today')} style={{ textDecoration: 'none' }}>
+          <div style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>{formatNumber(today)}</div>
         </Link>
-        <span className="sourceCardTotalLabel">Today's Leads</span>
+        <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Today's Leads</div>
       </div>
-      <div className="sourceCardStats">
-        <div className="sourceStat">
-          <Link to={linkFn('yesterday')} className="sourceStatLink">
-            <span className="sourceStatValue">{formatNumber(yesterday)}</span>
-          </Link>
-          <span className="sourceStatLabel"><span className="labelDesktop">Yesterday</span><span className="labelMobile">-1 day</span></span>
-        </div>
-        <div className="sourceStat">
-          <Link to={linkFn('7days')} className="sourceStatLink">
-            <span className="sourceStatValue">{formatNumber(days7)}</span>
-          </Link>
-          <span className="sourceStatLabel"><span className="labelDesktop">Last 7 Days</span><span className="labelMobile">-7 days</span></span>
-        </div>
-        <div className="sourceStat">
-          <Link to={linkFn('30days')} className="sourceStatLink">
-            <span className="sourceStatValue">{formatNumber(days30)}</span>
-          </Link>
-          <span className="sourceStatLabel"><span className="labelDesktop">Last 30 Days</span><span className="labelMobile">-30 days</span></span>
-        </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
+        {[
+          { label: 'Yesterday', value: yesterday, period: 'yesterday' },
+          { label: '7 Days', value: days7, period: '7days' },
+          { label: '30 Days', value: days30, period: '30days' },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, padding: '10px 8px', textAlign: 'center', borderRight: '1px solid var(--border)' }}>
+            <Link to={linkFn(s.period)} style={{ textDecoration: 'none' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{formatNumber(s.value)}</div>
+            </Link>
+            <div style={{ fontSize: 9, color: 'var(--muted)', fontWeight: 500, textTransform: 'uppercase', marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
       </div>
-      <div className={`sourceCardTrend ${trend >= 0 ? 'trendUp' : 'trendDown'}`}>
+
+      {/* Trend */}
+      <div style={{
+        padding: '8px 16px', fontSize: 11, fontWeight: 600, textAlign: 'center',
+        color: trend >= 0 ? 'var(--success)' : 'var(--brand)',
+        background: trend >= 0 ? 'var(--successLight)' : 'var(--brandLight)',
+      }}>
         {trend >= 0 ? '↑' : '↓'} {formatNumber(Math.abs(trend))} vs yesterday ({Math.abs(trendPercent)}%)
       </div>
     </div>
   );
 }
 
-function RegionCard({ region, counts, color }) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  const n = (v) => (typeof v === 'string' ? parseInt(v, 10) : (v || 0));
-  const today     = n(counts?.count_today);
-  const yesterday = n(counts?.count_yesterday);
-  const days7     = n(counts?.count_7_days);
-  const days30    = n(counts?.count_30_days);
-
-  const total = days30 || 1;
-  const regionName = region.name;
-  const branches = REGION_BRANCHES[regionName] || [];
-
-  const bars = [
-    { labelDesktop: 'Today',        labelMobile: 'Today',    value: today,     period: 'today' },
-    { labelDesktop: 'Yesterday',    labelMobile: '-1 day',   value: yesterday, period: 'yesterday' },
-    { labelDesktop: 'Last 7 Days',  labelMobile: '-7 days',  value: days7,     period: '7days' },
-    { labelDesktop: 'Last 30 Days', labelMobile: '-30 days', value: days30,    period: '30days' },
-  ];
-
-  return (
-    <div className="regionCard" style={{ '--region-color': color }}>
-      <div className="regionCardHeader">
-        <span
-          className="regionCardName"
-          style={{ position: 'relative', cursor: 'default' }}
-          onMouseEnter={() => setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
-        >
-          {regionName}
-          {showTooltip && branches.length > 0 && (
-            <div className="regionBranchTooltip">
-              {branches.map(b => <div key={b}>{b}</div>)}
-            </div>
-          )}
-        </span>
-        <Link
-          to={getLeadCentreUrl('', 'today', regionName)}
-          className="regionCardTotalLink"
-        >
-          <span className="regionCardTotal">{formatNumber(today)}</span>
-          <span className="regionCardTotalLabel">Today</span>
-        </Link>
-      </div>
-      <div className="regionCardBars">
-        {bars.map(({ labelDesktop, labelMobile, value, period }) => (
-          <div key={labelDesktop} className="regionBarItem">
-            <div className="regionBarLabel">
-              <span className="labelDesktop">{labelDesktop}</span>
-              <span className="labelMobile">{labelMobile}</span>
-            </div>
-            <div className="regionBarTrack">
-              <div
-                className="regionBarFill"
-                style={{ width: `${Math.min((value / total) * 100 || 0, 100)}%` }}
-              />
-            </div>
-            {labelDesktop === 'Today' ? (
-              <Link to={getLeadCentreUrl('', period, regionName)} className="regionBarValueLink">
-                {formatNumber(value)}
-              </Link>
-            ) : (
-              <div className="regionBarValue">{formatNumber(value)}</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+/* ─── Branch Table ─── */
 function BranchTable({ branches }) {
-  if (!branches || branches.length === 0) return <div className="muted">No branch data available.</div>;
+  if (!branches || branches.length === 0) return <div style={{ color: 'var(--muted)' }}>No branch data available.</div>;
 
-  // Ensure all values are numbers
   const normalizeBranch = (branch) => ({
     ...branch,
     count_today: typeof branch.count_today === 'string' ? parseInt(branch.count_today, 10) : (branch.count_today || 0),
@@ -231,50 +192,58 @@ function BranchTable({ branches }) {
     count_30_days: typeof branch.count_30_days === 'string' ? parseInt(branch.count_30_days, 10) : (branch.count_30_days || 0),
   });
 
-  const normalizedBranches = branches.map(normalizeBranch);
-  
-  // Filter out inactive branches
   const inactiveBranches = ['Taman Melawati', 'Kajang Perdana', 'Bandar Sri Damansara', 'Kepong', 'Bandra East', 'Andheri West'];
-  const filteredBranches = normalizedBranches.filter(
-    (branch) => !inactiveBranches.includes(branch.clean_branch)
-  );
-  
-  // Sort by total (30d) descending
-  const sorted = [...filteredBranches].sort((a, b) => b.count_30_days - a.count_30_days);
+  const sorted = [...branches.map(normalizeBranch)]
+    .filter(b => !inactiveBranches.includes(b.clean_branch))
+    .sort((a, b) => b.count_30_days - a.count_30_days);
 
   return (
-    <div className="branchTableWrap">
-      <table className="branchTable">
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+      <table className="dataTable">
         <thead>
           <tr>
             <th>Branch</th>
-            <th className="textRight">Today</th>
-            <th className="textRight"><span className="labelDesktop">Yesterday</span><span className="labelMobile">-1 day</span></th>
-            <th className="textRight"><span className="labelDesktop">Last 7 Days</span><span className="labelMobile">-7 days</span></th>
-            <th className="textRight"><span className="labelDesktop">Last 30 Days</span><span className="labelMobile">-30 days</span></th>
+            <th style={{ textAlign: 'right' }}>Today</th>
+            <th style={{ textAlign: 'right' }}>Yesterday</th>
+            <th style={{ textAlign: 'right' }}>7 Days</th>
+            <th style={{ textAlign: 'right' }}>30 Days</th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map((branch, idx) => {
-            const isTop = idx < 3;
-            
-            return (
-              <tr key={branch.clean_branch || idx} className={isTop ? 'rowTop' : ''}>
-                <td>
-                  <div className="branchName">
-                    {isTop && <span className="rankBadge">#{idx + 1}</span>}
-                    {branch.clean_branch || 'Unknown'}
-                  </div>
-                </td>
-                <td className="textRight">{formatNumber(branch.count_today)}</td>
-                <td className="textRight">{formatNumber(branch.count_yesterday)}</td>
-                <td className="textRight">{formatNumber(branch.count_7_days)}</td>
-                <td className="textRight fontBold">{formatNumber(branch.count_30_days)}</td>
-              </tr>
-            );
-          })}
+          {sorted.map((branch, idx) => (
+            <tr key={branch.clean_branch || idx} style={idx < 3 ? { background: 'var(--successLight)' } : {}}>
+              <td>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {idx < 3 && <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 20, height: 20, borderRadius: '50%', fontSize: 10, fontWeight: 700,
+                    background: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : '#cd7f32',
+                    color: '#fff',
+                  }}>#{idx + 1}</span>}
+                  <span style={{ fontWeight: idx < 3 ? 600 : 400 }}>{branch.clean_branch || 'Unknown'}</span>
+                </div>
+              </td>
+              <td style={{ textAlign: 'right' }}>{formatNumber(branch.count_today)}</td>
+              <td style={{ textAlign: 'right' }}>{formatNumber(branch.count_yesterday)}</td>
+              <td style={{ textAlign: 'right' }}>{formatNumber(branch.count_7_days)}</td>
+              <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatNumber(branch.count_30_days)}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ─── Section Header ─── */
+function SectionHeader({ icon, letter, color, title, subtitle }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+        <Icon letter={letter} color={color} size={30} />
+        {title}
+      </div>
+      {subtitle && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, marginLeft: 40 }}>{subtitle}</div>}
     </div>
   );
 }
@@ -286,139 +255,75 @@ export function UiUxTestingPage() {
     refetchInterval: 180_000,
   });
 
-  // Use grandTotal from backend for accurate summary
   const grandTotal = q.data?.grandTotal || {};
   const totalLeads = parseInt(grandTotal.count_30_days) || 0;
   const todayTotal = parseInt(grandTotal.count_today) || 0;
   const yesterdayTotal = parseInt(grandTotal.count_yesterday) || 0;
-  
-  // Calculate from branches for display table
   const branches = q.data?.branches || [];
   const regionCount = q.data?.regions?.length || 0;
-  
-  // Filter out inactive branches for the count as well
+
   const inactiveBranches = ['Taman Melawati', 'Kajang Perdana', 'Bandar Sri Damansara', 'Kepong', 'Bandra East', 'Andheri West'];
   const activeBranches = branches.filter(b => !inactiveBranches.includes(b.clean_branch));
   const branchCount = activeBranches.length;
 
-  // Online branch today count
   const onlineBranch = branches.find(b => b.clean_branch && b.clean_branch.toLowerCase().includes('online'));
   const onlineToday = parseInt(onlineBranch?.count_today) || 0;
 
-  const leadSources = [
-    { id: 'website', name: 'Website', icon: '🌐' },
-    { id: 'trial class form', name: 'Trial Class Form', icon: '🌐' },
-    { id: 'meta', name: 'Meta', img: '/meta_logo.svg' },
-    { id: 'facebook', name: 'Facebook', icon: '📘' },
-    { id: 'instagram', name: 'Instagram', icon: '📷' },
-    { id: 'tiktok', name: 'TikTok', img: '/tiktok_logo.svg' },
-    { id: 'google', name: 'Google', icon: '🔍' },
-    { id: 'referral', name: 'Referral', icon: '🤝' },
-    { id: 'walkin', name: 'Walk-in', icon: '🚶' },
-    { id: 'phone', name: 'Phone', icon: '📞' },
-    { id: 'roadshow', name: 'Roadshow', icon: '🎪' },
-    { id: 'other', name: 'Other', icon: '📋' },
-  ];
-
-  const regionColors = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#8b5cf6'];
+  const regionColors = ['#3b82f6', '#10b981', '#f59e0b'];
 
   return (
-    <div className="leadsBreakdownPage">
-      <div className="pageHeader">
-        <div className="backButtonContainer">
-          <BackButton to="/" label="Back to Home" />
+    <div className="dashboardPage">
+      <div className="dashboardHeader">
+        <BackButton to="/" label="Back to Home" />
+        <div style={{ marginTop: 16 }}>
+          <h1 className="pageHeaderTitle" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon letter="T" color="#f97316" size={32} />
+            UI/UX Testing
+          </h1>
+          <p className="headerSubtitle">Lead counts by source, region & branch · Auto-refresh every 3 min</p>
         </div>
-        <div className="pageHeaderTitle">🧪 UI/UX Testing</div>
-        <div className="pageHeaderSub">Lead counts by source, region & branch · Auto-refresh every 3 min</div>
-        <div className="refreshButtonContainer">
-          <button className="btn btnSmall" onClick={() => q.refetch()} disabled={q.isFetching}>
-            {q.isFetching ? '⟳ Refreshing…' : '⟳ Refresh'}
-          </button>
-        </div>
+        <button className="btn btnGhost btnSmall" onClick={() => q.refetch()} disabled={q.isFetching} style={{ marginLeft: 'auto' }}>
+          {q.isFetching ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
       {q.isLoading ? (
-        <div className="card">
-          <div className="loadingCard"><div className="loadingDots"><span /><span /><span /></div> Loading leads data…</div>
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div className="loadingDots"><span /><span /><span /></div>
+          <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading...</p>
         </div>
       ) : q.isError ? (
-        <div className="errorText">
-          {q.error?.data?.error || 'Failed to load leads data.'}{' '}
-          <span className="muted small">{q.error?.data?.hint || ''}</span>
-        </div>
+        <div className="errorText">{q.error?.data?.error || 'Failed to load leads data.'}</div>
       ) : (
         <>
           {/* Summary Stats */}
-          <div className="summaryStats">
-            <StatCard
-              title="Total Leads (30d)"
-              value={totalLeads}
-              icon="📈"
-              color="#3b82f6"
-              subtitle="All sources combined"
-              to={getLeadCentreUrl('', '30days')}
-            />
-            <StatCard
-              title="Today's Leads | Online"
-              value={todayTotal - onlineToday}
-              bracketValue={onlineToday}
-              icon="📅"
-              color="#10b981"
-              subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`}
-              to={getLeadCentreUrl('', 'today')}
-            />
-            <StatCard
-              title="Yesterday's Leads"
-              value={yesterdayTotal}
-              icon="📆"
-              color="#f59e0b"
-              subtitle={`${todayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% change today`}
-              to={getLeadCentreUrl('', 'yesterday')}
-            />
-            <StatCard 
-              title="Active Regions" 
-              value={regionCount} 
-              icon="🗺️" 
-              color="#6366f1"
-              subtitle="With lead activity"
-            />
-            <StatCard 
-              title="Active Branches" 
-              value={branchCount} 
-              icon="🏢" 
-              color="#ec4899"
-              subtitle="With lead activity"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+            <StatCard title="Total Leads (30d)" value={totalLeads} icon="L" color="#3b82f6" subtitle="All sources combined" to={getLeadCentreUrl('', '30days')} />
+            <StatCard title="Today's Leads | Online" value={todayTotal - onlineToday} bracketValue={onlineToday} icon="T" color="#10b981" subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`} to={getLeadCentreUrl('', 'today')} />
+            <StatCard title="Yesterday's Leads" value={yesterdayTotal} icon="Y" color="#f59e0b" subtitle={`${todayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% change today`} to={getLeadCentreUrl('', 'yesterday')} />
+            <StatCard title="Active Regions" value={regionCount} icon="R" color="#6366f1" subtitle="With lead activity" />
+            <StatCard title="Active Branches" value={branchCount} icon="B" color="#ec4899" subtitle="With lead activity" />
           </div>
 
-          {/* Lead Sources — 4 fixed cards */}
-          <div className="section">
-            <h3 className="sectionTitle">📊 Lead Sources (without siblings)</h3>
-            <p className="sectionSubtitle">Performance breakdown by acquisition channel</p>
-            <div className="sourcesGrid">
+          {/* Lead Sources */}
+          <div style={{ marginBottom: 32 }}>
+            <SectionHeader letter="S" color="#3b82f6" title="Lead Sources (without siblings)" subtitle="Performance breakdown by acquisition channel" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
               {[
-                { key: 'Meta', icon: null, img: '/facebook_logo.svg', color: '#1877f2',
-                  tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.' } },
-                { key: 'TikTok', icon: null, img: '/tiktok_logo.svg', color: '#010101',
-                  tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.' } },
-                { key: 'Trial Class Form', icon: '🌐', img: null, color: '#3b82f6', sublabel: '(Conversion)', displayName: 'Website',
-                  tooltip: { title: 'Website (Conversion)', desc: 'Leads from conversion campaigns (Meta/TikTok) where the lead filled in the form on the website.', url: 'https://www.ebright.my/trial-classes' } },
-                { key: 'Roadshow', icon: '🎪', img: null, color: '#f97316',
-                  tooltip: { title: 'Roadshow', desc: 'Leads from contacts collected during showcase, festival roadshows, and/or promotional events.', url: 'https://www.ebright.my/trial-class-roadshow' } },
-                { key: 'Self Generated Lead', icon: '🤝', img: null, color: '#10b981',
-                  tooltip: { title: 'Self Generated Lead', desc: 'Leads generated directly by staff through personal or direct contact. Staff can claim these leads when the lead enrolls.', url: 'https://www.ebright.my/trial-class-self-generated' } },
-                { key: 'Walk In', icon: '🚶', img: null, color: '#6366f1',
-                  tooltip: { title: 'Walk In', desc: 'Leads who visited the centre directly to inquire or attend a trial session by walking in.', url: 'https://www.ebright.my/trial-class-walk-in' } },
-                { key: 'Website', icon: '💻', img: null, color: '#8b5cf6', sublabel: '(Organic)',
-                  tooltip: { title: 'Website (Organic)', desc: 'Leads who found the website organically and clicked the trial class form on the website.', url: 'https://www.ebright.my/trial-class-website' } },
-                { key: 'Others', icon: '📋', img: null, color: '#64748b',
-                  tooltip: { title: 'Others', desc: 'Leads that do not fall under any other category (e.g. parent referrals).', url: 'https://www.ebright.my/trial-class-others' } },
+                { key: 'Meta', img: '/facebook_logo.svg', color: '#1877f2', tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.' } },
+                { key: 'TikTok', img: '/tiktok_logo.svg', color: '#69c9d0', tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.' } },
+                { key: 'Trial Class Form', color: '#3b82f6', sublabel: '(Conversion)', displayName: 'Website', tooltip: { title: 'Website (Conversion)', desc: 'Leads from conversion campaigns (Meta/TikTok) where the lead filled in the form on the website.', url: 'https://www.ebright.my/trial-classes' } },
+                { key: 'Roadshow', color: '#f97316', tooltip: { title: 'Roadshow', desc: 'Leads from contacts collected during showcase, festival roadshows, and/or promotional events.' } },
+                { key: 'Self Generated Lead', color: '#10b981', tooltip: { title: 'Self Generated Lead', desc: 'Leads generated directly by staff through personal or direct contact.' } },
+                { key: 'Walk In', color: '#6366f1', tooltip: { title: 'Walk In', desc: 'Leads who visited the centre directly to inquire or attend a trial session.' } },
+                { key: 'Website', color: '#8b5cf6', sublabel: '(Organic)', tooltip: { title: 'Website (Organic)', desc: 'Leads who found the website organically and clicked the trial class form.' } },
+                { key: 'Others', color: '#64748b', tooltip: { title: 'Others', desc: 'Leads that do not fall under any other category.' } },
               ].map(card => {
                 const match = q.data?.total?.find(s => s.lead_source === card.key);
                 return (
                   <SourceCard
                     key={card.key}
-                    source={{ name: card.key, icon: card.icon, img: card.img, sublabel: card.sublabel, displayName: card.displayName, tooltip: card.tooltip }}
+                    source={{ name: card.key, img: card.img, sublabel: card.sublabel, displayName: card.displayName, tooltip: card.tooltip }}
                     counts={match || { count_today: 0, count_yesterday: 0, count_7_days: 0, count_30_days: 0 }}
                     color={card.color}
                   />
@@ -427,11 +332,10 @@ export function UiUxTestingPage() {
             </div>
           </div>
 
-          {/* Regions — same layout as Lead Sources */}
-          <div className="section">
-            <h3 className="sectionTitle">🗺️ Regional Breakdown (with siblings)</h3>
-            <p className="sectionSubtitle">Lead distribution across mapped regions</p>
-            <div className="sourcesGrid">
+          {/* Regions */}
+          <div style={{ marginBottom: 32 }}>
+            <SectionHeader letter="R" color="#10b981" title="Regional Breakdown (with siblings)" subtitle="Lead distribution across mapped regions" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
               {(() => {
                 const regions = q.data?.regions || [];
                 const totalCounts = {
@@ -441,62 +345,48 @@ export function UiUxTestingPage() {
                   count_30_days: regions.reduce((s, r) => s + (parseInt(r.count_30_days) || 0), 0),
                 };
                 const cards = [
-                  { key: 'Total', icon: '📊', color: '#3b82f6', counts: totalCounts, regionName: '',
-                    tooltip: { title: 'Total', desc: 'Combined leads from all regions.' } },
+                  { key: 'Total', color: '#3b82f6', counts: totalCounts, regionName: '', tooltip: { title: 'Total', desc: 'Combined leads from all regions.' } },
                   ...regions.map((r, idx) => ({
-                    key: r.region,
-                    icon: ['🔵', '🟢', '🟡'][idx] || '⚪',
-                    color: regionColors[idx % regionColors.length],
-                    counts: r,
-                    regionName: r.region,
+                    key: r.region, color: regionColors[idx % regionColors.length], counts: r, regionName: r.region,
                     tooltip: { title: r.region, desc: (REGION_BRANCHES[r.region] || []).join('\n') },
                   })),
                 ];
                 return cards.map(card => (
-                  <SourceCard
-                    key={card.key}
-                    source={{ name: card.regionName || '', icon: card.icon, displayName: card.key, tooltip: card.tooltip }}
-                    counts={card.counts}
-                    color={card.color}
-                  />
+                  <SourceCard key={card.key} source={{ name: card.regionName || '', displayName: card.key, tooltip: card.tooltip }} counts={card.counts} color={card.color} />
                 ));
               })()}
             </div>
           </div>
 
           {/* Branches */}
-          <div className="section">
-            <h3 className="sectionTitle">🏢 Branch Performance</h3>
-            <p className="sectionSubtitle">Lead counts by branch office (sorted by 30-day total)</p>
+          <div style={{ marginBottom: 32 }}>
+            <SectionHeader letter="B" color="#ec4899" title="Branch Performance" subtitle="Lead counts by branch office (sorted by 30-day total)" />
             <BranchTable branches={q.data?.branches} />
           </div>
 
-          {/* Others Detail — diagnostic breakdown of unclassified lead sources */}
+          {/* Others Detail */}
           {q.data?.othersDetail && q.data.othersDetail.length > 0 && (
-            <div className="section">
-              <h3 className="sectionTitle">📋 Others — Raw Lead Source Breakdown</h3>
-              <p className="sectionSubtitle">Unclassified lead_source values falling into "Others" category</p>
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="tableWrap" style={{ border: 'none', borderRadius: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Raw Lead Source (from DB)</th>
-                        <th style={{ textAlign: 'right' }}>Today</th>
-                        <th style={{ textAlign: 'right' }}>All Time</th>
+            <div style={{ marginBottom: 32 }}>
+              <SectionHeader letter="O" color="#64748b" title="Others — Raw Lead Source Breakdown" subtitle="Unclassified lead_source values" />
+              <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                <table className="dataTable">
+                  <thead>
+                    <tr>
+                      <th>Raw Lead Source</th>
+                      <th style={{ textAlign: 'right' }}>Today</th>
+                      <th style={{ textAlign: 'right' }}>All Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {q.data.othersDetail.map((row, idx) => (
+                      <tr key={idx}>
+                        <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{row.raw_lead_source || '(empty)'}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: parseInt(row.count_today) > 0 ? 'var(--warning)' : 'var(--text)' }}>{formatNumber(parseInt(row.count_today))}</td>
+                        <td style={{ textAlign: 'right' }}>{formatNumber(parseInt(row.count_total))}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {q.data.othersDetail.map((row, idx) => (
-                        <tr key={idx}>
-                          <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{row.raw_lead_source || '(empty)'}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: parseInt(row.count_today) > 0 ? '#f97316' : undefined }}>{formatNumber(parseInt(row.count_today))}</td>
-                          <td style={{ textAlign: 'right' }}>{formatNumber(parseInt(row.count_total))}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -505,4 +395,3 @@ export function UiUxTestingPage() {
     </div>
   );
 }
-
