@@ -42,6 +42,7 @@ import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
+import { UiUxTestingPage } from './pages/UiUxTestingPage';
 
 export default function App() {
   return (
@@ -163,6 +164,9 @@ export default function App() {
           } />
           <Route path="/hrfs-attendance-dashboard" element={
             <RequirePermission dashboard="testing"><HrfsAttendanceDashboardPage /></RequirePermission>
+          } />
+          <Route path="/ui-ux-testing" element={
+            <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>
           } />
         </Route>
       </Route>

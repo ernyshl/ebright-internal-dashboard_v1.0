@@ -154,6 +154,7 @@ export function DashboardHomePage() {
         { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'testing' },
         { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
+        { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
       ]
     },
     {
