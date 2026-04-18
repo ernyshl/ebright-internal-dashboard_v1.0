@@ -55,7 +55,6 @@ export default function App() {
       <Route path="/tv" element={<TvPage />} />
       <Route path="/fa-dashboard" element={<FaDashboardPage />} />
       <Route path="/okr-preview" element={<OkrAttendancePage />} />
-      <Route path="/home-preview" element={<DashboardHomePage previewMode />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
