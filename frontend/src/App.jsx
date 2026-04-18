@@ -53,10 +53,10 @@ export default function App() {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/tv" element={<TvPage />} />
-      <Route path="/fa-dashboard" element={<FaDashboardPage />} />
-      <Route path="/okr-preview" element={<OkrAttendancePage />} />
 
       <Route element={<RequireAuth />}>
+        <Route path="/fa-dashboard" element={<FaDashboardPage />} />
+        <Route path="/okr-preview" element={<OkrAttendancePage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />
           <Route path="/events" element={
