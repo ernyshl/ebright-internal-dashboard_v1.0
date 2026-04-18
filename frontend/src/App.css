@@ -6202,6 +6202,102 @@
 .okrMeetupLabel { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--textSecondary); }
 .okrMeetupArrow { font-size: 1.4rem; color: var(--border); font-weight: 300; }
 
+/* Weekly Totals Chart */
+.okrWeeklyTotalWrap {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  padding: 16px 0;
+}
+
+.okrWeeklyTotalChart {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  height: 180px;
+}
+
+.okrWeeklyColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.okrWeeklyBar {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background: var(--bg);
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.okrWeeklyBarFill {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 4px;
+}
+
+.okrWeeklyBarValue {
+  position: absolute;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 4px;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+  z-index: 1;
+}
+
+.okrWeeklyLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.okrWeeklyTotalStats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  min-width: 100px;
+}
+
+.okrWeeklyStatItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.okrWeeklyStat {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--textSecondary);
+}
+
+.okrWeeklyStatItem strong {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* Outstanding invoices */
 .okrInvoiceWrap { display: flex; flex-direction: column; gap: 8px; }
 .okrInvoiceTarget {
@@ -6386,6 +6482,40 @@
   color: var(--brand);
 }
 .okrPasteIcon { font-size: 1.1rem; }
+.okrPasteInputRow {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+.okrPasteInputTextarea {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--text);
+  resize: vertical;
+  min-height: 72px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.okrPasteInputTextarea:focus { border-color: var(--brand); }
+.okrPasteImportBtn {
+  padding: 0 22px;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.okrPasteImportBtn:hover { opacity: 0.88; }
+.okrPasteImportBtnFull { width: 100%; padding: 12px; margin-bottom: 10px; font-size: 0.95rem; }
 
 /* Paste preview strip */
 .okrPastePreview {
@@ -6443,14 +6573,15 @@
 /* Hidden paste textarea */
 .okrPasteTextarea {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: none;
-  overflow: hidden;
+  cursor: pointer;
   resize: none;
-  pointer-events: none;
+  border: none;
+  background: transparent;
+  z-index: 2;
 }
 
 /* Back-to-all button */
@@ -7046,7 +7177,178 @@ kbd {
 .okrTrendDown { color: var(--brand,   #ef4444); font-weight: 700; font-size: 0.78rem; }
 .okrTrendNeutral { color: var(--textSecondary); font-size: 0.78rem; }
 
+/* 4-Week Trend - Week Toggle */
+.okrWeekToggleContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--borderLight, var(--border));
+}
+
+.okrWeekToggleLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.okrWeekToggle {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.okrWeekToggleBtn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--textSecondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.okrWeekToggleBtn:hover {
+  border-color: var(--text);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.okrWeekToggleBtnActive {
+  background: var(--accent, var(--brand, #3b82f6));
+  border-color: var(--accent, var(--brand, #3b82f6));
+  color: white;
+  font-weight: 600;
+}
+
+.okrWeekToggleBtnActive:hover {
+  opacity: 0.9;
+}
+
+/* ── Week Toggle Buttons (in BranchDetailCard) ── */
+.okrWeekToggleRow {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.okrWeekToggleBtn {
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  color: var(--textSecondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.okrWeekToggleBtn:hover:not(:disabled) {
+  border-color: var(--info);
+  color: var(--info);
+  background: var(--infoLight);
+}
+.okrWeekToggleBtn.okrWeekToggleBtnActive {
+  border-color: var(--info);
+  background: var(--info);
+  color: #fff;
+}
+.okrWeekToggleBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── FourWeekTrendCard ── */
+.okrFwCard {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 20px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 16px 8px;
+}
+.okrFwChartWrap { flex: 1; min-width: 0; }
+.okrFwSummary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-width: 100px;
+  border-left: 1.5px solid var(--border);
+  padding-left: 16px;
+  margin-left: 4px;
+}
+.okrFwStat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.okrFwStatLabel { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--textSecondary); }
+.okrFwStatValue { font-size: 1.5rem; font-weight: 800; color: var(--text); }
+.okrFwStatSub   { font-size: 0.62rem; color: var(--muted); }
+.okrFwDivider   { height: 1px; background: var(--border); margin: 12px 0; width: 100%; }
+@media (max-width: 640px) {
+  .okrFwCard { flex-direction: column; padding: 12px; }
+  .okrFwSummary { flex-direction: row; justify-content: space-around; border-left: none; border-top: 1.5px solid var(--border); padding: 12px 0 0; margin: 0; }
+  .okrFwDivider { width: 1px; height: 32px; margin: 0 12px; }
+}
+
 @media (max-width: 640px) {
   .okrTrendRow { grid-template-columns: 1.4fr 0.9fr 0.9fr 0.9fr 0.7fr; }
   .okrTrendCard { padding: 14px 12px; }
+  .okrWeekToggleContainer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .okrWeekToggle {
+    width: 100%;
+  }
+  .okrWeekToggleBtn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ── Company Health Banner ── */
+.companyHealthBanner {
+  margin: 20px 0;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 5px solid;
+  background: var(--panel);
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+.companyHealthBanner.companyHealthMatch    { border-left-color: var(--success); background: linear-gradient(to right, rgba(5,150,105,0.04), var(--panel)); }
+.companyHealthBanner.companyHealthMismatch { border-left-color: var(--brand);   background: linear-gradient(to right, rgba(220,38,38,0.05), var(--panel)); }
+.companyHealthContent    { display: flex; flex-direction: column; gap: 12px; }
+.companyHealthHeader     { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.companyHealthTitle      { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text); }
+.companyHealthStatus     { padding: 4px 12px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.companyHealthStatusOk   { color: var(--success); background: var(--successLight); }
+.companyHealthStatusError { color: var(--brand); background: var(--brandLight); }
+.companyHealthMain       { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.companyHealthMainText   { display: flex; gap: 24px; flex-wrap: wrap; }
+.companyHealthMainText span   { font-size: 0.875rem; color: var(--text); }
+.companyHealthMainText strong { font-weight: 700; color: var(--text); margin-left: 4px; }
+.companyHealthSubtext    { font-size: 0.8rem; color: var(--textSecondary); display: flex; gap: 12px; flex-wrap: wrap; padding: 8px 0; }
+.companyHealthSubtext strong  { font-weight: 600; color: var(--text); }
+.companyHealthWarning    { padding: 12px; border-radius: 6px; background: var(--brandLight); border: 1px solid rgba(220,38,38,0.15); margin-top: 4px; }
+.companyHealthWarningTitle    { font-size: 0.8rem; font-weight: 600; color: var(--brand); margin-bottom: 8px; }
+.companyHealthWarningBranches { display: flex; flex-direction: column; gap: 6px; }
+.companyHealthWarningItem     { font-size: 0.8rem; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.companyHealthBranchName      { font-weight: 600; color: var(--text); min-width: 120px; }
+.companyHealthBranchDisc      { color: var(--textSecondary); font-size: 0.75rem; }
+.companyHealthSuccessMsg      { font-size: 0.8rem; color: var(--success); font-weight: 500; margin-top: 4px; }
+@media (max-width: 768px) {
+  .companyHealthBanner    { padding: 16px; margin: 16px 0; }
+  .companyHealthHeader    { flex-direction: column; align-items: flex-start; }
+  .companyHealthStatus    { align-self: flex-start; }
+  .companyHealthMainText  { flex-direction: column; gap: 8px; }
+  .companyHealthSubtext   { flex-direction: column; gap: 4px; }
 }

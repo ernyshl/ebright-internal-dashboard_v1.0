@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pg_isready)",
+      "Bash(psql --version)",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const crypto = require\\(''crypto''\\); console.log\\(crypto.randomBytes\\(48\\).toString\\(''base64''\\)\\);\")"
+    ]
+  }
+}
