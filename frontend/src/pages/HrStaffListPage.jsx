@@ -6,8 +6,10 @@ import { apiFetch } from '../lib/api';
 const PAGE_SIZE = 50;
 
 const POSITION_OPTIONS = [
+  'CEO',
   'HOD',
   'Executive',
+  'Branch Executive',
   'Full-Time Branch Manager',
   'Full-Time Coach',
   'Full-Time',
@@ -32,10 +34,12 @@ const DEPARTMENT_OPTIONS = [
   'Danau Kota',
   'Denai Alam',
   'Eco Grandeur',
+  'HQ',
   'Kajang TTDI Grove',
   'Klang',
   'Kota Damansara',
   'Kota Warisan',
+  'Online',
   'Putrajaya',
   'Setia Alam',
   'Shah Alam',
