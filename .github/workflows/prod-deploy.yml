@@ -1,0 +1,19 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 103.209.156.174
+          username: staff1
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 30m
+          script: /home/staff1/deploy-prod.sh dashboard
