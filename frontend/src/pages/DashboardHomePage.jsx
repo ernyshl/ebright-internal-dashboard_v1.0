@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
+import { getUser } from '../lib/auth';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 
@@ -35,6 +36,15 @@ export function DashboardHomePage() {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+      ]
+    },
+    {
+      id: 'fa_testing',
+      name: 'FA Dashboard Testing',
+      icon: '🧪',
+      color: '#6366f1',
+      links: [
         { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
       ]
     },
@@ -139,7 +149,8 @@ export function DashboardHomePage() {
       icon: '📚',
       color: '#7c3aed',
       links: [
-        { label: 'Student Database', path: '/student-database', dashboard: 'student_db' },
+        { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
+        { label: '🗂 Archived Students', path: '/archived-students', dashboard: 'student_db' },
       ]
     },
     {
@@ -181,12 +192,14 @@ export function DashboardHomePage() {
     }
   ];
 
-  // Filter departments based on permissions
+  // When no user session, show all dashboards (local preview mode)
+  const noAuth = !getUser();
+
   const filteredDepartments = departmentData
       .map(dept => ({
         ...dept,
-        gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
-        links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
+        gaReports: dept.gaReports && (noAuth || canAccess(dept.id, permissions)) ? dept.gaReports : undefined,
+        links: dept.links.filter(link => noAuth || !link.dashboard || canAccess(link.dashboard, permissions)),
       }))
       .filter(dept => {
         const hasLinks = dept.links.length > 0;

@@ -43,6 +43,7 @@ import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
+import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 
 export default function App() {
   return (
@@ -167,6 +168,9 @@ export default function App() {
           } />
           <Route path="/student-database" element={
             <RequirePermission dashboard="student_db"><StudentDatabasePage /></RequirePermission>
+          } />
+          <Route path="/archived-students" element={
+            <RequirePermission dashboard="student_db"><ArchivedStudentsPage /></RequirePermission>
           } />
         </Route>
       </Route>

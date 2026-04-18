@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import App from './App.jsx';
 import { setQueryClient } from './lib/auth';
+import { AcademyProvider } from './context/AcademyContext.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <AcademyProvider>
+          <App />
+        </AcademyProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

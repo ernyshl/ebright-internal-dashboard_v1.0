@@ -27,10 +27,10 @@ router.get('/', async (_req, res, next) => {
   }
 });
 
-// POST /api/fa-dashboard/save — upsert all 20 rows at once
-router.post('/save', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
+// POST /api/fa-dashboard/save — upsert all 20 rows at once (public write, FA dashboard is open)
+router.post('/save', async (req, res, next) => {
   const { rows } = req.body;
-  const updatedBy = req.user?.email || req.user?.sub || 'unknown';
+  const updatedBy = 'fa-dashboard';
 
   if (!Array.isArray(rows) || rows.length === 0) {
     return res.status(400).json({ error: 'rows array is required' });
@@ -53,14 +53,12 @@ router.post('/save', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
     // Upsert each row using Prisma in a transaction
     await prisma.$transaction(
       rows.map(({ branch_code, fa_active, inv_apr1819, inv_apr2526 }) => {
-        const backlog = Math.max(0, fa_active - inv_apr1819 - inv_apr2526);
         return prisma.fa_dashboard_data.upsert({
           where: { branch_code },
           update: {
             fa_active,
             inv_apr1819,
             inv_apr2526,
-            backlog,
             updated_at: new Date(),
             updated_by: updatedBy,
           },
@@ -69,7 +67,6 @@ router.post('/save', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
             fa_active,
             inv_apr1819,
             inv_apr2526,
-            backlog,
             updated_at: new Date(),
             updated_by: updatedBy,
           },
