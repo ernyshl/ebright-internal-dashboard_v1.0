@@ -9,6 +9,7 @@ import { CompanyHealthBanner } from '../components/okr/CompanyHealthBanner';
 import { RateBar } from '../components/okr/RateBar';
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
 import { AllBranchesGrid } from '../components/okr/AllBranchesGrid';
+import { DailyBulkEntry } from '../components/okr/DailyBulkEntry';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
 const TABS = [
@@ -26,6 +27,7 @@ export function OkrAttendancePage() {
   const [filterBranch, setFilterBranch] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [saveStatus, setSaveStatus]     = useState(null);
+  const [entryMode, setEntryMode]       = useState('daily');
   const [showPcMeetup, setShowPcMeetup] = useState(false);
   const [pasteStatus, setPasteStatus]   = useState(null);
   const [pastePreview, setPastePreview] = useState(null);
@@ -174,23 +176,25 @@ export function OkrAttendancePage() {
             <p className="okrHeroSub">Weekly student attendance tracking per branch</p>
           </div>
         </div>
-        <div className="okrHeroControls">
-          <div className="okrHeroSelect">
-            <span className="okrSelectIcon">🏢</span>
-            <select value={dashBranch} onChange={e => setDashBranch(e.target.value)}>
-              <option value="">Select Branch</option>
-              {Object.entries(REGIONS).map(([region, list]) => (
-                <optgroup key={region} label={`Region ${region}`}>
-                  {list.map(b => <option key={b.name} value={b.name}>{b.name} ({b.code})</option>)}
-                </optgroup>
-              ))}
-            </select>
+        {!(activeTab === 'entry' && entryMode === 'daily') && (
+          <div className="okrHeroControls">
+            <div className="okrHeroSelect">
+              <span className="okrSelectIcon">🏢</span>
+              <select value={dashBranch} onChange={e => setDashBranch(e.target.value)}>
+                <option value="">Select Branch</option>
+                {Object.entries(REGIONS).map(([region, list]) => (
+                  <optgroup key={region} label={`Region ${region}`}>
+                    {list.map(b => <option key={b.name} value={b.name}>{b.name} ({b.code})</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <div className="okrHeroSelect">
+              <span className="okrSelectIcon">📅</span>
+              <input type="date" value={dashWeek} onChange={e => setDashWeek(e.target.value)} />
+            </div>
           </div>
-          <div className="okrHeroSelect">
-            <span className="okrSelectIcon">📅</span>
-            <input type="date" value={dashWeek} onChange={e => setDashWeek(e.target.value)} />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ── Tabs ── */}
@@ -305,6 +309,21 @@ export function OkrAttendancePage() {
           DATA ENTRY TAB
       ══════════════════════════════════════ */}
       {activeTab === 'entry' && (
+        <div className="okrEntryWrap">
+          <div className="okrEntryModeToggle">
+            <button type="button"
+              className={`okrEntryModeBtn${entryMode === 'daily' ? ' okrEntryModeBtnActive' : ''}`}
+              onClick={() => setEntryMode('daily')}>
+              📅 Daily Entry
+            </button>
+            <button type="button"
+              className={`okrEntryModeBtn${entryMode === 'weekly' ? ' okrEntryModeBtnActive' : ''}`}
+              onClick={() => setEntryMode('weekly')}>
+              📋 Weekly Entry
+            </button>
+          </div>
+
+          {entryMode === 'daily' ? <DailyBulkEntry /> : (
         <form className="okrEntryForm" onSubmit={handleSubmit}>
           <div className="okrEntryHeader">
             <h2>{editingId ? '✏️ Edit Record' : '➕ New Record'}</h2>
@@ -507,6 +526,8 @@ export function OkrAttendancePage() {
             {saveStatus === 'error' && <div className="okrSaveStatus okrSaveStatusErr">❌ Save failed — check the backend is running.</div>}
           </div>
         </form>
+          )}
+        </div>
       )}
 
       {/* ══════════════════════════════════════
