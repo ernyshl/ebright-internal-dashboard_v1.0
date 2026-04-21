@@ -40,8 +40,9 @@ export function StudentDatabasePage() {
   const activeFiltered = filtered.filter(s => s.status === 'Active');
 
   // FA stats computed from student records
-  const faInvited = activeFiltered.filter(s => s.faAttended.some(Boolean)).length;
-  const faBacklog = activeFiltered.length - faInvited;
+  const faDue     = activeFiltered.reduce((acc, s) => acc + s.faAttended.length, 0);
+  const faInvited = activeFiltered.reduce((acc, s) => acc + s.faAttended.filter(Boolean).length, 0);
+  const faBacklog = faDue - faInvited;
 
   const totals = activeFiltered.reduce(
     (acc, s) => ({
@@ -162,9 +163,10 @@ export function StudentDatabasePage() {
       </div>
 
       {/* Summary Stats — computed from student records */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
-        {statCard('FA Invited', faInvited, `/${activeFiltered.length}`, '#4f46e5', '🎓')}
-        {statCard('FA Backlog', faBacklog, `/${activeFiltered.length}`, '#ef4444', '📋')}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
+        {statCard('FA Invited', faInvited, `/${faDue}`, '#4f46e5', '🎓')}
+        {statCard('FA Due', faDue, '', '#8b5cf6', '📅')}
+        {statCard('FA Backlog', faBacklog, `/${faDue}`, '#ef4444', '📋')}
         {statCard('Total Students', students.length, '', '#6366f1', '👥')}
         {statCard('Total Active', students.filter(s=>s.status==='Active').length, ' active', '#10b981', '✅')}
       </div>
