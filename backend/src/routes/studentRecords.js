@@ -56,7 +56,7 @@ router.post('/bulk', async (req, res, next) => {
         `INSERT INTO studentrecords
            (name, status, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::jsonb,$10)`,
+         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10)`,
         s.name,
         s.status || 'Active',
         s.gender || 'Male',
@@ -84,7 +84,7 @@ router.put('/:id', async (req, res, next) => {
   try {
     await prisma.$queryRawUnsafe(
       `UPDATE studentrecords SET
-         name=$1, status=$2, gender=$3, branch=$4, enrollment_date=$5,
+         name=$1, status=$2, gender=$3, branch=$4, enrollment_date=$5::date,
          grade_chapter=$6, fa_progress_json=$7::jsonb, total_fa=$8,
          pcm_progress_json=$9::jsonb, total_pcm=$10
        WHERE id=$11`,
