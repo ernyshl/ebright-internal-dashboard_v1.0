@@ -15,7 +15,7 @@ const td = { padding:'10px 14px', fontSize:12 };
 
 export function StudentDatabasePage() {
   const navigate = useNavigate();
-  const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch, getFaStats } = useAcademy();
+  const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch } = useAcademy();
   const [branchFilter, setBranchFilter] = useState(sharedBranch);
   const [showAdd, setShowAdd] = useState(false);
   const [editStudent, setEditStudent] = useState(null);
@@ -39,8 +39,9 @@ export function StudentDatabasePage() {
   const filtered = branchFilter === 'All' ? students : students.filter(s => s.branch === branchFilter);
   const activeFiltered = filtered.filter(s => s.status === 'Active');
 
-  // FA stats pulled from FA Dashboard branch data (reactive to branch filter)
-  const faStats = getFaStats(branchFilter);
+  // FA stats computed from student records
+  const faInvited = activeFiltered.filter(s => s.faAttended.some(Boolean)).length;
+  const faBacklog = activeFiltered.length - faInvited;
 
   const totals = activeFiltered.reduce(
     (acc, s) => ({
@@ -160,12 +161,12 @@ export function StudentDatabasePage() {
         </div>
       </div>
 
-      {/* Summary Stats — FA numbers from FA Dashboard branch data */}
+      {/* Summary Stats — computed from student records */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
-        {statCard('FA Invited', faStats.invited, `/${faStats.active}`, '#4f46e5', '🎓')}
-        {statCard('FA Backlog', faStats.backlog, `/${faStats.active}`, '#ef4444', '📋')}
-        {statCard('Total Students', students.filter(s=>s.status==='Active').length, '', '#6366f1', '👥')}
-        {statCard('Showing', activeFiltered.length, branchFilter!=='All'?` in ${branchFilter}`:' (active)', '#10b981', '🔍')}
+        {statCard('FA Invited', faInvited, `/${activeFiltered.length}`, '#4f46e5', '🎓')}
+        {statCard('FA Backlog', faBacklog, `/${activeFiltered.length}`, '#ef4444', '📋')}
+        {statCard('Total Students', students.length, '', '#6366f1', '👥')}
+        {statCard('Total Active', students.filter(s=>s.status==='Active').length, ' active', '#10b981', '✅')}
       </div>
 
       {/* Branch Filter */}
