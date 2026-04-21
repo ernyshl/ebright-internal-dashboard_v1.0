@@ -1,7 +1,7 @@
 import { ALL_BRANCHES } from './constants';
 import { n } from './utils';
 
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 export const MOCK_WEEK = '2026-04-09';
 
 function lcg(seed) {
