@@ -15,7 +15,7 @@ export function HrfsLeaveTransactionPage() {
 
   useEffect(() => { setPage(1); }, [search, status, leaveType, dateFrom, dateTo]);
 
-  const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+  const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (search) params.set('search', search);
   if (status) params.set('status', status);
   if (leaveType) params.set('leave_type', leaveType);

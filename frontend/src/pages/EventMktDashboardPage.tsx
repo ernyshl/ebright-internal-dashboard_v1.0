@@ -70,9 +70,9 @@ export function EventMktDashboardPage() {
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['eventMktVenues'] });
-  const createMutation = useMutation({ mutationFn: (body) => apiFetch('/api/event-mkt/venues', { method: 'POST', body }), onSuccess: () => { invalidate(); setShowForm(false); setForm({ ...EMPTY_VENUE }); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, body }) => apiFetch(`/api/event-mkt/venues/${id}`, { method: 'PUT', body }), onSuccess: () => { invalidate(); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_VENUE }); } });
-  const deleteMutation = useMutation({ mutationFn: (id) => apiFetch(`/api/event-mkt/venues/${id}`, { method: 'DELETE' }), onSuccess: () => invalidate() });
+  const createMutation = useMutation({ mutationFn: (body: any) => apiFetch('/api/event-mkt/venues', { method: 'POST', body }), onSuccess: () => { invalidate(); setShowForm(false); setForm({ ...EMPTY_VENUE }); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, body }: { id: any; body: any }) => apiFetch(`/api/event-mkt/venues/${id}`, { method: 'PUT', body }), onSuccess: () => { invalidate(); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_VENUE }); } });
+  const deleteMutation = useMutation({ mutationFn: (id: any) => apiFetch(`/api/event-mkt/venues/${id}`, { method: 'DELETE' }), onSuccess: () => invalidate() });
 
   const venues = data?.venues || [];
 

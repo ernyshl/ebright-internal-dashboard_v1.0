@@ -20,7 +20,7 @@ export function AuditLogPage() {
 
   useEffect(() => { setPage(1); }, [type, search, dateFrom, dateTo]);
 
-  const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+  const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (type) params.set('type', type);
   if (search) params.set('search', search);
   if (dateFrom) params.set('date_from', dateFrom);

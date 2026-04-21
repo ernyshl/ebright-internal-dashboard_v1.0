@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
@@ -136,7 +136,7 @@ export function GhlLeadsCentrePage() {
     }
   };
 
-  const params = new URLSearchParams({ date_from, date_to, page, limit: PAGE_SIZE });
+  const params = new URLSearchParams({ date_from, date_to, page: String(page), limit: String(PAGE_SIZE) });
   if (stage)    params.set('stage', stage);
   if (pipeline) params.set('pipeline', pipeline);
   if (!pipeline && region) params.set('pipelines', filteredPipelines.join(','));
@@ -146,24 +146,24 @@ export function GhlLeadsCentrePage() {
     queryKey: ['ghlLeadsCentre', date_from, date_to, stage, pipeline, region, search, page],
     queryFn: () => apiFetch(`/api/ghl-stages?${params}`),
     staleTime: 2 * 60 * 1000,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     enabled: preset !== 'custom' || (!!customFrom && !!customTo),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['ghlLeadsCentre'] });
 
   const createMutation = useMutation({
-    mutationFn: (body) => apiFetch('/api/ghl-stages', { method: 'POST', body }),
+    mutationFn: (body: any) => apiFetch('/api/ghl-stages', { method: 'POST', body }),
     onSuccess: () => { invalidate(); setShowForm(false); setForm({ ...EMPTY_FORM }); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, body }) => apiFetch(`/api/ghl-stages/${id}`, { method: 'PUT', body }),
+    mutationFn: ({ id, body }: { id: any; body: any }) => apiFetch(`/api/ghl-stages/${id}`, { method: 'PUT', body }),
     onSuccess: () => { invalidate(); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_FORM }); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => apiFetch(`/api/ghl-stages/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: any) => apiFetch(`/api/ghl-stages/${id}`, { method: 'DELETE' }),
     onSuccess: () => { invalidate(); setDeleteId(null); },
   });
 

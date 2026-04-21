@@ -22,7 +22,7 @@ export function HrfsAttendancePage() {
 
   useEffect(() => { setPage(1); }, [search, dateFrom, dateTo]);
 
-  const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+  const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (search) params.set('search', search);
   if (dateFrom) params.set('date_from', dateFrom);
   if (dateTo) params.set('date_to', dateTo);

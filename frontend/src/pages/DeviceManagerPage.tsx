@@ -112,21 +112,21 @@ export function DeviceManagerPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: body => apiFetch('/api/devices', { method: 'POST', body }),
-    onSuccess: () => { qc.invalidateQueries(['devices']); setNewName(''); showToast('✅ Device created'); },
-    onError: err => showToast(`⚠️ ${err.message}`),
+    mutationFn: (body: any) => apiFetch('/api/devices', { method: 'POST', body }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['devices'] }); setNewName(''); showToast('✅ Device created'); },
+    onError: (err: any) => showToast(`⚠️ ${err.message}`),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, body }) => apiFetch(`/api/devices/${id}`, { method: 'PATCH', body }),
-    onSuccess: () => { qc.invalidateQueries(['devices']); showToast('✅ Saved'); },
-    onError: err => showToast(`⚠️ ${err.message}`),
+    mutationFn: ({ id, body }: { id: any; body: any }) => apiFetch(`/api/devices/${id}`, { method: 'PATCH', body }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['devices'] }); showToast('✅ Saved'); },
+    onError: (err: any) => showToast(`⚠️ ${err.message}`),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: id => apiFetch(`/api/devices/${id}`, { method: 'DELETE' }),
-    onSuccess: () => { qc.invalidateQueries(['devices']); showToast('🗑️ Deleted'); },
-    onError: err => showToast(`⚠️ ${err.message}`),
+    mutationFn: (id: any) => apiFetch(`/api/devices/${id}`, { method: 'DELETE' }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['devices'] }); showToast('🗑️ Deleted'); },
+    onError: (err: any) => showToast(`⚠️ ${err.message}`),
   });
 
   const handleCreate = () => {
