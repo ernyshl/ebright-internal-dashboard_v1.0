@@ -26,6 +26,7 @@ const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 const { faDashboardRouter } = require('./routes/faDashboard');
 const { hrfsRouter } = require('./routes/hrfs');
 const { okrAttendanceRouter } = require('./routes/okrAttendance');
+const { studentRecordsRouter } = require('./routes/studentRecords');
 
 const jwt = require('jsonwebtoken');
 
@@ -156,6 +157,7 @@ function createApp() {
   app.use('/api/fa-dashboard', applyRoleBasedRateLimit, faDashboardRouter);
   app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
   app.use('/api/okr-attendance', applyRoleBasedRateLimit, okrAttendanceRouter);
+  app.use('/api/student-records', applyRoleBasedRateLimit, studentRecordsRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
