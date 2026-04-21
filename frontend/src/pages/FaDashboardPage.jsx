@@ -1,10 +1,14 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
+import { clearToken, getUser } from '../lib/auth';
+import { getRoleLabel } from '../lib/roles';
+import { useAcademy } from '../context/AcademyContext';
 
 /* ─────────────────────────── Previous Snapshot (for Delta) ─────────────────────────── */
 
@@ -610,13 +614,31 @@ function dbToRow(r) {
 }
 
 export function FaDashboardPage() {
+  const navigate = useNavigate();
+  const { dbStudents, setDbStudents, sharedBranch } = useAcademy();
   const [savedData, setSavedData]   = useState(INITIAL_DATA);
   const [dbLoaded, setDbLoaded]     = useState(false);
   const [loadError, setLoadError]   = useState(null);
   const [selectedRegion, setSelectedRegion] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState(() => sharedBranch !== 'All' ? sharedBranch : '');
   const [showCrude, setShowCrude]   = useState(false);
-  const [students, setStudents]     = useState([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const user = getUser();
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+
+  function onLogout() {
+    clearToken();
+    navigate('/', { replace: true });
+  }
 
   useEffect(() => {
     apiFetch('/api/fa-dashboard')
@@ -626,6 +648,21 @@ export function FaDashboardPage() {
       })
       .catch(err => { setLoadError(err.message); setDbLoaded(true); });
   }, []);
+
+  // Load students from DB if not already loaded by Student Database page
+  useEffect(() => {
+    if (dbStudents.length === 0) {
+      apiFetch('/api/student-records')
+        .then(res => { if (res.data) setDbStudents(res.data); })
+        .catch(() => {});
+    }
+  }, []);
+
+  // Sync selectedBranch when sharedBranch changes from Student DB page
+  useEffect(() => {
+    const contextBranch = sharedBranch !== 'All' ? sharedBranch : '';
+    if (contextBranch !== selectedBranch) setSelectedBranch(contextBranch);
+  }, [sharedBranch]);
 
   async function handleSave(committed) {
     const rows = committed.map(b => ({
@@ -705,10 +742,11 @@ export function FaDashboardPage() {
     );
   }, [backlogChartData]);
 
-  const gradeChartData = useMemo(() => GRADE_OPTIONS.map(g => ({
-    grade: g,
-    count: students.filter(s => s.grade === g).length,
-  })), [students]);
+  const gradeChartData = useMemo(() => {
+    const active = dbStudents.filter(s => s.status === 'Active');
+    const byBranch = selectedBranch ? active.filter(s => s.branch === selectedBranch) : active;
+    return GRADE_OPTIONS.map(g => ({ grade: g, count: byBranch.filter(s => s.grade === g).length }));
+  }, [dbStudents, selectedBranch]);
 
   const gradeChartMax = useMemo(() => {
     const max = Math.max(...gradeChartData.map(d => d.count), 1);
@@ -728,6 +766,38 @@ export function FaDashboardPage() {
 
   return (
     <div className="dashboardPage">
+
+      {/* ── Topbar ── */}
+      <header className="topbar">
+        <div className="topbarLeft">
+          <div className="pageTitle">Ebright Internal Dashboard</div>
+          <div className="muted small">
+            {user ? `Welcome back, ${user.fullName || user.email || ''}` : 'Welcome'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="avatar avatarBrand">{initials}</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{user.fullName || user.email}</div>
+                <div className="muted small">{getRoleLabel(user.role)}</div>
+              </div>
+            </div>
+          )}
+          <button
+            className="btn btnSmall"
+            onClick={toggleTheme}
+            style={{ padding: '4px 8px', fontSize: '16px', background: 'transparent', border: 'none', cursor: 'pointer' }}
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+          <button className="btn btnSmall btnDanger" onClick={onLogout}>
+            Log out
+          </button>
+        </div>
+      </header>
 
       {/* ── Full-width Header ── */}
       <div style={{
@@ -854,21 +924,14 @@ export function FaDashboardPage() {
               <CrudeTable savedData={sortedAlpha} onSave={handleSave} />
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1.5px solid rgba(239,68,68,0.2)', boxShadow: '0 4px 24px rgba(239,68,68,0.08)' }}>
-              <div style={{
-                padding: '14px 18px', borderBottom: '1px solid rgba(239,68,68,0.15)',
-                background: 'linear-gradient(135deg, rgba(239,68,68,0.06), rgba(185,28,28,0.03))',
-                display: 'flex', alignItems: 'center', gap: 10,
-              }}>
-                <span style={{ fontSize: 20 }}>📚</span>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Student Grade Management</h3>
-                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                    Add students · Change grade · Grade chart updates instantly
-                  </p>
+            <div className="card" style={{ padding: '14px 18px', border: '1.5px solid rgba(239,68,68,0.2)', boxShadow: '0 4px 24px rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24 }}>📚</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Student grade data is synced from the Student Database</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                  {dbStudents.filter(s => s.status === 'Active').length} active students loaded · Grade chart updates automatically
                 </div>
               </div>
-              <GradeManagementTable students={students} setStudents={setStudents} />
             </div>
           </div>
         )}

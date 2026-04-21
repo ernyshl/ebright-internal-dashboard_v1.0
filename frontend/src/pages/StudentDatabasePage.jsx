@@ -1,713 +1,270 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { useNavigate } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
+import { BRANCHES } from '../lib/studentTypes';
+import { getFaCount, getPcmCount, reconcileFa, faSummary } from '../lib/studentFaLogic';
+import { useAcademy } from '../context/AcademyContext';
+import { apiFetch } from '../lib/api';
+import AddStudentModal from '../components/StudentDB/AddStudentModal';
+import EditStudentModal from '../components/StudentDB/EditStudentModal';
+import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
 
-/* ─── Constants ─────────────────────────────────────────────────────── */
-const BRANCHES = [
-  'AMP','BBB','BSP','BTHO','CJY','DA','DK','EGR',
-  'KLG','KTG','KW','ONL','PJY','RBY','SA','SHA','SP','ST','TSG',
-];
+const th = { padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', whiteSpace:'nowrap', letterSpacing:0.5 };
+const td = { padding:'10px 14px', fontSize:12 };
 
-const GRADES = [
-  'G1','G2','G3','G4','G5','G6','G7','G8',
-  'GA1','GA2','GB1','GB2',
-];
+export function StudentDatabasePage() {
+  const navigate = useNavigate();
+  const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch, getFaStats } = useAcademy();
+  const [branchFilter, setBranchFilter] = useState(sharedBranch);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editStudent, setEditStudent] = useState(null);
+  const [deleteStudent, setDeleteStudent] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-const CHAPTERS = [
-  'C1','C2','C3','C4','C5','C6',
-  'C7','C8','C9','C10','C11','C12',
-];
+  // Load from DB on mount
+  useEffect(() => {
+    setLoading(true);
+    apiFetch('/api/student-records')
+      .then(res => { if (res.data) setStudents(res.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
-function gradeIndex(grade) { return GRADES.indexOf(grade); }
-function chapterNum(chapter) { return parseInt(chapter.slice(1), 10); }
+  function handleBranchChange(branch) {
+    setBranchFilter(branch);
+    setSharedBranch(branch);
+  }
 
-/**
- * How many FA checkboxes a student should see:
- *  - gradeNum   = index + 1  (G1=1 … GB2=12)
- *  - chapter < 12  → gradeNum - 1  (current grade's FA not yet unlocked)
- *  - chapter = 12  → gradeNum      (current grade's FA now available)
- */
-function calcFaCount(grade, chapter) {
-  const gn = gradeIndex(grade) + 1;
-  if (gn <= 0) return 0;
-  const cn = chapterNum(chapter);
-  return cn < 12 ? Math.max(0, gn - 1) : gn;
-}
+  const filtered = branchFilter === 'All' ? students : students.filter(s => s.branch === branchFilter);
+  const activeFiltered = filtered.filter(s => s.status === 'Active');
 
-function resizeFaChecked(existing = [], newCount) {
-  if (existing.length === newCount) return existing;
-  if (newCount > existing.length)
-    return [...existing, ...Array(newCount - existing.length).fill(false)];
-  return existing.slice(0, newCount);
-}
+  // FA stats pulled from FA Dashboard branch data (reactive to branch filter)
+  const faStats = getFaStats(branchFilter);
 
-/**
- * Parse tab-separated Excel data.
- * Col B = index 1 (Name)
- * Col C = index 2 (Gender)
- * Col M = index 12 (Enrollment Date)
- * Col N = index 13 (Status)
- */
-function parseExcelText(text, defaultBranch = '') {
-  return text
-    .split('\n')
-    .map(line => line.trimEnd())
-    .filter(line => line.trim())
-    .map((line, i) => {
-      const cols = line.split('\t');
-      const name = (cols[1] || '').trim();
-      if (!name) return null;
-      return {
-        _pid: `preview_${Date.now()}_${i}`,
-        name,
-        gender:         (cols[2]  || '').trim(),
-        enrollmentDate: (cols[12] || '').trim(),
-        status:         (cols[13] || 'Active').trim() || 'Active',
-        grade:   'G1',
-        chapter: 'C1',
-        branch:  defaultBranch,
-      };
-    })
-    .filter(Boolean);
-}
-
-function uid() {
-  return `s_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function fmtDate(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return d;
-  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-/* ─── localStorage hook ──────────────────────────────────────────────── */
-function useLocalStorage(key, init) {
-  const [val, setVal] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(key)) ?? init; }
-    catch { return init; }
-  });
-  useEffect(() => { localStorage.setItem(key, JSON.stringify(val)); }, [key, val]);
-  return [val, setVal];
-}
-
-/* ─── Sub-components ─────────────────────────────────────────────────── */
-
-/** FA checkboxes in the main table row */
-function FaCheckboxes({ student, onToggle }) {
-  const faCount   = calcFaCount(student.grade, student.chapter);
-  const faChecked = resizeFaChecked(student.faChecked, faCount);
-  return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-      {faCount === 0 && <span className="muted small">—</span>}
-      {Array.from({ length: faCount }, (_, i) => (
-        <label
-          key={i}
-          style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' }}
-        >
-          <input
-            type="checkbox"
-            checked={faChecked[i] || false}
-            onChange={() => onToggle(i)}
-            style={{ cursor: 'pointer', accentColor: 'var(--brand)' }}
-          />
-          <span style={{ color: 'var(--textSecondary)' }}>{GRADES[i]}</span>
-        </label>
-      ))}
-    </div>
+  const totals = activeFiltered.reduce(
+    (acc, s) => ({
+      pcmTicked: acc.pcmTicked + s.pcmAttended.filter(Boolean).length,
+      pcmTotal:  acc.pcmTotal  + s.pcmAttended.length,
+    }),
+    { pcmTicked:0, pcmTotal:0 }
   );
-}
 
-/** Paste → Preview → Save modal */
-function AddModal({ onClose, onSave }) {
-  const [step, setStep]               = useState('paste');
-  const [pasteText, setPasteText]     = useState('');
-  const [defaultBranch, setDefault]   = useState('');
-  const [previewRows, setPreviewRows] = useState([]);
-
-  const handleClipboard = async () => {
+  // ── Add students (bulk insert) ────────────────────────────────────────────
+  const addStudents = useCallback(async (newStudents) => {
     try {
-      const text = await navigator.clipboard.readText();
-      setPasteText(text);
-      parseAndPreview(text);
+      const res = await apiFetch('/api/student-records/bulk', { method: 'POST', body: { students: newStudents } });
+      if (res.data) setStudents(res.data);
     } catch {
-      alert('Clipboard access denied. Please paste data manually in the text area below, then click "Parse Data".');
+      // fallback: local state
+      setStudents(prev => [...prev, ...newStudents]);
     }
-  };
+  }, [setStudents]);
 
-  const parseAndPreview = (text = pasteText) => {
-    const rows = parseExcelText(text, defaultBranch);
-    if (!rows.length) {
-      alert('No valid rows found. Make sure you copied from column A onwards in Excel.');
-      return;
-    }
-    setPreviewRows(rows);
-    setStep('preview');
-  };
-
-  const updateRow = (pid, field, value) => {
-    setPreviewRows(prev => prev.map(r => {
-      if (r._pid !== pid) return r;
-      return { ...r, [field]: value };
-    }));
-  };
-
-  const removeRow = (pid) => setPreviewRows(prev => prev.filter(r => r._pid !== pid));
-
-  const handleSave = () => {
-    const students = previewRows.map(r => ({
-      id: uid(),
-      name:           r.name,
-      gender:         r.gender,
-      enrollmentDate: r.enrollmentDate,
-      status:         r.status,
-      grade:          r.grade,
-      chapter:        r.chapter,
-      branch:         r.branch,
-      faChecked:      Array(calcFaCount(r.grade, r.chapter)).fill(false),
-    }));
-    onSave(students);
-  };
-
-  return (
-    <div className="modalOverlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: step === 'preview' ? 960 : 580, width: '95vw' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="modalHeader">
-          <span className="modalTitle">
-            {step === 'paste' ? '📋 Import Students from Excel' : `👁️ Preview — ${previewRows.length} student${previewRows.length !== 1 ? 's' : ''} detected`}
-          </span>
-          <button className="modalClose" onClick={onClose}>✕</button>
-        </div>
-
-        <div className="modalBody">
-          {step === 'paste' ? (
-            <>
-              <p style={{ color: 'var(--textSecondary)', fontSize: 14, marginBottom: 20, lineHeight: 1.6 }}>
-                In Excel, select your rows starting from <strong>column A</strong>. The system reads:
-                &nbsp;<strong>Col B</strong> → Name,&nbsp;<strong>Col C</strong> → Gender,
-                &nbsp;<strong>Col M</strong> → Enrolment Date,&nbsp;<strong>Col N</strong> → Status.
-              </p>
-
-              {/* Default branch */}
-              <div className="filterGroup" style={{ marginBottom: 20 }}>
-                <label>Default Branch (applied to all imported rows)</label>
-                <select
-                  className="filterSelect"
-                  value={defaultBranch}
-                  onChange={e => setDefault(e.target.value)}
-                  style={{ marginTop: 6 }}
-                >
-                  <option value="">— None —</option>
-                  {BRANCHES.map(b => <option key={b}>{b}</option>)}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button className="btn btnPrimary" onClick={handleClipboard}>
-                  📋 Paste from Clipboard
-                </button>
-                <span style={{ color: 'var(--muted)', fontSize: 13 }}>or paste manually below</span>
-              </div>
-
-              <textarea
-                className="input"
-                rows={8}
-                placeholder={"Paste your copied Excel rows here...\n(Select rows in Excel → Ctrl+C → click here → Ctrl+V)"}
-                value={pasteText}
-                onChange={e => setPasteText(e.target.value)}
-                style={{ fontFamily: 'monospace', fontSize: 12, resize: 'vertical' }}
-              />
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-                <button
-                  className="btn btnPrimary"
-                  onClick={() => parseAndPreview()}
-                  disabled={!pasteText.trim()}
-                >
-                  Parse Data →
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p style={{ color: 'var(--textSecondary)', fontSize: 14, marginBottom: 16 }}>
-                Verify the data, then assign <strong>Grade</strong>, <strong>Chapter</strong>, and <strong>Branch</strong> before saving.
-                Default values are <strong>G1</strong> and <strong>C1</strong>.
-              </p>
-
-              <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-                <table className="table" style={{ fontSize: 13 }}>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Name</th>
-                      <th>Gender</th>
-                      <th>Enrolment Date</th>
-                      <th>Status</th>
-                      <th>Grade</th>
-                      <th>Chapter</th>
-                      <th>Branch</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewRows.map((r, idx) => (
-                      <tr key={r._pid}>
-                        <td style={{ color: 'var(--muted)' }}>{idx + 1}</td>
-                        <td style={{ fontWeight: 600 }}>{r.name}</td>
-                        <td>{r.gender || '—'}</td>
-                        <td>{r.enrollmentDate || '—'}</td>
-                        <td>
-                          <span className={`badge ${r.status?.toLowerCase() === 'inactive' ? 'badgeInactive' : 'badgeActive'}`}>
-                            {r.status || 'Active'}
-                          </span>
-                        </td>
-                        <td>
-                          <select
-                            className="filterSelect"
-                            style={{ padding: '4px 28px 4px 8px', fontSize: 13 }}
-                            value={r.grade}
-                            onChange={e => updateRow(r._pid, 'grade', e.target.value)}
-                          >
-                            {GRADES.map(g => <option key={g}>{g}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="filterSelect"
-                            style={{ padding: '4px 28px 4px 8px', fontSize: 13 }}
-                            value={r.chapter}
-                            onChange={e => updateRow(r._pid, 'chapter', e.target.value)}
-                          >
-                            {CHAPTERS.map(c => <option key={c}>{c}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="filterSelect"
-                            style={{ padding: '4px 28px 4px 8px', fontSize: 13 }}
-                            value={r.branch}
-                            onChange={e => updateRow(r._pid, 'branch', e.target.value)}
-                          >
-                            <option value="">Select…</option>
-                            {BRANCHES.map(b => <option key={b}>{b}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <button
-                            className="actionBtn actionBtnDelete"
-                            title="Remove row"
-                            onClick={() => removeRow(r._pid)}
-                          >✕</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, gap: 12 }}>
-                <button className="btn" onClick={() => setStep('paste')}>← Back</button>
-                <button
-                  className="btn btnPrimary"
-                  onClick={handleSave}
-                  disabled={previewRows.length === 0}
-                >
-                  ✅ Save {previewRows.length} Student{previewRows.length !== 1 ? 's' : ''}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Edit single student modal */
-function EditModal({ student, onClose, onSave }) {
-  const [form, setForm] = useState(() => ({ ...student }));
-
-  const faCount   = calcFaCount(form.grade, form.chapter);
-  const faChecked = resizeFaChecked(form.faChecked || [], faCount);
-
-  const setField = (field, value) => {
-    setForm(prev => {
-      const next = { ...prev, [field]: value };
-      if (field === 'grade' || field === 'chapter') {
-        const count = calcFaCount(
-          field === 'grade'   ? value : prev.grade,
-          field === 'chapter' ? value : prev.chapter,
-        );
-        next.faChecked = resizeFaChecked(prev.faChecked || [], count);
+  // ── Update student ────────────────────────────────────────────────────────
+  const updateStudent = useCallback(async (updated) => {
+    const reconciled = {
+      ...updated,
+      faAttended:  reconcileFa(updated.faAttended,  getFaCount(updated.grade, updated.chapter)),
+      pcmAttended: reconcileFa(updated.pcmAttended, getPcmCount(updated.grade, updated.chapter)),
+    };
+    try {
+      const res = await apiFetch(`/api/student-records/${updated.id}`, { method: 'PUT', body: reconciled });
+      if (res.data) {
+        setStudents(prev => prev.map(s => s.id === updated.id ? res.data : s));
       }
+    } catch {
+      setStudents(prev => prev.map(s => s.id === updated.id ? reconciled : s));
+    }
+    setEditStudent(null);
+  }, [setStudents]);
+
+  // ── Delete student ────────────────────────────────────────────────────────
+  const deleteStudentById = useCallback(async (id) => {
+    try {
+      await apiFetch(`/api/student-records/${id}`, { method: 'DELETE' });
+    } catch { /* continue regardless */ }
+    setStudents(prev => prev.filter(s => s.id !== id));
+    setDeleteStudent(null);
+  }, [setStudents]);
+
+  // ── Toggle FA checkbox (save to DB) ──────────────────────────────────────
+  const toggleFa = useCallback(async (studentId, index) => {
+    setStudents(prev => {
+      const next = prev.map(s => {
+        if (s.id !== studentId) return s;
+        const updated = [...s.faAttended];
+        updated[index] = !updated[index];
+        const reconciled = { ...s, faAttended: updated };
+        // fire-and-forget save
+        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: reconciled }).catch(() => {});
+        return reconciled;
+      });
       return next;
     });
-  };
+  }, [setStudents]);
 
-  const toggleFa = (i) => {
-    const next = [...faChecked];
-    next[i] = !next[i];
-    setForm(prev => ({ ...prev, faChecked: next }));
-  };
+  // ── Toggle PCM checkbox ───────────────────────────────────────────────────
+  const togglePcm = useCallback(async (studentId, index) => {
+    setStudents(prev => {
+      const next = prev.map(s => {
+        if (s.id !== studentId) return s;
+        const updated = [...s.pcmAttended];
+        updated[index] = !updated[index];
+        const reconciled = { ...s, pcmAttended: updated };
+        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: reconciled }).catch(() => {});
+        return reconciled;
+      });
+      return next;
+    });
+  }, [setStudents]);
 
-  return (
-    <div className="modalOverlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modalHeader">
-          <span className="modalTitle">✏️ Edit Student</span>
-          <button className="modalClose" onClick={onClose}>✕</button>
-        </div>
-        <div className="modalBody">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {/* Name */}
-            <label className="field" style={{ gridColumn: '1 / -1' }}>
-              <div className="label">Name</div>
-              <input className="input" value={form.name} onChange={e => setField('name', e.target.value)} />
-            </label>
-
-            {/* Gender */}
-            <label className="field">
-              <div className="label">Gender</div>
-              <select className="input" value={form.gender} onChange={e => setField('gender', e.target.value)}>
-                <option value="">Select…</option>
-                <option>Male</option>
-                <option>Female</option>
-              </select>
-            </label>
-
-            {/* Status */}
-            <label className="field">
-              <div className="label">Status</div>
-              <select className="input" value={form.status} onChange={e => setField('status', e.target.value)}>
-                <option>Active</option>
-                <option>Inactive</option>
-              </select>
-            </label>
-
-            {/* Enrollment Date */}
-            <label className="field">
-              <div className="label">Enrolment Date</div>
-              <input
-                className="input"
-                type="date"
-                value={form.enrollmentDate ? (form.enrollmentDate.includes('T') ? form.enrollmentDate.split('T')[0] : form.enrollmentDate) : ''}
-                onChange={e => setField('enrollmentDate', e.target.value)}
-              />
-            </label>
-
-            {/* Branch */}
-            <label className="field">
-              <div className="label">Branch</div>
-              <select className="input" value={form.branch} onChange={e => setField('branch', e.target.value)}>
-                <option value="">Select Branch…</option>
-                {BRANCHES.map(b => <option key={b}>{b}</option>)}
-              </select>
-            </label>
-
-            {/* Grade */}
-            <label className="field">
-              <div className="label">Grade</div>
-              <select className="input" value={form.grade} onChange={e => setField('grade', e.target.value)}>
-                {GRADES.map(g => <option key={g}>{g}</option>)}
-              </select>
-            </label>
-
-            {/* Chapter */}
-            <label className="field">
-              <div className="label">Chapter</div>
-              <select className="input" value={form.chapter} onChange={e => setField('chapter', e.target.value)}>
-                {CHAPTERS.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </label>
-          </div>
-
-          {/* FA checkboxes */}
-          {faCount > 0 && (
-            <div style={{ marginTop: 20, padding: '16px 20px', background: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-              <div className="label" style={{ marginBottom: 12 }}>
-                FA Attendance &nbsp;
-                <span style={{ color: 'var(--success)', fontWeight: 700 }}>
-                  {faChecked.filter(Boolean).length}/{faCount}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                {Array.from({ length: faCount }, (_, i) => (
-                  <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 14 }}>
-                    <input
-                      type="checkbox"
-                      checked={faChecked[i] || false}
-                      onChange={() => toggleFa(i)}
-                      style={{ cursor: 'pointer', accentColor: 'var(--brand)', width: 16, height: 16 }}
-                    />
-                    <span style={{ fontWeight: 600 }}>{GRADES[i]} FA</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
-            <button className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn btnPrimary" onClick={() => onSave({ ...form, faChecked })}>
-              Save Changes
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Delete confirmation modal */
-function DeleteModal({ student, onClose, onConfirm }) {
-  return (
-    <div className="modalOverlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-        <div className="modalHeader">
-          <span className="modalTitle">🗑️ Delete Student</span>
-          <button className="modalClose" onClick={onClose}>✕</button>
-        </div>
-        <div className="modalBody">
-          <p style={{ color: 'var(--text)', lineHeight: 1.6, marginBottom: 24 }}>
-            Delete <strong>{student.name}</strong>? This cannot be undone.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <button className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn btnDanger" onClick={onConfirm}>Delete</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Main Page ──────────────────────────────────────────────────────── */
-export function StudentDatabasePage() {
-  const [students, setStudents] = useLocalStorage('ebright_students_v1', []);
-  const [branchFilter, setBranchFilter] = useState('');
-  const [search, setSearch]             = useState('');
-
-  // Modals
-  const [showAdd,  setShowAdd]  = useState(false);
-  const [editing,  setEditing]  = useState(null);   // student object
-  const [deleting, setDeleting] = useState(null);   // student object
-
-  /* ── Derived ── */
-  const filtered = students.filter(s => {
-    const matchBranch  = !branchFilter || s.branch === branchFilter;
-    const matchSearch  = !search || s.name.toLowerCase().includes(search.toLowerCase());
-    return matchBranch && matchSearch;
-  });
-
-  /* ── Handlers ── */
-  const handleAddSave = (newStudents) => {
-    setStudents(prev => [...prev, ...newStudents]);
-    setShowAdd(false);
-  };
-
-  const handleEditSave = (updatedStudent) => {
-    setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
-    setEditing(null);
-  };
-
-  const handleDelete = () => {
-    setStudents(prev => prev.filter(s => s.id !== deleting.id));
-    setDeleting(null);
-  };
-
-  const toggleFa = (studentId, faIndex) => {
-    setStudents(prev => prev.map(s => {
-      if (s.id !== studentId) return s;
-      const faCount   = calcFaCount(s.grade, s.chapter);
-      const faChecked = resizeFaChecked(s.faChecked || [], faCount);
-      faChecked[faIndex] = !faChecked[faIndex];
-      return { ...s, faChecked };
+  function exportToExcel() {
+    const data = filtered.map((s, i) => ({
+      'No.': i+1, 'Name': s.name, 'Gender': s.gender, 'Branch': s.branch,
+      'Enrollment Date': s.enrollmentDate, 'Grade': s.grade, 'Chapter': s.chapter, 'Status': s.status,
+      'FA Attended': s.faAttended.filter(Boolean).length, 'FA Total': s.faAttended.length,
+      'PCM Attended': s.pcmAttended.filter(Boolean).length, 'PCM Total': s.pcmAttended.length,
     }));
-  };
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Student Records');
+    XLSX.writeFile(wb, `student-records-${branchFilter.toLowerCase()}-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
 
-  /* ── Render ── */
+  const statCard = (label, val, sub, color, icon) => (
+    <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'var(--shadow-sm)' }}>
+      <div>
+        <p style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:0.5, margin:'0 0 4px' }}>{label}</p>
+        <p style={{ fontSize:24, fontWeight:800, color, margin:0 }}>{val}<span style={{ fontSize:14, fontWeight:500, color:'var(--muted)' }}>{sub}</span></p>
+      </div>
+      <div style={{ width:40, height:40, borderRadius:'50%', background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{icon}</div>
+    </div>
+  );
+
   return (
     <div className="dashboardPage">
-      {/* Page header */}
-      <div className="dashboardHeader">
+      {/* Header */}
+      <div style={{ marginBottom:24 }}>
         <BackButton to="/" label="Back to Home" />
-        <div style={{ marginTop: 16 }}>
-          <h1 className="pageHeaderTitle">Student Database</h1>
-          <p className="headerSubtitle">
-            {filtered.length} student{filtered.length !== 1 ? 's' : ''}
-            {branchFilter ? ` · ${branchFilter}` : ` · ${students.length} total`}
-          </p>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:12, flexWrap:'wrap', gap:12 }}>
+          <div>
+            <h1 style={{ fontSize:28, fontWeight:900, color:'var(--text)', margin:0, letterSpacing:-0.5 }}>📚 Student Database</h1>
+            <p style={{ fontSize:13, color:'var(--muted)', margin:'4px 0 0' }}>{students.length} total students</p>
+          </div>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
+            <button onClick={() => navigate('/archived-students')} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:'pointer', fontWeight:500 }}>🗂 Archived Students</button>
+            <button onClick={exportToExcel} disabled={filtered.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'none', background:'#10b981', color:'#fff', cursor:'pointer', fontWeight:600, opacity:filtered.length?1:0.4 }}>⬇ Export</button>
+            <button onClick={() => setShowAdd(true)} style={{ fontSize:13, padding:'8px 20px', borderRadius:8, border:'none', background:'#4f46e5', color:'#fff', cursor:'pointer', fontWeight:600 }}>+ Add Students</button>
+          </div>
         </div>
-        <button
-          className="btn btnPrimary btnSmall"
-          style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}
-          onClick={() => setShowAdd(true)}
-        >
-          + Add Student
-        </button>
       </div>
 
-      {/* Filter bar */}
-      <div className="filterBar">
-        <div className="filterRow">
-          {/* Search */}
-          <div className="filterGroup searchGroup">
-            <label>Search</label>
-            <div className="searchInputWrapper">
-              <span className="searchIcon">🔍</span>
-              <input
-                placeholder="Search by name…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
+      {/* Summary Stats — FA numbers from FA Dashboard branch data */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
+        {statCard('FA Invited', faStats.invited, `/${faStats.active}`, '#4f46e5', '🎓')}
+        {statCard('FA Backlog', faStats.backlog, `/${faStats.active}`, '#ef4444', '📋')}
+        {statCard('Total Students', students.filter(s=>s.status==='Active').length, '', '#6366f1', '👥')}
+        {statCard('Showing', activeFiltered.length, branchFilter!=='All'?` in ${branchFilter}`:' (active)', '#10b981', '🔍')}
+      </div>
 
-          {/* Branch filter */}
-          <div className="filterGroup">
-            <label>Branch</label>
-            <select
-              className="filterSelect"
-              value={branchFilter}
-              onChange={e => setBranchFilter(e.target.value)}
-            >
-              <option value="">All Branches</option>
-              {BRANCHES.map(b => <option key={b}>{b}</option>)}
-            </select>
-          </div>
-
-          {(branchFilter || search) && (
-            <div className="filterActions" style={{ alignSelf: 'flex-end' }}>
-              <button className="btn btnSmall clearFiltersBtn" onClick={() => { setBranchFilter(''); setSearch(''); }}>
-                Clear Filters
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Branch Filter */}
+      <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+        <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>Filter by Branch:</span>
+        <select value={branchFilter} onChange={e => handleBranchChange(e.target.value)} style={{ fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', background:'var(--bg)', color:'var(--text)', outline:'none' }}>
+          <option value="All">All Branches</option>
+          {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        {branchFilter !== 'All' && <span style={{ fontSize:13, color:'#4f46e5', fontWeight:500 }}>Showing {filtered.length} student{filtered.length!==1?'s':''} in {branchFilter}</span>}
       </div>
 
       {/* Table */}
-      <div className="tableWrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th style={{ width: 48 }}>No.</th>
-              <th>Name</th>
-              <th>Gender</th>
-              <th>Enrolment Date</th>
-              <th>Grade &amp; Chapter</th>
-              <th>FA Progress</th>
-              <th style={{ width: 90 }}>Total FA</th>
-              <th>Branch</th>
-              <th style={{ width: 90 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={9} style={{ padding: 0, border: 0 }}>
-                  <div className="emptyState">
-                    <div className="emptyStateIcon">🎓</div>
-                    <div className="emptyStateTitle">
-                      {students.length === 0 ? 'No students yet' : 'No results found'}
-                    </div>
-                    <div className="emptyStateText">
-                      {students.length === 0
-                        ? 'Click "+ Add Student" to import students from Excel.'
-                        : 'Try adjusting your search or branch filter.'}
-                    </div>
-                  </div>
-                </td>
+      {loading ? (
+        <div style={{ textAlign:'center', padding:48, color:'var(--muted)', fontSize:14 }}>Loading students…</div>
+      ) : (
+      <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:12, overflow:'hidden' }}>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
+                {['No.','Name','Gender','Branch','Enrollment Date','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Actions'].map(h => (
+                  <th key={h} style={th}>{h}</th>
+                ))}
               </tr>
-            ) : (
-              filtered.map((s, idx) => {
-                const faCount   = calcFaCount(s.grade, s.chapter);
-                const faChecked = resizeFaChecked(s.faChecked || [], faCount);
-                const faTotal   = faChecked.filter(Boolean).length;
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr><td colSpan={11} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:36 }}>🎓</span>
+                    <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>No students yet</p>
+                    <p style={{ fontSize:12, margin:0 }}>Click "Add Students" to import from Excel</p>
+                  </div>
+                </td></tr>
+              ) : filtered.map((student, idx) => {
+                const fa  = faSummary(student.faAttended);
+                const pcm = faSummary(student.pcmAttended);
                 return (
-                  <tr key={s.id}>
-                    <td style={{ color: 'var(--muted)', textAlign: 'center' }}>{idx + 1}</td>
-
-                    {/* Name + badge */}
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 600 }}>{s.name}</span>
-                        <span className={`badge ${s.status?.toLowerCase() === 'inactive' ? 'badgeInactive' : 'badgeActive'}`}>
-                          {s.status || 'Active'}
-                        </span>
+                  <tr key={student.id} style={{ borderTop:'1px solid var(--border)' }}>
+                    <td style={{ ...td, color:'var(--muted)' }}>{idx+1}</td>
+                    <td style={td}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <span style={{ fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{student.name}</span>
+                        <span style={{ fontSize:10, padding:'2px 7px', borderRadius:99, fontWeight:600, background:student.status==='Active'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.12)', color:student.status==='Active'?'#16a34a':'#dc2626' }}>{student.status}</span>
                       </div>
                     </td>
-
-                    <td>{s.gender || '—'}</td>
-                    <td>{fmtDate(s.enrollmentDate)}</td>
-
-                    {/* Grade & Chapter */}
-                    <td>
-                      <span style={{ fontWeight: 700, color: 'var(--text)' }}>{s.grade}</span>
-                      <span style={{ color: 'var(--muted)' }}> – </span>
-                      <span style={{ color: 'var(--textSecondary)' }}>{s.chapter}</span>
-                    </td>
+                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.gender}</td>
+                    <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{student.branch}</span></td>
+                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.enrollmentDate||'—'}</td>
+                    <td style={td}><span style={{ fontSize:11, padding:'4px 8px', borderRadius:6, fontWeight:600, background:'rgba(139,92,246,0.1)', color:'#7c3aed', whiteSpace:'nowrap' }}>{student.grade} — {student.chapter}</span></td>
 
                     {/* FA checkboxes */}
-                    <td>
-                      <FaCheckboxes
-                        student={s}
-                        onToggle={(i) => toggleFa(s.id, i)}
-                      />
+                    <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:4, minWidth:80 }}>
+                        {student.faAttended.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
+                         : student.faAttended.map((checked,i) => (
+                          <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
+                            <input type="checkbox" checked={checked} onChange={() => toggleFa(student.id,i)} style={{ accentColor:'#4f46e5', cursor:'pointer' }} />
+                            <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
+                          </label>
+                        ))}
+                      </div>
                     </td>
+                    <td style={td}><span style={{ fontSize:14, fontWeight:700, color:fa.total===0?'var(--muted)':fa.attended===fa.total?'#16a34a':'#4f46e5' }}>{fa.attended}/{fa.total}</span></td>
 
-                    {/* Total FA */}
-                    <td style={{ textAlign: 'center' }}>
-                      {faCount > 0 ? (
-                        <span style={{
-                          fontWeight: 700,
-                          color: faTotal === faCount && faCount > 0
-                            ? 'var(--success)'
-                            : faTotal > 0 ? 'var(--warning)' : 'var(--muted)',
-                        }}>
-                          {faTotal}/{faCount}
-                        </span>
-                      ) : (
-                        <span className="muted small">—</span>
-                      )}
+                    {/* PCM checkboxes */}
+                    <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:4, minWidth:80 }}>
+                        {student.pcmAttended.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
+                         : student.pcmAttended.map((checked,i) => (
+                          <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
+                            <input type="checkbox" checked={checked} onChange={() => togglePcm(student.id,i)} style={{ accentColor:'#f59e0b', cursor:'pointer' }} />
+                            <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
+                          </label>
+                        ))}
+                      </div>
                     </td>
-
-                    <td>{s.branch || <span className="muted small">—</span>}</td>
+                    <td style={td}><span style={{ fontSize:14, fontWeight:700, color:pcm.total===0?'var(--muted)':pcm.attended===pcm.total?'#16a34a':'#f59e0b' }}>{pcm.attended}/{pcm.total}</span></td>
 
                     {/* Actions */}
-                    <td>
-                      <div className="actionButtons">
-                        <button
-                          className="actionBtn actionBtnEdit"
-                          title="Edit"
-                          onClick={() => setEditing(s)}
-                        >✏️</button>
-                        <button
-                          className="actionBtn actionBtnDelete"
-                          title="Delete"
-                          onClick={() => setDeleting(s)}
-                        >🗑️</button>
+                    <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={() => setEditStudent(student)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'rgba(59,130,246,0.12)', color:'#2563eb', cursor:'pointer', fontWeight:600 }}>Edit</button>
+                        <button onClick={() => setDeleteStudent(student)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'rgba(239,68,68,0.1)', color:'#dc2626', cursor:'pointer', fontWeight:600 }}>Delete</button>
                       </div>
                     </td>
                   </tr>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
+      )}
 
-      {/* Modals */}
-      {showAdd   && <AddModal    onClose={() => setShowAdd(false)}   onSave={handleAddSave} />}
-      {editing   && <EditModal   student={editing}  onClose={() => setEditing(null)}  onSave={handleEditSave} />}
-      {deleting  && <DeleteModal student={deleting} onClose={() => setDeleting(null)} onConfirm={handleDelete} />}
+      {showAdd     && <AddStudentModal    onClose={() => setShowAdd(false)}      onAdd={addStudents} />}
+      {editStudent && <EditStudentModal   student={editStudent} onClose={() => setEditStudent(null)}   onSave={updateStudent} />}
+      {deleteStudent && <DeleteConfirmModal student={deleteStudent} onClose={() => setDeleteStudent(null)} onConfirm={() => deleteStudentById(deleteStudent.id)} />}
     </div>
   );
 }

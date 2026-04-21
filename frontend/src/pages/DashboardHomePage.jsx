@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
+import { getUser } from '../lib/auth';
 
 export function DashboardHomePage({ previewMode = false }) {
   const navigate = useNavigate();
@@ -28,6 +29,15 @@ export function DashboardHomePage({ previewMode = false }) {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+      ]
+    },
+    {
+      id: 'fa_testing',
+      name: 'FA Dashboard Testing',
+      icon: '🧪',
+      color: '#6366f1',
+      links: [
         { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
       ]
     },
@@ -133,7 +143,8 @@ export function DashboardHomePage({ previewMode = false }) {
       icon: '📚',
       color: '#7c3aed',
       links: [
-        { label: 'Student Database', path: '/student-database', dashboard: 'student_db' },
+        { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
+        { label: '🗂 Archived Students', path: '/archived-students', dashboard: 'student_db' },
       ]
     },
     {
@@ -176,12 +187,15 @@ export function DashboardHomePage({ previewMode = false }) {
     }
   ];
 
+  // When no user session, show all dashboards (local preview mode)
+  const noAuth = !getUser();
+
   // In preview mode, remap auth-protected routes to their preview equivalents
   const PREVIEW_ROUTE_MAP = { '/okr-attendance': '/okr-preview' };
   const resolvePreviewPath = (path) => previewMode ? (PREVIEW_ROUTE_MAP[path] ?? path) : path;
 
-  // Filter departments based on permissions (skipped in preview mode)
-  const filteredDepartments = previewMode
+  // Filter departments based on permissions (skipped in preview mode or when no auth)
+  const filteredDepartments = (previewMode || noAuth)
     ? departmentData.map(dept => ({
         ...dept,
         links: dept.links.map(link => ({ ...link, path: resolvePreviewPath(link.path) })),

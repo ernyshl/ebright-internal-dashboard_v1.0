@@ -44,6 +44,7 @@ import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
 import { UiUxTestingPage } from './pages/UiUxTestingPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
+import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
 
 export default function App() {
@@ -52,11 +53,10 @@ export default function App() {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/tv" element={<TvPage />} />
-      <Route path="/fa-dashboard" element={<FaDashboardPage />} />
-      <Route path="/okr-preview" element={<OkrAttendancePage />} />
-      <Route path="/home-preview" element={<DashboardHomePage previewMode />} />
 
       <Route element={<RequireAuth />}>
+        <Route path="/fa-dashboard" element={<FaDashboardPage />} />
+        <Route path="/okr-preview" element={<OkrAttendancePage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />
           <Route path="/events" element={
@@ -174,6 +174,9 @@ export default function App() {
           } />
           <Route path="/student-database" element={
             <RequirePermission dashboard="student_db"><StudentDatabasePage /></RequirePermission>
+          } />
+          <Route path="/archived-students" element={
+            <RequirePermission dashboard="student_db"><ArchivedStudentsPage /></RequirePermission>
           } />
           <Route path="/okr-attendance" element={
             <RequirePermission dashboard="operations"><OkrAttendancePage /></RequirePermission>
