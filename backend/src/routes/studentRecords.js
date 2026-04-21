@@ -13,7 +13,7 @@ function rowToStudent(r) {
     status:         r.status,
     gender:         r.gender,
     branch:         r.branch,
-    enrollmentDate: r.enrollment_date ? String(r.enrollment_date).slice(0, 10) : '',
+    enrollmentDate: r.enrollment_date ? new Date(r.enrollment_date).toISOString().slice(0, 10) : '',
     grade,
     chapter,
     faAttended:     Array.isArray(r.fa_progress_json)  ? r.fa_progress_json  : [],
