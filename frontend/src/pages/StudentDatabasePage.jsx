@@ -21,13 +21,15 @@ export function StudentDatabasePage() {
   const [editStudent, setEditStudent] = useState(null);
   const [deleteStudent, setDeleteStudent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   // Load from DB on mount
   useEffect(() => {
     setLoading(true);
+    setApiError('');
     apiFetch('/api/student-records')
       .then(res => { if (res.data) setStudents(res.data); })
-      .catch(() => {})
+      .catch((err) => { setApiError(err?.message || 'Failed to load students'); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -75,7 +77,8 @@ export function StudentDatabasePage() {
       if (res.data) {
         setStudents(prev => prev.map(s => s.id === updated.id ? res.data : s));
       }
-    } catch {
+    } catch (err) {
+      setApiError(`Save failed: ${err?.message || 'unknown error'} (id=${updated.id})`);
       setStudents(prev => prev.map(s => s.id === updated.id ? reconciled : s));
     }
     setEditStudent(null);
@@ -161,6 +164,8 @@ export function StudentDatabasePage() {
           </div>
         </div>
       </div>
+
+      {apiError && <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:8, padding:'10px 16px', marginBottom:12, fontSize:13, color:'#dc2626' }}>⚠ API Error: {apiError}</div>}
 
       {/* Summary Stats — computed from student records */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
