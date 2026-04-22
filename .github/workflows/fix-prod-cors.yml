@@ -7,7 +7,7 @@ jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
-      - name: Diagnose, patch CORS, restart backend
+      - name: Patch app.js CORS directly + rebuild backend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.174
@@ -15,47 +15,38 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
             echo "=== Docker containers ==="
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
+            docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || true
 
-            echo "=== Finding app directory ==="
-            find /home/staff1 -name "docker-compose.yml" -o -name "docker-compose.yaml" 2>/dev/null | head -5
+            echo "=== deploy-prod.sh contents ==="
+            cat /home/staff1/deploy-prod.sh 2>/dev/null || echo "not found"
 
-            echo "=== Finding .env files ==="
-            find /home/staff1 -name ".env" 2>/dev/null
+            echo "=== Finding all app.js with CORS code ==="
+            find / -name "app.js" -path "*/src/app.js" 2>/dev/null | grep -v node_modules | head -20
 
-            echo "=== Patching CORS + NODE_ENV in all .env files ==="
-            for f in $(find /home/staff1 -name ".env" 2>/dev/null); do
-              echo "--- $f ---"
-              cat "$f" | grep -iE "cors|node_env" || echo "(no CORS/NODE_ENV line)"
-
-              # Patch CORS_ORIGIN
-              if grep -q "CORS_ORIGIN" "$f"; then
-                sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f"
-              else
-                echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
+            echo "=== Patching CORS in every app.js found ==="
+            for f in $(find / -name "app.js" -path "*/src/app.js" 2>/dev/null | grep -v node_modules); do
+              if grep -q "Not allowed by CORS" "$f"; then
+                echo "Patching: $f"
+                # Add ebright.my allow rule before the reject line
+                sed -i "s|callback(new Error('Not allowed by CORS'))|if (/^https?:\\/\\/[a-z0-9-]+\\.ebright\\.my\$/.test(origin)) return callback(null, true);\n      callback(new Error('Not allowed by CORS'))|" "$f" 2>/dev/null || true
+                echo "Done: $f"
+                grep -A2 "ebright" "$f" | head -5
               fi
-
-              # Patch NODE_ENV — must be 'production' for CORS to allow non-localhost origins
-              if grep -q "NODE_ENV" "$f"; then
-                sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$f"
-              else
-                echo "NODE_ENV=production" >> "$f"
-              fi
-
-              echo "After patch:"
-              grep -iE "cors|node_env" "$f"
             done
 
-            echo "=== Restarting all running backend containers ==="
-            for name in $(docker ps --format "{{.Names}}" 2>/dev/null | grep -i back); do
-              echo "Restarting container: $name"
-              docker restart "$name" || true
-            done
-            # Also try by compose file location
-            for dir in $(find /home/staff1 -name "docker-compose.yml" -exec dirname {} \; 2>/dev/null); do
-              echo "Trying compose restart in $dir"
-              cd "$dir"
-              docker compose restart backend 2>/dev/null || docker-compose restart backend 2>/dev/null || true
+            echo "=== Patching all .env files ==="
+            for f in $(find / -name ".env" 2>/dev/null | grep -v node_modules | grep -v proc); do
+              grep -q "CORS_ORIGIN" "$f" && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f" || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
+              grep -q "NODE_ENV" "$f" && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$f" || echo "NODE_ENV=production" >> "$f"
+              echo "Patched: $f"
             done
 
+            echo "=== Restarting backend (all methods) ==="
+            # Docker restart all backend-related containers
+            for name in $(docker ps --format "{{.Names}}" 2>/dev/null); do
+              echo "Restarting: $name"
+              docker restart "$name" 2>/dev/null || true
+            done
+            # PM2
+            pm2 restart all 2>/dev/null || true
             echo "=== Done ==="
