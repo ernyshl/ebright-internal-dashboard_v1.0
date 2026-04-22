@@ -150,8 +150,8 @@ export function OkrAttendancePage() {
           setTimeout(() => setSaveStatus(null), 4000);
           if (!editingId) resetForm();
         },
-        onError: (e) => {
-          setSaveStatus('error');
+        onError: (e: any) => {
+          setSaveStatus(e?.status === 401 ? 'auth' : 'error');
           setTimeout(() => setSaveStatus(null), 6000);
           console.error('Save error:', e);
         },
@@ -524,6 +524,7 @@ export function OkrAttendancePage() {
             </button>
             {saveStatus === 'ok'    && <div className="okrSaveStatus okrSaveStatusOk">✅ Saved successfully!</div>}
             {saveStatus === 'error' && <div className="okrSaveStatus okrSaveStatusErr">❌ Save failed — check the backend is running.</div>}
+            {saveStatus === 'auth'  && <div className="okrSaveStatus okrSaveStatusErr">🔒 Session expired — please log in again.</div>}
           </div>
         </form>
           )}

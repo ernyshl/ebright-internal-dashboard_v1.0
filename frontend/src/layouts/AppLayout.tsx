@@ -2,7 +2,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
-import { apiFetch } from '../lib/api';
+import { apiFetch, ApiError } from '../lib/api';
 import { clearToken } from '../lib/auth';
 import { getRoleLabel } from '../lib/roles';
 
@@ -27,6 +27,13 @@ export function AppLayout() {
     staleTime: 60_000,
     retry: false,
   });
+
+  useEffect(() => {
+    if (me.isError && (me.error as ApiError)?.status === 401) {
+      clearToken();
+      navigate('/login', { replace: true });
+    }
+  }, [me.isError, me.error, navigate]);
 
   const user = me.data?.user;
   const initials = user?.fullName
