@@ -12,16 +12,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Upload source to server
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          VITE_API_BASE_URL="" npm run build
+
+      - name: Upload dist and nginx config to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 103.209.156.225
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
-          source: "frontend,nginx,backend,docker-compose.yml"
+          source: "frontend/dist,nginx"
           target: /home/deploy/apps/ebright-dashboard
 
-      - name: Rebuild and restart Docker
+      - name: Rebuild nginx and restart
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.225
@@ -29,6 +35,8 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             cd /home/deploy/apps/ebright-dashboard
-            docker compose down 2>/dev/null || docker-compose down || true
+            docker compose stop nginx 2>/dev/null || docker-compose stop nginx || true
+            docker compose rm -f nginx 2>/dev/null || docker-compose rm -f nginx || true
             docker compose build --no-cache nginx 2>/dev/null || docker-compose build --no-cache nginx
             docker compose up -d 2>/dev/null || docker-compose up -d
+            echo "Done!"
