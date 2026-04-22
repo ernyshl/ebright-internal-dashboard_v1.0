@@ -36,13 +36,15 @@ export function StudentDatabasePage() {
   const [deleteAllBranch, setDeleteAllBranch] = useState('All');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   // Load from DB on mount
   useEffect(() => {
     setLoading(true);
+    setApiError('');
     apiFetch('/api/student-records')
       .then(res => { if (res.data) setStudents(res.data); })
-      .catch(() => {})
+      .catch((err) => { setApiError(err?.message || 'Failed to load students'); })
       .finally(() => setLoading(false));
   }, []);
 
