@@ -18,12 +18,14 @@ jobs:
           command_timeout: 30m
           script: |
             /home/staff1/deploy-prod.sh dashboard
-            # Ensure CORS is correct after every deploy
-            find /home/staff1 -name ".env" -path "*/backend*" 2>/dev/null | while read f; do
-              if grep -q "CORS_ORIGIN" "$f"; then
-                sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f"
-              else
-                echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
-              fi
+            # Patch env vars
+            for f in $(find /home/staff1 -name ".env" 2>/dev/null); do
+              grep -q "CORS_ORIGIN" "$f" && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f" || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
+              grep -q "NODE_ENV" "$f" && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$f" || echo "NODE_ENV=production" >> "$f"
             done
-            docker compose restart backend 2>/dev/null || docker-compose restart backend 2>/dev/null || true
+            # Rebuild backend with new code then restart all services
+            for dir in $(find /home/staff1 -name "docker-compose.yml" -exec dirname {} \; 2>/dev/null); do
+              cd "$dir"
+              docker compose build --no-cache backend 2>/dev/null || docker-compose build --no-cache backend 2>/dev/null || true
+              docker compose up -d 2>/dev/null || docker-compose up -d 2>/dev/null || true
+            done

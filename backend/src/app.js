@@ -95,7 +95,8 @@ function createApp() {
   const corsOptions = {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
+      if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+      if (/^https?:\/\/[a-z0-9-]+\.ebright\.my$/.test(origin)) return callback(null, true);
       if (origin === env.CORS_ORIGIN) return callback(null, true);
       callback(new Error('Not allowed by CORS'));
     },
