@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 
 import { REGIONS, BRANCH_META, DAYS, EMPTY_FORM } from '../lib/okr/constants';
@@ -10,6 +11,7 @@ import { RateBar } from '../components/okr/RateBar';
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
 import { AllBranchesGrid } from '../components/okr/AllBranchesGrid';
 import { DailyBulkEntry } from '../components/okr/DailyBulkEntry';
+import { DailyAttendanceView } from '../components/okr/DailyAttendanceView';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
 const TABS = [
@@ -19,15 +21,19 @@ const TABS = [
 ];
 
 export function OkrAttendancePage() {
+  const [searchParams] = useSearchParams();
+  const initMode = searchParams.get('mode') === 'weekly' ? 'weekly' : 'daily';
+
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [editingId, setEditingId]       = useState(null);
-  const [activeTab, setActiveTab]       = useState('dashboard');
+  const [activeTab, setActiveTab]       = useState(initMode === 'weekly' ? 'entry' : 'dashboard');
+  const [dashView, setDashView]         = useState<'weekly' | 'daily'>('weekly');
   const [dashBranch, setDashBranch]     = useState('');
   const [dashWeek, setDashWeek]         = useState(USE_MOCK ? MOCK_WEEK : '');
   const [filterBranch, setFilterBranch] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [saveStatus, setSaveStatus]     = useState(null);
-  const [entryMode, setEntryMode]       = useState('daily');
+  const [entryMode, setEntryMode]       = useState(initMode);
   const [showPcMeetup, setShowPcMeetup] = useState(false);
   const [pasteStatus, setPasteStatus]   = useState(null);
   const [pastePreview, setPastePreview] = useState(null);
@@ -215,7 +221,34 @@ export function OkrAttendancePage() {
       ══════════════════════════════════════ */}
       {activeTab === 'dashboard' && (
         <div className="okrDashWrap">
-          {!dashWeek ? (
+
+          {/* ── Weekly / Daily view toggle ── */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            <button type="button"
+              onClick={() => setDashView('weekly')}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                background: dashView === 'weekly' ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                color: dashView === 'weekly' ? '#fff' : '#374151',
+              }}>
+              📋 Weekly View
+            </button>
+            <button type="button"
+              onClick={() => setDashView('daily')}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                background: dashView === 'daily' ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                color: dashView === 'daily' ? '#fff' : '#374151',
+              }}>
+              📅 Daily View
+            </button>
+          </div>
+
+          {/* ── Daily View ── */}
+          {dashView === 'daily' && <DailyAttendanceView />}
+
+          {/* ── Weekly View ── */}
+          {dashView === 'weekly' && (!dashWeek ? (
             <div className="okrEmptyHero">
               <div className="okrEmptyIcon">📅</div>
               <h3>Select a week date above</h3>
@@ -301,7 +334,7 @@ export function OkrAttendancePage() {
                 </>
               )}
             </>
-          )}
+          ))}
         </div>
       )}
 

@@ -9,10 +9,40 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to staging server
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          VITE_API_BASE_URL="" npm run build
+
+      - name: Upload dist and nginx config to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 103.209.156.225
+          username: deploy
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "frontend/dist,nginx"
+          target: /home/deploy/apps/ebright-dashboard
+
+      - name: Rebuild nginx and restart
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.225
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
-          script: /home/deploy/deploy.sh dashboard
+          script: |
+            cd /home/deploy/apps/ebright-dashboard
+            # Ensure CORS_ORIGIN is set correctly in staging .env
+            sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://staging-dashboard.ebright.my|' backend/.env 2>/dev/null \
+              || echo "CORS_ORIGIN=https://staging-dashboard.ebright.my" >> backend/.env
+            # Restart backend to pick up the env change
+            docker compose restart backend 2>/dev/null || docker-compose restart backend || true
+            # Rebuild and restart nginx with new frontend
+            docker compose stop nginx 2>/dev/null || docker-compose stop nginx || true
+            docker compose rm -f nginx 2>/dev/null || docker-compose rm -f nginx || true
+            docker compose build --no-cache nginx 2>/dev/null || docker-compose build --no-cache nginx
+            docker compose up -d 2>/dev/null || docker-compose up -d
+            echo "Done!"
