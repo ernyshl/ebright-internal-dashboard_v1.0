@@ -7,35 +7,22 @@ jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
-      - name: Restore app.js from git and rebuild backend
+      - name: Fix backend on production
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.174
           username: staff1
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
+            set -e
             cd /home/staff1/ebright-dashboard
-
-            echo "=== Restoring app.js from git (removes broken sed patch) ==="
             git checkout backend/src/app.js
             git pull origin master
-
-            echo "=== Current CORS section ==="
-            grep -A8 "corsOptions" backend/src/app.js | head -15
-
-            echo "=== Patching backend .env ==="
             grep -q "CORS_ORIGIN" backend/.env && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' backend/.env || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> backend/.env
             grep -q "NODE_ENV" backend/.env && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' backend/.env || echo "NODE_ENV=production" >> backend/.env
-            echo "=== backend/.env CORS/NODE lines ==="
-            grep -E "CORS|NODE_ENV" backend/.env
-
-            echo "=== Rebuilding and restarting backend container ==="
             docker compose stop backend
             docker compose rm -f backend
             docker compose build --no-cache backend
-            docker compose up -d backend
-
-            echo "=== Waiting 5s then checking status ==="
+            docker compose up -d
             sleep 5
-            docker ps --format "table {{.Names}}\t{{.Status}}"
-            echo "=== Done ==="
+            docker ps
