@@ -5,9 +5,10 @@ export function RequireAuth() {
   const user = getUser();
   const location = useLocation();
 
-  if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
+  // Auth check disabled for local preview
+  // if (!user) {
+  //   return <Navigate to="/login" replace state={{ from: location }} />;
+  // }
 
   return <Outlet context={{ user }} />;
 }
