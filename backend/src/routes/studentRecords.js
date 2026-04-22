@@ -107,6 +107,17 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
+// ── DELETE /api/student-records  (delete ALL) ────────────────────────────────
+
+router.delete('/', async (req, res, next) => {
+  try {
+    await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+    return res.json({ ok: true });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // ── DELETE /api/student-records/:id ─────────────────────────────────────────
 
 router.delete('/:id', async (req, res, next) => {

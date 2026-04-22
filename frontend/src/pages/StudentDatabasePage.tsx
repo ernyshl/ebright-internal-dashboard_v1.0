@@ -10,16 +10,20 @@ import AddStudentModal from '../components/StudentDB/AddStudentModal';
 import EditStudentModal from '../components/StudentDB/EditStudentModal';
 import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
 
-const th = { padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', whiteSpace:'nowrap', letterSpacing:0.5 };
+const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
 const td = { padding:'10px 14px', fontSize:12 };
 
 export function StudentDatabasePage() {
   const navigate = useNavigate();
   const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch } = useAcademy();
   const [branchFilter, setBranchFilter] = useState(sharedBranch);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
-  const [editStudent, setEditStudent] = useState(null);
-  const [deleteStudent, setDeleteStudent] = useState(null);
+  const [editStudent, setEditStudent] = useState<any>(null);
+  const [deleteStudent, setDeleteStudent] = useState<any>(null);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Load from DB on mount
@@ -31,40 +35,34 @@ export function StudentDatabasePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleBranchChange(branch) {
+  function handleBranchChange(branch: string) {
     setBranchFilter(branch);
     setSharedBranch(branch);
   }
 
-  const filtered = branchFilter === 'All' ? students : students.filter(s => s.branch === branchFilter);
-  const activeFiltered = filtered.filter(s => s.status === 'Active');
+  const branchFiltered = branchFilter === 'All' ? students : students.filter(s => s.branch === branchFilter);
+  const activeFiltered = branchFiltered.filter(s => s.status === 'Active');
 
-  // FA stats computed from student records
+  const q = searchQuery.trim().toLowerCase();
+  const displayed = q ? branchFiltered.filter(s => s.name.toLowerCase().includes(q)) : branchFiltered;
+
+  // FA stats computed from branch-filtered active students (not search-filtered)
   const faDue     = activeFiltered.reduce((acc, s) => acc + s.faAttended.length, 0);
   const faInvited = activeFiltered.reduce((acc, s) => acc + s.faAttended.filter(Boolean).length, 0);
   const faBacklog = faDue - faInvited;
 
-  const totals = activeFiltered.reduce(
-    (acc, s) => ({
-      pcmTicked: acc.pcmTicked + s.pcmAttended.filter(Boolean).length,
-      pcmTotal:  acc.pcmTotal  + s.pcmAttended.length,
-    }),
-    { pcmTicked:0, pcmTotal:0 }
-  );
-
   // ── Add students (bulk insert) ────────────────────────────────────────────
-  const addStudents = useCallback(async (newStudents) => {
+  const addStudents = useCallback(async (newStudents: any[]) => {
     try {
       const res = await apiFetch('/api/student-records/bulk', { method: 'POST', body: { students: newStudents } });
       if (res.data) setStudents(res.data);
     } catch {
-      // fallback: local state
-      setStudents(prev => [...prev, ...newStudents]);
+      setStudents((prev: any[]) => [...prev, ...newStudents]);
     }
   }, [setStudents]);
 
   // ── Update student ────────────────────────────────────────────────────────
-  const updateStudent = useCallback(async (updated) => {
+  const updateStudent = useCallback(async (updated: any) => {
     const reconciled = {
       ...updated,
       faAttended:  reconcileFa(updated.faAttended,  getFaCount(updated.grade, updated.chapter)),
@@ -73,32 +71,47 @@ export function StudentDatabasePage() {
     try {
       const res = await apiFetch(`/api/student-records/${updated.id}`, { method: 'PUT', body: reconciled });
       if (res.data) {
-        setStudents(prev => prev.map(s => s.id === updated.id ? res.data : s));
+        setStudents((prev: any[]) => prev.map(s => s.id === updated.id ? res.data : s));
       }
     } catch {
-      setStudents(prev => prev.map(s => s.id === updated.id ? reconciled : s));
+      setStudents((prev: any[]) => prev.map(s => s.id === updated.id ? reconciled : s));
     }
     setEditStudent(null);
   }, [setStudents]);
 
   // ── Delete student ────────────────────────────────────────────────────────
-  const deleteStudentById = useCallback(async (id) => {
+  const deleteStudentById = useCallback(async (id: number) => {
     try {
       await apiFetch(`/api/student-records/${id}`, { method: 'DELETE' });
     } catch { /* continue regardless */ }
-    setStudents(prev => prev.filter(s => s.id !== id));
+    setStudents((prev: any[]) => prev.filter(s => s.id !== id));
     setDeleteStudent(null);
   }, [setStudents]);
 
+  // ── Delete ALL students ───────────────────────────────────────────────────
+  const deleteAllStudents = useCallback(async () => {
+    setDeleteAllLoading(true);
+    try {
+      await apiFetch('/api/student-records', { method: 'DELETE' });
+      setStudents([]);
+      setShowDeleteAll(false);
+      setSuccessMsg('All records cleared successfully.');
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch {
+      setShowDeleteAll(false);
+    } finally {
+      setDeleteAllLoading(false);
+    }
+  }, [setStudents]);
+
   // ── Toggle FA checkbox (save to DB) ──────────────────────────────────────
-  const toggleFa = useCallback(async (studentId, index) => {
-    setStudents(prev => {
+  const toggleFa = useCallback(async (studentId: number, index: number) => {
+    setStudents((prev: any[]) => {
       const next = prev.map(s => {
         if (s.id !== studentId) return s;
         const updated = [...s.faAttended];
         updated[index] = !updated[index];
         const reconciled = { ...s, faAttended: updated };
-        // fire-and-forget save
         apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: reconciled }).catch(() => {});
         return reconciled;
       });
@@ -107,8 +120,8 @@ export function StudentDatabasePage() {
   }, [setStudents]);
 
   // ── Toggle PCM checkbox ───────────────────────────────────────────────────
-  const togglePcm = useCallback(async (studentId, index) => {
-    setStudents(prev => {
+  const togglePcm = useCallback(async (studentId: number, index: number) => {
+    setStudents((prev: any[]) => {
       const next = prev.map(s => {
         if (s.id !== studentId) return s;
         const updated = [...s.pcmAttended];
@@ -122,7 +135,7 @@ export function StudentDatabasePage() {
   }, [setStudents]);
 
   function exportToExcel() {
-    const data = filtered.map((s, i) => ({
+    const data = displayed.map((s, i) => ({
       'No.': i+1, 'Name': s.name, 'Gender': s.gender, 'Branch': s.branch,
       'Enrollment Date': s.enrollmentDate, 'Grade': s.grade, 'Chapter': s.chapter, 'Status': s.status,
       'FA Attended': s.faAttended.filter(Boolean).length, 'FA Total': s.faAttended.length,
@@ -134,7 +147,7 @@ export function StudentDatabasePage() {
     XLSX.writeFile(wb, `student-records-${branchFilter.toLowerCase()}-${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
-  const statCard = (label, val, sub, color, icon) => (
+  const statCard = (label: string, val: any, sub: string, color: string, icon: string) => (
     <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'var(--shadow-sm)' }}>
       <div>
         <p style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:0.5, margin:'0 0 4px' }}>{label}</p>
@@ -156,13 +169,21 @@ export function StudentDatabasePage() {
           </div>
           <div style={{ display:'flex', gap:10, flexWrap:'wrap', alignItems:'center' }}>
             <button onClick={() => navigate('/archived-students')} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:'pointer', fontWeight:500 }}>🗂 Archived Students</button>
-            <button onClick={exportToExcel} disabled={filtered.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'none', background:'#10b981', color:'#fff', cursor:'pointer', fontWeight:600, opacity:filtered.length?1:0.4 }}>⬇ Export</button>
+            <button onClick={exportToExcel} disabled={displayed.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'none', background:'#10b981', color:'#fff', cursor:'pointer', fontWeight:600, opacity:displayed.length?1:0.4 }}>⬇ Export</button>
             <button onClick={() => setShowAdd(true)} style={{ fontSize:13, padding:'8px 20px', borderRadius:8, border:'none', background:'#4f46e5', color:'#fff', cursor:'pointer', fontWeight:600 }}>+ Add Students</button>
+            <button onClick={() => setShowDeleteAll(true)} disabled={students.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid #dc2626', background:'rgba(239,68,68,0.08)', color:'#dc2626', cursor:'pointer', fontWeight:600, opacity:students.length?1:0.4 }}>🗑 Delete All</button>
           </div>
         </div>
       </div>
 
-      {/* Summary Stats — computed from student records */}
+      {/* Success notification */}
+      {successMsg && (
+        <div style={{ background:'#dcfce7', border:'1px solid #86efac', borderRadius:8, padding:'10px 16px', marginBottom:12, fontSize:13, color:'#16a34a', fontWeight:500 }}>
+          ✅ {successMsg}
+        </div>
+      )}
+
+      {/* Summary Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
         {statCard('FA Invited', faInvited, `/${faDue}`, '#4f46e5', '🎓')}
         {statCard('FA Due', faDue, '', '#8b5cf6', '📅')}
@@ -171,14 +192,38 @@ export function StudentDatabasePage() {
         {statCard('Total Active', students.filter(s=>s.status==='Active').length, ' active', '#10b981', '✅')}
       </div>
 
-      {/* Branch Filter */}
+      {/* Filters: Branch + Search */}
       <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
         <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>Filter by Branch:</span>
         <select value={branchFilter} onChange={e => handleBranchChange(e.target.value)} style={{ fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', background:'var(--bg)', color:'var(--text)', outline:'none' }}>
           <option value="All">All Branches</option>
           {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
-        {branchFilter !== 'All' && <span style={{ fontSize:13, color:'#4f46e5', fontWeight:500 }}>Showing {filtered.length} student{filtered.length!==1?'s':''} in {branchFilter}</span>}
+
+        {/* Search input */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:180, maxWidth:320, border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', background:'var(--bg)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search student name…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ border:'none', outline:'none', background:'transparent', fontSize:13, color:'var(--text)', flex:1, minWidth:0 }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:16, lineHeight:1, padding:0 }}>×</button>
+          )}
+        </div>
+
+        {(branchFilter !== 'All' || q) && (
+          <span style={{ fontSize:13, color:'#4f46e5', fontWeight:500 }}>
+            Showing {displayed.length} student{displayed.length!==1?'s':''}
+            {branchFilter !== 'All' ? ` in ${branchFilter}` : ''}
+            {q ? ` matching "${searchQuery.trim()}"` : ''}
+          </span>
+        )}
       </div>
 
       {/* Table */}
@@ -196,15 +241,19 @@ export function StudentDatabasePage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {displayed.length === 0 ? (
                 <tr><td colSpan={11} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-                    <span style={{ fontSize:36 }}>🎓</span>
-                    <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>No students yet</p>
-                    <p style={{ fontSize:12, margin:0 }}>Click "Add Students" to import from Excel</p>
+                    <span style={{ fontSize:36 }}>{q ? '🔍' : '🎓'}</span>
+                    <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
+                      {q ? 'No students match your search' : 'No students yet'}
+                    </p>
+                    <p style={{ fontSize:12, margin:0 }}>
+                      {q ? `Try a different name or clear the search` : 'Click "Add Students" to import from Excel'}
+                    </p>
                   </div>
                 </td></tr>
-              ) : filtered.map((student, idx) => {
+              ) : displayed.map((student, idx) => {
                 const fa  = faSummary(student.faAttended);
                 const pcm = faSummary(student.pcmAttended);
                 return (
@@ -225,7 +274,7 @@ export function StudentDatabasePage() {
                     <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
                       <div style={{ display:'flex', flexWrap:'wrap', gap:4, minWidth:80 }}>
                         {student.faAttended.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
-                         : student.faAttended.map((checked,i) => (
+                         : student.faAttended.map((checked: boolean, i: number) => (
                           <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
                             <input type="checkbox" checked={checked} onChange={() => toggleFa(student.id,i)} style={{ accentColor:'#4f46e5', cursor:'pointer' }} />
                             <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
@@ -239,7 +288,7 @@ export function StudentDatabasePage() {
                     <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
                       <div style={{ display:'flex', flexWrap:'wrap', gap:4, minWidth:80 }}>
                         {student.pcmAttended.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
-                         : student.pcmAttended.map((checked,i) => (
+                         : student.pcmAttended.map((checked: boolean, i: number) => (
                           <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
                             <input type="checkbox" checked={checked} onChange={() => togglePcm(student.id,i)} style={{ accentColor:'#f59e0b', cursor:'pointer' }} />
                             <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
@@ -265,9 +314,42 @@ export function StudentDatabasePage() {
       </div>
       )}
 
+      {/* Modals */}
       {showAdd     && <AddStudentModal    onClose={() => setShowAdd(false)}      onAdd={addStudents} />}
       {editStudent && <EditStudentModal   student={editStudent} onClose={() => setEditStudent(null)}   onSave={updateStudent} />}
       {deleteStudent && <DeleteConfirmModal student={deleteStudent} onClose={() => setDeleteStudent(null)} onConfirm={() => deleteStudentById(deleteStudent.id)} />}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAll && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'var(--panel)', borderRadius:16, boxShadow:'0 25px 50px rgba(0,0,0,0.25)', width:'100%', maxWidth:440 }}>
+            <div style={{ padding:28, textAlign:'center' }}>
+              <div style={{ width:56, height:56, background:'rgba(239,68,68,0.1)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', fontSize:28 }}>⚠️</div>
+              <h2 style={{ fontSize:20, fontWeight:700, color:'var(--text)', margin:'0 0 10px' }}>Confirm Bulk Deletion</h2>
+              <p style={{ fontSize:13, color:'var(--muted)', margin:0, lineHeight:1.6 }}>
+                Are you sure you want to delete <strong style={{ color:'#dc2626' }}>all {students.length} student records</strong>?<br/>
+                This action is <strong>permanent and cannot be undone.</strong>
+              </p>
+            </div>
+            <div style={{ padding:'0 24px 24px', display:'flex', gap:12 }}>
+              <button
+                onClick={() => setShowDeleteAll(false)}
+                disabled={deleteAllLoading}
+                style={{ flex:1, fontSize:13, padding:'10px 16px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', cursor:'pointer', fontWeight:500 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteAllStudents}
+                disabled={deleteAllLoading}
+                style={{ flex:1, fontSize:13, padding:'10px 16px', borderRadius:8, border:'none', background:'#dc2626', color:'#fff', cursor:'pointer', fontWeight:600, opacity:deleteAllLoading?0.6:1 }}
+              >
+                {deleteAllLoading ? 'Deleting…' : 'Yes, Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
