@@ -12,7 +12,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const login = useMutation({
-    mutationFn: (body) => apiFetch('/api/auth/login', { method: 'POST', body }),
+    mutationFn: (body: any) => apiFetch('/api/auth/login', { method: 'POST', body }),
     onSuccess: (data) => {
       setToken(data.token);
       const to = location.state?.from || '/';

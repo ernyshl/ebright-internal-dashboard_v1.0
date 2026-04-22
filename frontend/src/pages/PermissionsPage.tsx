@@ -11,7 +11,7 @@ export function PermissionsPage() {
   const [selectedUser, setSelectedUser] = useState(null);
 
   const updatePermission = useMutation({
-    mutationFn: ({ userId, dashboard, allowed }) =>
+    mutationFn: ({ userId, dashboard, allowed }: { userId: any; dashboard: any; allowed: boolean }) =>
       apiFetch(`/api/permissions/${userId}`, {
         method: 'PUT',
         body: { dashboard, allowed }
@@ -22,7 +22,7 @@ export function PermissionsPage() {
   });
 
   const resetPermission = useMutation({
-    mutationFn: ({ userId, dashboard }) =>
+    mutationFn: ({ userId, dashboard }: { userId: any; dashboard: any }) =>
       apiFetch(`/api/permissions/${userId}/${dashboard}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-permissions'] });

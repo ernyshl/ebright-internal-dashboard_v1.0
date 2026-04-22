@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
@@ -25,7 +25,7 @@ export function HrMcPage() {
 
   useEffect(() => { setPage(1); }, [search, posFilter, dept, dateFrom, dateTo]);
 
-  const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+  const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (search) params.set('search', search);
   if (posFilter) params.set('position', posFilter);
   if (dept) params.set('department_branch', dept);
@@ -36,13 +36,13 @@ export function HrMcPage() {
     queryKey: ['hrMcList', search, posFilter, dept, dateFrom, dateTo, page],
     queryFn: () => apiFetch(`/api/hr-mc?${params}`),
     staleTime: 2 * 60 * 1000,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const invalidate = () => { queryClient.invalidateQueries({ queryKey: ['hrMcList'] }); queryClient.invalidateQueries({ queryKey: ['hrMcDashboard'] }); };
-  const createMutation = useMutation({ mutationFn: (body) => apiFetch('/api/hr-mc', { method: 'POST', body }), onSuccess: () => { invalidate(); setShowForm(false); setForm({ ...EMPTY_FORM }); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, body }) => apiFetch(`/api/hr-mc/${id}`, { method: 'PUT', body }), onSuccess: () => { invalidate(); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_FORM }); } });
-  const deleteMutation = useMutation({ mutationFn: (id) => apiFetch(`/api/hr-mc/${id}`, { method: 'DELETE' }), onSuccess: () => { invalidate(); setDeleteId(null); } });
+  const createMutation = useMutation({ mutationFn: (body: any) => apiFetch('/api/hr-mc', { method: 'POST', body }), onSuccess: () => { invalidate(); setShowForm(false); setForm({ ...EMPTY_FORM }); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, body }: { id: any; body: any }) => apiFetch(`/api/hr-mc/${id}`, { method: 'PUT', body }), onSuccess: () => { invalidate(); setShowForm(false); setEditingId(null); setForm({ ...EMPTY_FORM }); } });
+  const deleteMutation = useMutation({ mutationFn: (id: any) => apiFetch(`/api/hr-mc/${id}`, { method: 'DELETE' }), onSuccess: () => { invalidate(); setDeleteId(null); } });
 
   const records = data?.records || [];
   const total = data?.total || 0;

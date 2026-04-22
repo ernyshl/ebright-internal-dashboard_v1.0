@@ -18,12 +18,12 @@ export function ProfilePage() {
   const [error, setError] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['profile', currentUser.sub],
+    queryKey: ['profile', currentUser?.id],
     queryFn: () => apiFetch('/api/auth/profile'),
   });
 
   const updateProfile = useMutation({
-    mutationFn: (body) => apiFetch('/api/auth/profile', { method: 'PUT', body }),
+    mutationFn: (body: any) => apiFetch('/api/auth/profile', { method: 'PUT', body }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -37,7 +37,7 @@ export function ProfilePage() {
       });
       setTimeout(() => setMessage(''), 5000);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       setError(err.data?.error || err.message || 'Failed to update profile');
       setMessage('');
     },
@@ -86,7 +86,7 @@ export function ProfilePage() {
       }
     }
 
-    const body = { fullName: formData.fullName };
+    const body: any = { fullName: formData.fullName };
     if (formData.newPassword) {
       body.currentPassword = formData.currentPassword;
       body.newPassword = formData.newPassword;

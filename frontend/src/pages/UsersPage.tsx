@@ -78,7 +78,7 @@ export function UsersPage() {
   ];
 
   const createUser = useMutation({
-    mutationFn: (body) => apiFetch('/api/users', { method: 'POST', body }),
+    mutationFn: (body: any) => apiFetch('/api/users', { method: 'POST', body }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowForm(false);
@@ -87,7 +87,7 @@ export function UsersPage() {
   });
 
   const updateUser = useMutation({
-    mutationFn: ({ id, data }) => apiFetch(`/api/users/${id}`, { method: 'PUT', body: data }),
+    mutationFn: ({ id, data }: { id: any; data: any }) => apiFetch(`/api/users/${id}`, { method: 'PUT', body: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setEditingUser(null);
@@ -96,13 +96,13 @@ export function UsersPage() {
   });
 
   const toggleUser = useMutation({
-    mutationFn: (id) => apiFetch(`/api/users/${id}/toggle`, { method: 'PATCH' }),
+    mutationFn: (id: any) => apiFetch(`/api/users/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   });
 
   // Permission mutations
   const updatePermission = useMutation({
-    mutationFn: ({ userId, dashboard, allowed }) =>
+    mutationFn: ({ userId, dashboard, allowed }: { userId: any; dashboard: any; allowed: boolean }) =>
       apiFetch(`/api/permissions/${userId}`, {
         method: 'PUT',
         body: { dashboard, allowed }
@@ -112,21 +112,21 @@ export function UsersPage() {
       setPermMessage({ type: 'success', text: 'Permission updated successfully!' });
       setTimeout(() => setPermMessage(null), 3000);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setPermMessage({ type: 'error', text: 'Failed: ' + (error?.data?.error || 'Unknown error') });
       setTimeout(() => setPermMessage(null), 5000);
     },
   });
 
   const resetPermission = useMutation({
-    mutationFn: ({ userId, dashboard }) =>
+    mutationFn: ({ userId, dashboard }: { userId: any; dashboard: any }) =>
       apiFetch(`/api/permissions/${userId}/${dashboard}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-permissions'] });
       setPermMessage({ type: 'success', text: 'Permission reset to role default!' });
       setTimeout(() => setPermMessage(null), 3000);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       setPermMessage({ type: 'error', text: 'Failed: ' + (error?.data?.error || 'Unknown error') });
       setTimeout(() => setPermMessage(null), 5000);
     },

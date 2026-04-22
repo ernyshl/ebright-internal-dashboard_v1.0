@@ -25,30 +25,30 @@ export function EventEntryPage() {
 
   // Create event mutation
   const createMutation = useMutation({
-    mutationFn: (newEvent) => apiFetch('/api/events', { method: 'POST', body: newEvent }),
+    mutationFn: (newEvent: any) => apiFetch('/api/events', { method: 'POST', body: newEvent }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       resetForm();
     },
   });
 
   // Update event mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, event }) => apiFetch(`/api/events/${id}`, { method: 'PUT', body: event }),
+    mutationFn: ({ id, event }: { id: any; event: any }) => apiFetch(`/api/events/${id}`, { method: 'PUT', body: event }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       resetForm();
     },
   });
 
   // Delete event mutation
   const deleteMutation = useMutation({
-    mutationFn: (id) => apiFetch(`/api/events/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: any) => apiFetch(`/api/events/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['events']);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
     },
-    onError: (error) => {
-      alert(error.data?.error || 'Failed to delete event');
+    onError: (error: any) => {
+      alert((error as any).data?.error || 'Failed to delete event');
     },
   });
 

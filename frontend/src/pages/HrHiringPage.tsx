@@ -12,7 +12,7 @@ export function HrHiringPage() {
 
   useEffect(() => { setPage(1); }, [search, empType]);
 
-  const params = new URLSearchParams({ page, limit: PAGE_SIZE });
+  const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (search) params.set('search', search);
   if (empType) params.set('employment_type', empType);
 

@@ -78,15 +78,15 @@ export function useOkrData({ dashBranch, dashWeek }) {
       ? new Promise(resolve => setTimeout(() => resolve({ ok: true }), 600))
       : apiFetch('/api/okr-attendance', { method: 'POST', body }),
     onSuccess: () => {
-      queryClient.invalidateQueries(['okr-list']);
-      queryClient.invalidateQueries(['okr-week']);
-      queryClient.invalidateQueries(['okr-dash']);
+      queryClient.invalidateQueries({ queryKey: ['okr-list'] });
+      queryClient.invalidateQueries({ queryKey: ['okr-week'] });
+      queryClient.invalidateQueries({ queryKey: ['okr-dash'] });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => apiFetch(`/api/okr-attendance/${id}`, { method: 'DELETE' }),
-    onSuccess: () => queryClient.invalidateQueries(['okr-list']),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['okr-list'] }),
   });
 
   // ── Derived state ──
@@ -130,9 +130,9 @@ export function useOkrData({ dashBranch, dashWeek }) {
     deleteMutation,
     // Invalidate helpers
     invalidateAll: () => {
-      queryClient.invalidateQueries(['okr-list']);
-      queryClient.invalidateQueries(['okr-week']);
-      queryClient.invalidateQueries(['okr-dash']);
+      queryClient.invalidateQueries({ queryKey: ['okr-list'] });
+      queryClient.invalidateQueries({ queryKey: ['okr-week'] });
+      queryClient.invalidateQueries({ queryKey: ['okr-dash'] });
     },
   };
 }

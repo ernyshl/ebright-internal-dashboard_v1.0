@@ -234,9 +234,9 @@ export function DailyBulkEntry({ filterBranch = null }) {
           apiFetch('/api/okr-attendance', { method: 'POST', body: p })
         ));
       }
-      qc.invalidateQueries(['okr-week']);
-      qc.invalidateQueries(['okr-list']);
-      qc.invalidateQueries(['okr-dash']);
+      qc.invalidateQueries({ queryKey: ['okr-week'] });
+      qc.invalidateQueries({ queryKey: ['okr-list'] });
+      qc.invalidateQueries({ queryKey: ['okr-dash'] });
       setSaveStatus('ok');
     } catch {
       setSaveStatus('error');

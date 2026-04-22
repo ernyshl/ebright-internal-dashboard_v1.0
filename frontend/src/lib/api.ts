@@ -2,7 +2,25 @@ import { getToken } from './auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-export async function apiFetch(path, options = {}) {
+interface ApiFetchOptions {
+  method?: string;
+  token?: string;
+  headers?: Record<string, string>;
+  json?: boolean;
+  body?: any;
+}
+
+export class ApiError extends Error {
+  status: number;
+  data: any;
+  constructor(message: string, status: number, data: any) {
+    super(message);
+    this.status = status;
+    this.data = data;
+  }
+}
+
+export async function apiFetch(path: string, options: ApiFetchOptions = {}): Promise<any> {
   const token = options.token ?? getToken();
   const headers = new Headers(options.headers || {});
 
@@ -10,7 +28,7 @@ export async function apiFetch(path, options = {}) {
   if (options.json !== false) headers.set('Content-Type', 'application/json');
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    method: options.method,
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -20,10 +38,7 @@ export async function apiFetch(path, options = {}) {
   const data = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '');
 
   if (!res.ok) {
-    const err = new Error(data?.error || 'Request failed');
-    err.status = res.status;
-    err.data = data;
-    throw err;
+    throw new ApiError(data?.error || 'Request failed', res.status, data);
   }
 
   return data;

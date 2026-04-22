@@ -8,7 +8,7 @@ import { usePermissions, canAccess } from '../lib/permissions';
  * - `roles` — checks if the user has one of the specified roles (e.g. ['super_admin'])
  * Super admins bypass all permission checks.
  */
-export function RequirePermission({ dashboard, roles, children }) {
+export function RequirePermission({ dashboard, roles, children }: { dashboard?: string; roles?: string[]; children: any }) {
     const user = getUser();
     const { permissions, isLoading } = usePermissions();
 
