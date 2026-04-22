@@ -15,30 +15,8 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
             cd /home/staff1/ebright-dashboard
-
-            # Write the correct CORS function directly using Node — no git needed
-            node -e "
-            const fs = require('fs');
-            const f = 'backend/src/app.js';
-            let c = fs.readFileSync(f, 'utf8');
-            const oldBlock = /origin: \(origin, callback\) => \{[\s\S]*?callback\(new Error\('Not allowed by CORS'\)\);\n    \},/;
-            const newBlock = \`origin: (origin, callback) => {
-              if (!origin) return callback(null, true);
-              if (/^https?:\\/\\/localhost(:\\d+)?$/.test(origin)) return callback(null, true);
-              if (/^https?:\\/\\/[a-z0-9-]+\\.ebright\\.my$/.test(origin)) return callback(null, true);
-              if (origin === env.CORS_ORIGIN) return callback(null, true);
-              callback(new Error('Not allowed by CORS'));
-            },\`;
-            c = c.replace(oldBlock, newBlock);
-            fs.writeFileSync(f, c);
-            console.log('app.js fixed');
-            "
-
-            # Fix .env
-            grep -q "CORS_ORIGIN" backend/.env && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' backend/.env || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> backend/.env
-            grep -q "NODE_ENV" backend/.env && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' backend/.env || echo "NODE_ENV=production" >> backend/.env
-
-            # Rebuild backend fresh
+            git reset --hard HEAD
+            git pull origin master
             docker compose stop backend
             docker compose rm -f backend
             docker compose build --no-cache backend
