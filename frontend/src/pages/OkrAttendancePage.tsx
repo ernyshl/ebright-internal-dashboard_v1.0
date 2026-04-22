@@ -11,6 +11,7 @@ import { RateBar } from '../components/okr/RateBar';
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
 import { AllBranchesGrid } from '../components/okr/AllBranchesGrid';
 import { DailyBulkEntry } from '../components/okr/DailyBulkEntry';
+import { DailyAttendanceView } from '../components/okr/DailyAttendanceView';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
 const TABS = [
@@ -244,7 +245,7 @@ export function OkrAttendancePage() {
           </div>
 
           {/* ── Daily View ── */}
-          {dashView === 'daily' && <DailyBulkEntry />}
+          {dashView === 'daily' && <DailyAttendanceView />}
 
           {/* ── Weekly View ── */}
           {dashView === 'weekly' && (!dashWeek ? (
