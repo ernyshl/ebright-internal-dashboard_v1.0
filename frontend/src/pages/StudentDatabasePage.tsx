@@ -10,6 +10,18 @@ import AddStudentModal from '../components/StudentDB/AddStudentModal';
 import EditStudentModal from '../components/StudentDB/EditStudentModal';
 import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
 
+function toIsoDate(val: string): string {
+  if (!val) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  const parsed = new Date(val);
+  if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  return '';
+}
+
+function sanitizeForPut(s: any) {
+  return { ...s, enrollmentDate: toIsoDate(s.enrollmentDate) };
+}
+
 const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
 const td = { padding:'10px 14px', fontSize:12 };
 
@@ -69,7 +81,7 @@ export function StudentDatabasePage() {
       pcmAttended: reconcileFa(updated.pcmAttended, getPcmCount(updated.grade, updated.chapter)),
     };
     try {
-      const res = await apiFetch(`/api/student-records/${updated.id}`, { method: 'PUT', body: reconciled });
+      const res = await apiFetch(`/api/student-records/${updated.id}`, { method: 'PUT', body: sanitizeForPut(reconciled) });
       if (res.data) {
         setStudents((prev: any[]) => prev.map(s => s.id === updated.id ? res.data : s));
       }
@@ -112,7 +124,7 @@ export function StudentDatabasePage() {
         const updated = [...s.faAttended];
         updated[index] = !updated[index];
         const reconciled = { ...s, faAttended: updated };
-        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: reconciled }).catch(() => {});
+        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) }).catch(() => {});
         return reconciled;
       });
       return next;
@@ -127,7 +139,7 @@ export function StudentDatabasePage() {
         const updated = [...s.pcmAttended];
         updated[index] = !updated[index];
         const reconciled = { ...s, pcmAttended: updated };
-        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: reconciled }).catch(() => {});
+        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) }).catch(() => {});
         return reconciled;
       });
       return next;
