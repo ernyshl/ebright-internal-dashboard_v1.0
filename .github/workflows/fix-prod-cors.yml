@@ -1,29 +1,29 @@
-name: Deploy to Production
+name: Fix Production CORS + Restart Backend
 
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  fix:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to production server
+      - name: Patch CORS_ORIGIN and restart backend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.174
           username: staff1
           key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 30m
           script: |
-            /home/staff1/deploy-prod.sh dashboard
-            # Ensure CORS is correct after every deploy
+            # Patch CORS_ORIGIN in every backend .env found under staff1's home
             find /home/staff1 -name ".env" -path "*/backend*" 2>/dev/null | while read f; do
               if grep -q "CORS_ORIGIN" "$f"; then
                 sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f"
               else
                 echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
               fi
+              echo "Patched: $f"
             done
+            # Restart backend container (try both docker compose variants)
+            cd /home/staff1 2>/dev/null || true
             docker compose restart backend 2>/dev/null || docker-compose restart backend 2>/dev/null || true
+            echo "Done — backend restarted"
