@@ -117,33 +117,37 @@ export function StudentDatabasePage() {
   }, [setStudents]);
 
   // ── Toggle FA checkbox (save to DB) ──────────────────────────────────────
-  const toggleFa = useCallback(async (studentId: number, index: number) => {
-    setStudents((prev: any[]) => {
-      const next = prev.map(s => {
-        if (s.id !== studentId) return s;
-        const updated = [...s.faAttended];
-        updated[index] = !updated[index];
-        const reconciled = { ...s, faAttended: updated };
-        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) }).catch(() => {});
-        return reconciled;
-      });
-      return next;
-    });
+  const toggleFa = useCallback(async (studentId: number, index: number, currentStudents: any[]) => {
+    const student = currentStudents.find(s => s.id === studentId);
+    if (!student) return;
+    const updated = [...student.faAttended];
+    updated[index] = !updated[index];
+    const reconciled = { ...student, faAttended: updated };
+    setStudents((prev: any[]) => prev.map(s => s.id === studentId ? reconciled : s));
+    try {
+      await apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) });
+    } catch {
+      setStudents((prev: any[]) => prev.map(s => s.id === studentId ? student : s));
+      setSuccessMsg('❌ Save failed. Please try again.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    }
   }, [setStudents]);
 
   // ── Toggle PCM checkbox ───────────────────────────────────────────────────
-  const togglePcm = useCallback(async (studentId: number, index: number) => {
-    setStudents((prev: any[]) => {
-      const next = prev.map(s => {
-        if (s.id !== studentId) return s;
-        const updated = [...s.pcmAttended];
-        updated[index] = !updated[index];
-        const reconciled = { ...s, pcmAttended: updated };
-        apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) }).catch(() => {});
-        return reconciled;
-      });
-      return next;
-    });
+  const togglePcm = useCallback(async (studentId: number, index: number, currentStudents: any[]) => {
+    const student = currentStudents.find(s => s.id === studentId);
+    if (!student) return;
+    const updated = [...student.pcmAttended];
+    updated[index] = !updated[index];
+    const reconciled = { ...student, pcmAttended: updated };
+    setStudents((prev: any[]) => prev.map(s => s.id === studentId ? reconciled : s));
+    try {
+      await apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) });
+    } catch {
+      setStudents((prev: any[]) => prev.map(s => s.id === studentId ? student : s));
+      setSuccessMsg('❌ Save failed. Please try again.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    }
   }, [setStudents]);
 
   function exportToExcel() {
@@ -288,7 +292,7 @@ export function StudentDatabasePage() {
                         {student.faAttended.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
                          : student.faAttended.map((checked: boolean, i: number) => (
                           <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
-                            <input type="checkbox" checked={checked} onChange={() => toggleFa(student.id,i)} style={{ accentColor:'#4f46e5', cursor:'pointer' }} />
+                            <input type="checkbox" checked={checked} onChange={() => toggleFa(student.id,i,students)} style={{ accentColor:'#4f46e5', cursor:'pointer' }} />
                             <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
                           </label>
                         ))}
@@ -302,7 +306,7 @@ export function StudentDatabasePage() {
                         {student.pcmAttended.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
                          : student.pcmAttended.map((checked: boolean, i: number) => (
                           <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
-                            <input type="checkbox" checked={checked} onChange={() => togglePcm(student.id,i)} style={{ accentColor:'#f59e0b', cursor:'pointer' }} />
+                            <input type="checkbox" checked={checked} onChange={() => togglePcm(student.id,i,students)} style={{ accentColor:'#f59e0b', cursor:'pointer' }} />
                             <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
                           </label>
                         ))}
