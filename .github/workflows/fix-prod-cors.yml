@@ -7,46 +7,35 @@ jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
-      - name: Patch app.js CORS directly + rebuild backend
+      - name: Restore app.js from git and rebuild backend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.174
           username: staff1
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
-            echo "=== Docker containers ==="
-            docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || true
+            cd /home/staff1/ebright-dashboard
 
-            echo "=== deploy-prod.sh contents ==="
-            cat /home/staff1/deploy-prod.sh 2>/dev/null || echo "not found"
+            echo "=== Restoring app.js from git (removes broken sed patch) ==="
+            git checkout backend/src/app.js
+            git pull origin master
 
-            echo "=== Finding all app.js with CORS code ==="
-            find / -name "app.js" -path "*/src/app.js" 2>/dev/null | grep -v node_modules | head -20
+            echo "=== Current CORS section ==="
+            grep -A8 "corsOptions" backend/src/app.js | head -15
 
-            echo "=== Patching CORS in every app.js found ==="
-            for f in $(find / -name "app.js" -path "*/src/app.js" 2>/dev/null | grep -v node_modules); do
-              if grep -q "Not allowed by CORS" "$f"; then
-                echo "Patching: $f"
-                # Add ebright.my allow rule before the reject line
-                sed -i "s|callback(new Error('Not allowed by CORS'))|if (/^https?:\\/\\/[a-z0-9-]+\\.ebright\\.my\$/.test(origin)) return callback(null, true);\n      callback(new Error('Not allowed by CORS'))|" "$f" 2>/dev/null || true
-                echo "Done: $f"
-                grep -A2 "ebright" "$f" | head -5
-              fi
-            done
+            echo "=== Patching backend .env ==="
+            grep -q "CORS_ORIGIN" backend/.env && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' backend/.env || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> backend/.env
+            grep -q "NODE_ENV" backend/.env && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' backend/.env || echo "NODE_ENV=production" >> backend/.env
+            echo "=== backend/.env CORS/NODE lines ==="
+            grep -E "CORS|NODE_ENV" backend/.env
 
-            echo "=== Patching all .env files ==="
-            for f in $(find / -name ".env" 2>/dev/null | grep -v node_modules | grep -v proc); do
-              grep -q "CORS_ORIGIN" "$f" && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f" || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
-              grep -q "NODE_ENV" "$f" && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$f" || echo "NODE_ENV=production" >> "$f"
-              echo "Patched: $f"
-            done
+            echo "=== Rebuilding and restarting backend container ==="
+            docker compose stop backend
+            docker compose rm -f backend
+            docker compose build --no-cache backend
+            docker compose up -d backend
 
-            echo "=== Restarting backend (all methods) ==="
-            # Docker restart all backend-related containers
-            for name in $(docker ps --format "{{.Names}}" 2>/dev/null); do
-              echo "Restarting: $name"
-              docker restart "$name" 2>/dev/null || true
-            done
-            # PM2
-            pm2 restart all 2>/dev/null || true
+            echo "=== Waiting 5s then checking status ==="
+            sleep 5
+            docker ps --format "table {{.Names}}\t{{.Status}}"
             echo "=== Done ==="
