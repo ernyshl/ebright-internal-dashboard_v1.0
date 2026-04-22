@@ -1,12 +1,22 @@
 import { useState } from 'react';
+import React from 'react';
 import { BRANCHES, GRADES, CHAPTERS } from '../../lib/studentTypes';
 import { getFaCount, getPcmCount, reconcileFa } from '../../lib/studentFaLogic';
 
-const inp = { width:'100%', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:13, background:'var(--bg)', color:'var(--text)', outline:'none', boxSizing:'border-box' };
+const inp: React.CSSProperties = { width:'100%', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:13, background:'var(--bg)', color:'var(--text)', outline:'none', boxSizing:'border-box' };
 const lbl = { display:'block', fontSize:11, fontWeight:600, color:'var(--muted)', marginBottom:4, textTransform:'uppercase', letterSpacing:0.5 };
 
+function toIsoDate(val: string): string {
+  if (!val) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  // Fallback: try parsing (e.g. "Mon May 05 2025 ...")
+  const parsed = new Date(val);
+  if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  return '';
+}
+
 export default function EditStudentModal({ student, onClose, onSave }) {
-  const [form, setForm] = useState({ ...student });
+  const [form, setForm] = useState({ ...student, enrollmentDate: toIsoDate(student.enrollmentDate) });
 
   function set(field, value) {
     setForm(prev => {
@@ -59,7 +69,7 @@ export default function EditStudentModal({ student, onClose, onSave }) {
           </div>
           <div>
             <label style={lbl}>Enrollment Date</label>
-            <input style={inp} value={form.enrollmentDate} onChange={e => set('enrollmentDate', e.target.value)} placeholder="e.g. 2024-01-15" />
+            <input type="date" style={inp} value={form.enrollmentDate} onChange={e => set('enrollmentDate', e.target.value)} />
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
             <div>
