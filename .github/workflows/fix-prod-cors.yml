@@ -7,23 +7,45 @@ jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
-      - name: Patch CORS_ORIGIN and restart backend
+      - name: Diagnose, patch CORS, restart backend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.174
           username: staff1
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
-            # Patch CORS_ORIGIN in every backend .env found under staff1's home
-            find /home/staff1 -name ".env" -path "*/backend*" 2>/dev/null | while read f; do
+            echo "=== Docker containers ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || true
+
+            echo "=== Finding app directory ==="
+            find /home/staff1 -name "docker-compose.yml" -o -name "docker-compose.yaml" 2>/dev/null | head -5
+
+            echo "=== Finding .env files ==="
+            find /home/staff1 -name ".env" 2>/dev/null
+
+            echo "=== Patching CORS in all .env files ==="
+            for f in $(find /home/staff1 -name ".env" 2>/dev/null); do
+              echo "--- $f ---"
+              cat "$f" | grep -i cors || echo "(no CORS line)"
               if grep -q "CORS_ORIGIN" "$f"; then
                 sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f"
               else
                 echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
               fi
-              echo "Patched: $f"
+              echo "After patch:"
+              grep -i cors "$f" || echo "(still no CORS line?)"
             done
-            # Restart backend container (try both docker compose variants)
-            cd /home/staff1 2>/dev/null || true
-            docker compose restart backend 2>/dev/null || docker-compose restart backend 2>/dev/null || true
-            echo "Done — backend restarted"
+
+            echo "=== Restarting all running backend containers ==="
+            for name in $(docker ps --format "{{.Names}}" 2>/dev/null | grep -i back); do
+              echo "Restarting container: $name"
+              docker restart "$name" || true
+            done
+            # Also try by compose file location
+            for dir in $(find /home/staff1 -name "docker-compose.yml" -exec dirname {} \; 2>/dev/null); do
+              echo "Trying compose restart in $dir"
+              cd "$dir"
+              docker compose restart backend 2>/dev/null || docker-compose restart backend 2>/dev/null || true
+            done
+
+            echo "=== Done ==="
