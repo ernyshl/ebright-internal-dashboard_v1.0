@@ -222,15 +222,23 @@ export function OkrAttendancePage() {
         <div className="okrDashWrap">
 
           {/* ── Weekly / Daily view toggle ── */}
-          <div className="okrEntryModeToggle" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             <button type="button"
-              className={`okrEntryModeBtn${dashView === 'weekly' ? ' okrEntryModeBtnActive' : ''}`}
-              onClick={() => setDashView('weekly')}>
+              onClick={() => setDashView('weekly')}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                background: dashView === 'weekly' ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                color: dashView === 'weekly' ? '#fff' : '#374151',
+              }}>
               📋 Weekly View
             </button>
             <button type="button"
-              className={`okrEntryModeBtn${dashView === 'daily' ? ' okrEntryModeBtnActive' : ''}`}
-              onClick={() => setDashView('daily')}>
+              onClick={() => setDashView('daily')}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                background: dashView === 'daily' ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                color: dashView === 'daily' ? '#fff' : '#374151',
+              }}>
               📅 Daily View
             </button>
           </div>
