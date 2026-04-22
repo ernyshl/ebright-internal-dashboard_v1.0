@@ -15,4 +15,7 @@ jobs:
           host: 103.209.156.225
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
-          script: /home/deploy/deploy.sh dashboard
+          script: |
+            cd /home/deploy/apps/ebright-dashboard
+            git pull origin staging
+            docker-compose up --build -d
