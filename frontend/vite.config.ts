@@ -7,8 +7,9 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
+        target: 'https://dashboard.ebright.my',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

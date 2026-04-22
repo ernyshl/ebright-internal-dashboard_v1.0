@@ -676,7 +676,23 @@ export function FaDashboardPage() {
     else setSavedData(committed);
   }
 
-  const branchData = savedData;
+  // Compute per-branch stats from student records (matching Student Database card logic)
+  const studentBranchData = useMemo(() => {
+    const map = {};
+    BRANCH_LIST.forEach(code => { map[code] = { code, active: 0, inv1: 0, inv2: 0, backlog: 0 }; });
+    dbStudents.filter(s => s.status === 'Active').forEach(s => {
+      if (!map[s.branch]) map[s.branch] = { code: s.branch, active: 0, inv1: 0, inv2: 0, backlog: 0 };
+      map[s.branch].active  += s.faAttended.length;                  // FA Due
+      map[s.branch].inv1    += s.faAttended.filter(Boolean).length;  // FA Invited
+    });
+    Object.values(map).forEach(b => {
+      b.backlog = Math.max(0, b.active - b.inv1);
+    });
+    return Object.values(map);
+  }, [dbStudents]);
+
+  // Use student-derived data if students are loaded, else fall back to saved FA Dashboard data
+  const branchData = dbStudents.length > 0 ? studentBranchData : savedData;
 
   const availableBranches = useMemo(() => {
     if (!selectedRegion) return branchData.map(b => b.code).sort();
