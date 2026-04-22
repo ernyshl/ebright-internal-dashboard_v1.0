@@ -74,7 +74,7 @@ export function useOkrData({ dashBranch, dashWeek }) {
 
   // ── Mutations ──
   const saveMutation = useMutation({
-    mutationFn: (body) => USE_MOCK
+    mutationFn: (body: Record<string, unknown>) => USE_MOCK
       ? new Promise(resolve => setTimeout(() => resolve({ ok: true }), 600))
       : apiFetch('/api/okr-attendance', { method: 'POST', body }),
     onSuccess: () => {
