@@ -16,16 +16,15 @@ jobs:
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            set -e
-            # Step 1: deploy.sh handles git pull with correct SSH auth
-            /home/deploy/deploy.sh dashboard
+            # Step 1: deploy.sh pulls latest code via SSH auth (may fail on its own docker step - that's OK)
+            /home/deploy/deploy.sh dashboard || true
             # Step 2: Find app dir
             APP_DIR=/home/deploy/apps/ebright-dashboard
             [ -d "$APP_DIR" ] || APP_DIR=/home/deploy/ebright-dashboard
             cd "$APP_DIR"
             echo "Building from commit: $(git rev-parse HEAD)"
             # Step 3: Tear down old containers (avoids 'No such image' conflict)
-            docker compose down 2>/dev/null || docker-compose down
+            docker compose down 2>/dev/null || docker-compose down || true
             # Step 4: Force full rebuild of nginx (no cache = always picks up new frontend code)
             docker compose build --no-cache nginx 2>/dev/null || docker-compose build --no-cache nginx
             # Step 5: Start all services
