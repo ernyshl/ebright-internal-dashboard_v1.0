@@ -28,13 +28,12 @@ export function AppLayout() {
     retry: false,
   });
 
-  // Auth redirect disabled for local preview
-  // useEffect(() => {
-  //   if (me.isError && (me.error as ApiError)?.status === 401) {
-  //     clearToken();
-  //     navigate('/login', { replace: true });
-  //   }
-  // }, [me.isError, me.error, navigate]);
+  useEffect(() => {
+    if (me.isError && (me.error as ApiError)?.status === 401) {
+      clearToken();
+      navigate('/login', { replace: true });
+    }
+  }, [me.isError, me.error, navigate]);
 
   const user = me.data?.user;
   const initials = user?.fullName
