@@ -240,27 +240,6 @@ export function OkrAttendancePage() {
                 {dashWeek && <span className="okrWeekRangePill">{weekRange(dashWeek)}</span>}
               </div>
 
-              {/* Branch picker */}
-              <div className="okrBranchPicker">
-                {(Object.entries(REGIONS) as [string, { name: string; code: string }[]][]).map(([region, list]) => (
-                  <div key={region} className="okrBranchPickerRegion">
-                    <div className="okrBranchPickerRegionLabel">Region {region}</div>
-                    <div className="okrBranchPickerPills">
-                      {list.map(b => (
-                        <button
-                          key={b.name}
-                          type="button"
-                          className={`okrBranchPill${dashBranch === b.name ? ' okrBranchPillActive' : ''}`}
-                          onClick={() => setDashBranch(dashBranch === b.name ? '' : b.name)}
-                        >
-                          {b.name} <span className="okrBranchPillCode">{b.code}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               {!dashWeek ? (
                 <div className="okrEmptyHero">
                   <div className="okrEmptyIcon">📅</div>

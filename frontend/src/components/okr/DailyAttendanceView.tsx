@@ -37,6 +37,7 @@ export function DailyAttendanceView() {
   const [weekDate, setWeekDate]       = useState(USE_MOCK ? MOCK_WEEK : thisWeekWed());
   const [day, setDay]                 = useState('thu');
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
 
   const { data } = useQuery({
     queryKey: ['okr-week', weekDate],
@@ -60,8 +61,15 @@ export function DailyAttendanceView() {
     [dayRecords]
   );
 
-  const top5    = rankedRecords.slice(0, 5);
-  const bottom5 = rankedRecords.slice(-5).reverse();
+  const filteredRecords = useMemo(() =>
+    regionFilter
+      ? rankedRecords.filter(r => BRANCH_META[r.branch]?.region === regionFilter)
+      : rankedRecords,
+    [rankedRecords, regionFilter]
+  );
+
+  const top5    = filteredRecords.slice(0, 5);
+  const bottom5 = filteredRecords.slice(-5).reverse();
 
   const dashRecord  = selectedBranch ? dayRecords.find(r => r.branch === selectedBranch) ?? null : null;
   const dashMetrics = dashRecord ? calcMetrics(dashRecord) : null;
@@ -116,10 +124,16 @@ export function DailyAttendanceView() {
             <div className="okrRankCardHeader">
               <div>
                 <span className="okrRankCardTitle">Branch Rankings — {dayLabel}, Week of {weekDate}</span>
-                <span className="okrRankBadge" style={{ marginLeft: 10 }}>{rankedRecords.length} branches</span>
+                <span className="okrRankBadge" style={{ marginLeft: 10 }}>{filteredRecords.length} branches</span>
               </div>
               <div className="okrRegionTabs">
-                {/* intentionally no region filter in daily view to keep it simple */}
+                {['', 'A', 'B', 'C'].map(r => (
+                  <button key={r}
+                    className={`okrRegionTab${regionFilter === r ? ' okrRegionTabActive' : ''}`}
+                    onClick={() => { setRegionFilter(r); setSelectedBranch(''); }}>
+                    {r === '' ? 'All' : `Region ${r}`}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="okrRankGrid">
@@ -156,7 +170,7 @@ export function DailyAttendanceView() {
                     <div key={r.id ?? r.branch}
                       className={`okrRankRow${selectedBranch === r.branch ? ' okrRankRowActive' : ''}`}
                       onClick={() => setSelectedBranch(r.branch)}>
-                      <span className="okrRankPos okrRankPosBot">{rankedRecords.length - bottom5.length + i + 1}</span>
+                      <span className="okrRankPos okrRankPosBot">{filteredRecords.length - bottom5.length + i + 1}</span>
                       <div className="okrRankInfo">
                         <div className="okrRankBranchRow">
                           <span className="okrRankBranch">{r.branch}</span>
@@ -177,7 +191,7 @@ export function DailyAttendanceView() {
 
           {/* ── All branches / branch detail ── */}
           {!selectedBranch ? (
-            <AllBranchesGrid records={rankedRecords} onSelect={setSelectedBranch} />
+            <AllBranchesGrid records={filteredRecords} onSelect={setSelectedBranch} />
           ) : !dashRecord ? (
             <div className="okrEmptyHero okrEmptySmall">
               <div className="okrEmptyIcon">📭</div>
