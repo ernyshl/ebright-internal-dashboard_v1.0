@@ -23,17 +23,27 @@ jobs:
             echo "=== Finding .env files ==="
             find /home/staff1 -name ".env" 2>/dev/null
 
-            echo "=== Patching CORS in all .env files ==="
+            echo "=== Patching CORS + NODE_ENV in all .env files ==="
             for f in $(find /home/staff1 -name ".env" 2>/dev/null); do
               echo "--- $f ---"
-              cat "$f" | grep -i cors || echo "(no CORS line)"
+              cat "$f" | grep -iE "cors|node_env" || echo "(no CORS/NODE_ENV line)"
+
+              # Patch CORS_ORIGIN
               if grep -q "CORS_ORIGIN" "$f"; then
                 sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f"
               else
                 echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
               fi
+
+              # Patch NODE_ENV — must be 'production' for CORS to allow non-localhost origins
+              if grep -q "NODE_ENV" "$f"; then
+                sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$f"
+              else
+                echo "NODE_ENV=production" >> "$f"
+              fi
+
               echo "After patch:"
-              grep -i cors "$f" || echo "(still no CORS line?)"
+              grep -iE "cors|node_env" "$f"
             done
 
             echo "=== Restarting all running backend containers ==="
