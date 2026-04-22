@@ -35,6 +35,12 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             cd /home/deploy/apps/ebright-dashboard
+            # Ensure CORS_ORIGIN is set correctly in staging .env
+            sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://staging-dashboard.ebright.my|' backend/.env 2>/dev/null \
+              || echo "CORS_ORIGIN=https://staging-dashboard.ebright.my" >> backend/.env
+            # Restart backend to pick up the env change
+            docker compose restart backend 2>/dev/null || docker-compose restart backend || true
+            # Rebuild and restart nginx with new frontend
             docker compose stop nginx 2>/dev/null || docker-compose stop nginx || true
             docker compose rm -f nginx 2>/dev/null || docker-compose rm -f nginx || true
             docker compose build --no-cache nginx 2>/dev/null || docker-compose build --no-cache nginx
