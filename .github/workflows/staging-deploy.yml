@@ -16,6 +16,12 @@ jobs:
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            cd /home/deploy/apps/ebright-dashboard
-            git pull origin staging
-            docker-compose up --build -d
+            # Locate the app directory
+            APP_DIR=/home/deploy/apps/ebright-dashboard
+            [ -d "$APP_DIR" ] || APP_DIR=/home/deploy/ebright-dashboard
+            cd "$APP_DIR"
+            # Pull latest code (reset avoids merge conflicts)
+            git fetch --all
+            git reset --hard origin/staging
+            # Rebuild images and restart (support both old and new Docker CLI)
+            docker compose up --build -d 2>/dev/null || docker-compose up --build -d
