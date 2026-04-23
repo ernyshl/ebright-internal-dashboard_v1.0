@@ -627,7 +627,7 @@ export function FaDashboardPage() {
       const stored = localStorage.getItem('fa_previous_backlog');
       if (stored) return JSON.parse(stored);
     } catch {}
-    return PREVIOUS_DATA;
+    return {};  // No arrows until user saves data to establish a baseline
   });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const user = getUser();
