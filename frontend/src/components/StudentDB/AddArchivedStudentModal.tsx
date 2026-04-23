@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { BRANCHES } from '../../lib/studentTypes';
-import { parseArchivedExcelFile, generateArchivedId } from '../../lib/archivedExcelParser';
+import { parseArchivedExcelFile } from '../../lib/archivedExcelParser';
 
 const sel = { fontSize:11, border:'1px solid var(--border)', borderRadius:6, padding:'4px 8px', background:'var(--bg)', color:'var(--text)', outline:'none' };
 
@@ -9,6 +9,7 @@ export default function AddArchivedStudentModal({ onClose, onImport }) {
   const [rows, setRows] = useState([]);
   const [defaultBranch, setDefaultBranch] = useState('ONL');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef(null);
 
@@ -24,12 +25,14 @@ export default function AddArchivedStudentModal({ onClose, onImport }) {
     setLoading(false);
   }
 
-  function handleSave() {
-    onImport(rows.map(r => ({ id: generateArchivedId(), ...r })));
-    onClose();
+  async function handleSave() {
+    setSaving(true);
+    await onImport(rows);
+    setSaving(false);
   }
 
-  const colMap = [['A','Student ID'],['B','Student Name'],['C','Gender'],['D','Enrollment Date'],['E','Date of Birth'],['N','Created On'],['P','Archived On'],['Q','Guardian Name'],['S','Guardian Mobile'],['T','Guardian Email']];
+  const colMapInvoice = [['B','Invoice Number → Student ID'],['C','Student Name'],['H','Invoice Created By → Branch'],['F','Invoice Issue Date → Enrollment Date'],['E','Invoice Generation Date → Created On']];
+  const colMapStudent = [['A','Student ID'],['B','Student Name'],['C','Gender'],['D','Enrollment Date'],['E','Date of Birth'],['N','Created On'],['P','Archived On'],['Q','Guardian Name'],['S','Mobile'],['T','Email']];
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
@@ -63,9 +66,17 @@ export default function AddArchivedStudentModal({ onClose, onImport }) {
               </div>
               {error && <p style={{ fontSize:12, color:'#dc2626', margin:0 }}>{error}</p>}
               <div style={{ background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)', borderRadius:10, padding:14 }}>
-                <p style={{ fontSize:12, fontWeight:700, color:'#6366f1', margin:'0 0 8px' }}>Expected Excel Column Mapping:</p>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
-                  {colMap.map(([col,label]) => (
+                <p style={{ fontSize:12, fontWeight:700, color:'#6366f1', margin:'0 0 6px' }}>📄 Invoice Excel (auto-detected):</p>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3, marginBottom:10 }}>
+                  {colMapInvoice.map(([col,label]) => (
+                    <div key={col} style={{ fontSize:11, color:'#6366f1', display:'flex', gap:8 }}>
+                      <span style={{ fontWeight:700, width:16 }}>{col}</span><span>{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize:12, fontWeight:700, color:'#6366f1', margin:'0 0 6px' }}>📋 Student Export Excel:</p>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:3 }}>
+                  {colMapStudent.map(([col,label]) => (
                     <div key={col} style={{ fontSize:11, color:'#6366f1', display:'flex', gap:8 }}>
                       <span style={{ fontWeight:700, width:16 }}>{col}</span><span>{label}</span>
                     </div>
@@ -115,7 +126,7 @@ export default function AddArchivedStudentModal({ onClose, onImport }) {
         <div style={{ padding:'14px 24px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           {step === 'preview'
             ? <><button onClick={()=>setStep('upload')} style={{ fontSize:13, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', padding:'8px 14px', borderRadius:8, cursor:'pointer' }}>← Back</button>
-                <button onClick={handleSave} disabled={!rows.length} style={{ fontSize:13, background:'#4f46e5', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, cursor:'pointer', fontWeight:600, opacity:rows.length?1:0.5 }}>Import {rows.length} Student{rows.length!==1?'s':''}</button></>
+                <button onClick={handleSave} disabled={!rows.length || saving} style={{ fontSize:13, background:'#4f46e5', color:'#fff', border:'none', padding:'8px 20px', borderRadius:8, cursor:'pointer', fontWeight:600, opacity:(rows.length && !saving)?1:0.5 }}>{saving ? 'Saving…' : `Import ${rows.length} Student${rows.length!==1?'s':''}`}</button></>
             : <button onClick={onClose} style={{ marginLeft:'auto', fontSize:13, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', padding:'8px 14px', borderRadius:8, cursor:'pointer' }}>Cancel</button>}
         </div>
       </div>

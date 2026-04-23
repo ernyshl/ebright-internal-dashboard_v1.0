@@ -81,10 +81,15 @@ router.post('/bulk', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const s  = req.body;
+  // Only accept ISO dates (YYYY-MM-DD); pass null otherwise so COALESCE keeps existing value
+  const isoDate = s.enrollmentDate && /^\d{4}-\d{2}-\d{2}$/.test(s.enrollmentDate)
+    ? s.enrollmentDate
+    : null;
   try {
     await prisma.$queryRawUnsafe(
       `UPDATE studentrecords SET
-         name=$1, status=$2, gender=$3, branch=$4, enrollment_date=$5::date,
+         name=$1, status=$2, gender=$3, branch=$4,
+         enrollment_date = COALESCE($5::date, enrollment_date),
          grade_chapter=$6, fa_progress_json=$7::jsonb, total_fa=$8,
          pcm_progress_json=$9::jsonb, total_pcm=$10
        WHERE id=$11`,
@@ -92,7 +97,7 @@ router.put('/:id', async (req, res, next) => {
       s.status,
       s.gender,
       s.branch,
-      s.enrollmentDate || null,
+      isoDate,
       `${s.grade} — ${s.chapter}`,
       JSON.stringify(s.faAttended  || []),
       toTotalStr(s.faAttended),
@@ -102,6 +107,17 @@ router.put('/:id', async (req, res, next) => {
     );
     const rows = await prisma.$queryRawUnsafe(`SELECT * FROM studentrecords WHERE id=$1`, id);
     return res.json({ ok: true, data: rowToStudent(rows[0]) });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ── DELETE /api/student-records  (delete ALL) ────────────────────────────────
+
+router.delete('/', async (req, res, next) => {
+  try {
+    await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+    return res.json({ ok: true });
   } catch (err) {
     return next(err);
   }

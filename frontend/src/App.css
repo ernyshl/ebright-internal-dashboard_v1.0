@@ -5860,6 +5860,81 @@
   cursor: pointer;
 }
 
+/* Branch region picker */
+.okrBranchPicker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  background: var(--panel);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.okrBranchPickerRegion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.okrBranchPickerRegionLabel {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--textSecondary);
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+.okrBranchPickerPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.okrBranchPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.okrBranchPill:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: rgba(220, 38, 38, 0.05);
+}
+.okrBranchPillActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff !important;
+}
+.okrBranchPillActive:hover {
+  background: #c01f1f;
+  border-color: #c01f1f;
+}
+.okrBranchPillCode {
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.okrBranchPillActive .okrBranchPillCode {
+  opacity: 0.9;
+}
+@media (max-width: 900px) {
+  .okrBranchPicker { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .okrBranchPicker { grid-template-columns: 1fr; }
+}
+
 /* Tab bar */
 .okrTabBar {
   display: flex;
