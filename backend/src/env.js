@@ -27,6 +27,10 @@ const EnvSchema = z.object({
   META_TT_ID: z.string().optional(),
   META_SARA_ID: z.string().optional(),
   META_ONLINE_ID: z.string().optional(),
+
+  // Telegram bot (required at runtime when bot is used, optional at boot)
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_ALLOWED_CHATS: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
