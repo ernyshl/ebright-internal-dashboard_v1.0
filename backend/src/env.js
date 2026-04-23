@@ -31,6 +31,8 @@ const EnvSchema = z.object({
   // Telegram bot (required at runtime when bot is used, optional at boot)
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_ALLOWED_CHATS: z.string().optional(),
+  TELEGRAM_REPORT_CHATS: z.string().optional(),
+  TELEGRAM_ALERT_CHATS: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
