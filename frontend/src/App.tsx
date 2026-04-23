@@ -32,6 +32,7 @@ import { TallyPage } from './pages/TallyPage';
 import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
 import { HrStaffListPage } from './pages/HrStaffListPage';
 import { FaDashboardPage } from './pages/FaDashboardPage';
+import { FaDashboardTestingPage } from './pages/FaDashboardTestingPage';
 import { HrMcPage } from './pages/HrMcPage';
 import { EventMktDashboardPage } from './pages/EventMktDashboardPage';
 import { AuditLogPage } from './pages/AuditLogPage';
@@ -56,6 +57,7 @@ export default function App() {
 
       <Route element={<RequireAuth />}>
         <Route path="/fa-dashboard" element={<FaDashboardPage />} />
+        <Route path="/fa-dashboard-testing" element={<FaDashboardTestingPage />} />
         <Route path="/okr-preview" element={<OkrAttendancePage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />

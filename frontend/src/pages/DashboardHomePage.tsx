@@ -37,7 +37,7 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#6366f1',
       links: [
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' }
       ]
     },
     {
