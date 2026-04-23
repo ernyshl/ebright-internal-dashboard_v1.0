@@ -30,13 +30,16 @@ function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
+  const delta = d.delta ?? 0;
+  const cleared = Math.max(0, delta);
+  const added   = Math.max(0, -delta);
   return (
     <div style={{
       background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
       border: '1px solid rgba(99,102,241,0.4)',
       borderRadius: 12, padding: '10px 16px',
       boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-      fontSize: 13, color: '#fff', minWidth: 160,
+      fontSize: 13, color: '#fff', minWidth: 190,
     }}>
       <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: 6 }}>
         {d.code}
@@ -46,6 +49,25 @@ function CustomTooltip({ active, payload }: any) {
           <span style={{ color: 'rgba(255,255,255,0.65)' }}>FA Backlog</span>
           <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.backlog}</strong>
         </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>Baseline</span>
+          <strong style={{ color: '#94a3b8' }}>{d.prev ?? '—'}</strong>
+        </div>
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+        {delta === 0 && <div style={{ color: '#94a3b8', fontWeight: 600 }}>No change</div>}
+        {cleared > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+            <span style={{ color: 'rgba(255,255,255,0.65)' }}>Cleared (good)</span>
+            <strong style={{ color: '#22c55e' }}>↓ {cleared}</strong>
+          </div>
+        )}
+        {added > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+            <span style={{ color: 'rgba(255,255,255,0.65)' }}>Added (bad)</span>
+            <strong style={{ color: '#ef4444' }}>↑ {added}</strong>
+          </div>
+        )}
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
           <span style={{ color: 'rgba(255,255,255,0.65)' }}>FA Due</span>
           <strong>{d.active}</strong>
@@ -64,6 +86,11 @@ export function FaDashboardTestingPage() {
   const { dbStudents, setDbStudents } = useAcademy();
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
+  const [baselineData, setBaselineData] = useState<Record<string, number>>(() => {
+    try { const s = localStorage.getItem('fa_testing_baseline'); if (s) return JSON.parse(s); } catch {}
+    return {};
+  });
+  const [baselineSet, setBaselineSet] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const user = getUser();
   const initials = user?.fullName
@@ -104,9 +131,22 @@ export function FaDashboardTestingPage() {
     return null;
   }, [selectedRegion, selectedBranch]);
 
+  function handleSetBaseline() {
+    const snapshot: Record<string, number> = {};
+    branchData.forEach(b => { snapshot[b.code] = b.backlog; });
+    localStorage.setItem('fa_testing_baseline', JSON.stringify(snapshot));
+    setBaselineData(snapshot);
+    setBaselineSet(true);
+    setTimeout(() => setBaselineSet(false), 2000);
+  }
+
   const chartData = useMemo(() =>
-    [...branchData].sort((a, b) => b.backlog - a.backlog),
-  [branchData]);
+    [...branchData].sort((a, b) => b.backlog - a.backlog).map(b => {
+      const prev  = baselineData[b.code] ?? null;
+      const delta = prev !== null ? prev - b.backlog : 0;
+      return { ...b, prev, delta };
+    }),
+  [branchData, baselineData]);
 
   const availableBranches = useMemo(() => {
     if (!selectedRegion) return BRANCH_LIST.slice().sort();
@@ -213,6 +253,16 @@ export function FaDashboardTestingPage() {
                 ✕ Clear
               </button>
             )}
+            <button onClick={handleSetBaseline} style={{
+              padding: '9px 20px', borderRadius: 11, fontSize: 13, fontWeight: 700,
+              background: baselineSet
+                ? 'linear-gradient(135deg,#14532d,#16a34a)'
+                : 'linear-gradient(135deg,rgba(16,185,129,0.5),rgba(5,150,105,0.4))',
+              color: '#fff', border: '1.5px solid rgba(255,255,255,0.2)',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>
+              {baselineSet ? '✅ Baseline Set!' : '📌 Set as Baseline'}
+            </button>
           </div>
         </div>
       </div>
@@ -250,8 +300,25 @@ export function FaDashboardTestingPage() {
                           ? '#e2e8f0'
                           : getBacklogColor(entry.backlog, entry.active)} />
                     ))}
-                    <LabelList dataKey="backlog" position="right"
-                      style={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }} />
+                    <LabelList content={(props: any) => {
+                      const { x, y, width, height, index } = props;
+                      if (index === undefined || !chartData[index]) return null;
+                      const d = chartData[index];
+                      const cx = x + (width ?? 0) + 6;
+                      const cy = y + (height ?? 0) / 2 + 4;
+                      const delta = d.delta ?? 0;
+                      if (delta === 0) return (
+                        <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} —</text>
+                      );
+                      const sign = delta > 0 ? '↓' : '↑';
+                      const col  = delta > 0 ? '#16a34a' : '#dc2626';
+                      return (
+                        <g>
+                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} </text>
+                          <text x={cx + 24} y={cy} fontSize={10} fontWeight={800} fill={col}>{sign}{Math.abs(delta)}</text>
+                        </g>
+                      );
+                    }} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
