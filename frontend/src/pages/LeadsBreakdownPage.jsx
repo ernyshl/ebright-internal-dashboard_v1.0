@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
@@ -9,6 +9,79 @@ const REGION_BRANCHES = {
   'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak'],
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
+
+const HOURLY_TARGETS = [
+  { label: '9:00 AM',  hour: 9,  minute: 0, target: 30  },
+  { label: '11:00 AM', hour: 11, minute: 0, target: 45  },
+  { label: '4:00 PM',  hour: 16, minute: 0, target: 70  },
+  { label: '6:00 PM',  hour: 18, minute: 0, target: 85  },
+  { label: '8:00 PM',  hour: 20, minute: 0, target: 130 },
+];
+
+function HourlyTargetCard({ currentLeads }) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const checkpoints = HOURLY_TARGETS.map(t => ({ ...t, totalMinutes: t.hour * 60 + t.minute }));
+  const previous = [...checkpoints].reverse().find(c => nowMinutes >= c.totalMinutes);
+  const next = checkpoints.find(c => nowMinutes < c.totalMinutes);
+
+  const prevMet = previous ? currentLeads >= previous.target : null;
+  const statusTone = previous == null ? 'pending' : (prevMet ? 'good' : 'bad');
+
+  const previousClass = prevMet === true ? 'hourlyTargetBlock--met' : prevMet === false ? 'hourlyTargetBlock--missed' : '';
+
+  return (
+    <div className={`hourlyTargetCard hourlyTargetCard--${statusTone}`}>
+      <div className="hourlyTargetHeader">
+        <span className="hourlyTargetHeaderIcon">🎯</span>
+        <span className="hourlyTargetHeaderTitle">Hourly Target</span>
+      </div>
+      <div className="hourlyTargetBody">
+        <div className={`hourlyTargetBlock hourlyTargetBlock--previous ${previousClass}`}>
+          <div className="hourlyTargetLabel">
+            <span className="hourlyTargetLabelKey">Previous</span>
+            {previous && <span className="hourlyTargetLabelTime">· {previous.label}</span>}
+          </div>
+          {previous ? (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetNumber">{formatNumber(previous.target)}</span>
+              <span className="hourlyTargetUnit">
+                {prevMet ? `✓ ${formatNumber(currentLeads)} today` : `✗ short by ${previous.target - currentLeads}`}
+              </span>
+            </div>
+          ) : (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetUnit">Before 9:00 AM — not yet due</span>
+            </div>
+          )}
+        </div>
+
+        <div className="hourlyTargetBlock hourlyTargetBlock--next">
+          <div className="hourlyTargetLabel">
+            <span className="hourlyTargetLabelKey">Next</span>
+            {next && <span className="hourlyTargetLabelTime">· {next.label}</span>}
+          </div>
+          {next ? (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetNumber">{formatNumber(next.target)}</span>
+              <span className="hourlyTargetUnit">leads needed</span>
+            </div>
+          ) : (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetUnit">All checkpoints passed</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function getLeadCentreUrl(leadSourceKey, period, region = '') {
   const now = new Date();
@@ -348,8 +421,10 @@ export function LeadsBreakdownPage() {
         </div>
       ) : (
         <>
-          {/* Summary Stats */}
-          <div className="summaryStats">
+          {/* Hourly Target + Summary Stats row */}
+          <div className="summaryStatsRow">
+            <HourlyTargetCard currentLeads={todayTotal} />
+            <div className="summaryStats">
             <StatCard
               title="Total Leads (30d)"
               value={totalLeads}
@@ -382,13 +457,14 @@ export function LeadsBreakdownPage() {
               color="#6366f1"
               subtitle="With lead activity"
             />
-            <StatCard 
-              title="Active Branches" 
-              value={branchCount} 
-              icon="🏢" 
+            <StatCard
+              title="Active Branches"
+              value={branchCount}
+              icon="🏢"
               color="#ec4899"
               subtitle="With lead activity"
             />
+            </div>
           </div>
 
           {/* Lead Sources — 4 fixed cards */}
