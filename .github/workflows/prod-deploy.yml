@@ -25,7 +25,7 @@ jobs:
           username: staff1
           key: ${{ secrets.PROD_SSH_KEY }}
           source: "frontend/dist,nginx,backend/src"
-          target: /home/staff1/apps/ebright-dashboard
+          target: /home/staff1/_deploy_tmp
 
       - name: Rebuild backend and nginx, then restart
         uses: appleboy/ssh-action@v1.0.3
@@ -36,17 +36,29 @@ jobs:
           command_timeout: 30m
           script: |
             /home/staff1/deploy-prod.sh dashboard
-            cd /home/staff1/apps/ebright-dashboard
+
+            # Find the real app directory (wherever docker-compose.yml lives)
+            APP_DIR=$(find /home/staff1 -maxdepth 4 -name "docker-compose.yml" ! -path "*/_deploy_tmp/*" | head -1 | xargs dirname 2>/dev/null)
+            if [ -z "$APP_DIR" ]; then APP_DIR="/home/staff1/apps/ebright-dashboard"; fi
+            echo "App dir: $APP_DIR"
+
+            # Copy uploaded files into the real app dir
+            cp -r /home/staff1/_deploy_tmp/frontend/dist   "$APP_DIR/frontend/"
+            cp -r /home/staff1/_deploy_tmp/nginx           "$APP_DIR/"
+            cp -r /home/staff1/_deploy_tmp/backend/src     "$APP_DIR/backend/"
+
             # Patch CORS and NODE_ENV
-            sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' backend/.env 2>/dev/null \
-              || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> backend/.env
-            sed -i 's|NODE_ENV=.*|NODE_ENV=production|' backend/.env 2>/dev/null \
-              || echo "NODE_ENV=production" >> backend/.env
+            sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$APP_DIR/backend/.env" 2>/dev/null \
+              || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$APP_DIR/backend/.env"
+            sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$APP_DIR/backend/.env" 2>/dev/null \
+              || echo "NODE_ENV=production" >> "$APP_DIR/backend/.env"
+
+            cd "$APP_DIR"
             # Rebuild backend with new source code
             docker compose stop backend 2>/dev/null || docker-compose stop backend || true
             docker compose rm -f backend 2>/dev/null || docker-compose rm -f backend || true
             docker compose build --no-cache backend 2>/dev/null || docker-compose build --no-cache backend
-            # Rebuild nginx with new frontend
+            # Rebuild nginx with new frontend dist
             docker compose stop nginx 2>/dev/null || docker-compose stop nginx || true
             docker compose rm -f nginx 2>/dev/null || docker-compose rm -f nginx || true
             docker compose build --no-cache nginx 2>/dev/null || docker-compose build --no-cache nginx
