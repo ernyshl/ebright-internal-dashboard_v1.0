@@ -2,9 +2,24 @@
 # Telegram Daily Report Bot
 # Runs via cron at 9am, 12pm, 3pm, 6pm, 9pm MYT
 
-BOT_TOKEN="8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ"
-CHAT_ID="178748547"
-DB_CONTAINER="ebright-dashboard-backend"
+set -euo pipefail
+
+# Load env from backend/.env (this script lives in backend/scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/../.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is not set (check $ENV_FILE)}"
+: "${TELEGRAM_ALLOWED_CHATS:?TELEGRAM_ALLOWED_CHATS is not set (check $ENV_FILE)}"
+
+BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
+CHAT_ID="${TELEGRAM_ALLOWED_CHATS%%,*}"  # first chat ID only for scheduled pushes
+DB_CONTAINER="${DB_CONTAINER:-ebright-dashboard-backend}"
 
 # Get current time in MYT
 REPORT_TIME=$(TZ="Asia/Kuala_Lumpur" date '+%I:%M %p')

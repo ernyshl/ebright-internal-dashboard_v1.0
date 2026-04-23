@@ -2,9 +2,24 @@
 # Telegram alert if meta sync log hasn't updated in 15 minutes
 # Run via cron every 5 minutes
 
-BOT_TOKEN="8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ"
-CHAT_ID="178748547"
-LOG_FILE="/home/staff1/ebright-live-dashboard/meta_sync.log"
+set -euo pipefail
+
+# Load env from backend/.env (this script lives in backend/scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/../.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is not set (check $ENV_FILE)}"
+: "${TELEGRAM_ALLOWED_CHATS:?TELEGRAM_ALLOWED_CHATS is not set (check $ENV_FILE)}"
+
+BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
+CHAT_ID="${TELEGRAM_ALLOWED_CHATS%%,*}"
+LOG_FILE="${META_SYNC_LOG:-/home/staff1/ebright-live-dashboard/meta_sync.log}"
 ALERT_FLAG="/tmp/meta_alert_sent"
 
 # Check if log file exists
