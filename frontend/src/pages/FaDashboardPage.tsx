@@ -74,9 +74,9 @@ function CustomBacklogTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
-  const delta = d.delta ?? 0;
-  const cleared = Math.max(0, -delta);
-  const added   = Math.max(0,  delta);
+  const delta = d.delta ?? 0;  // delta = prev - current; positive = improvement
+  const cleared = Math.max(0,  delta);
+  const added   = Math.max(0, -delta);
   return (
     <div style={{
       background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
@@ -139,13 +139,13 @@ function CustomGradeTooltip({ active, payload }) {
 
 /* ─────────────────────────── Branch Card ─────────────────────────── */
 
-function BranchCard({ branch, filtered }) {
+function BranchCard({ branch, filtered, prevData }) {
   const pct = branch.active > 0 ? (branch.backlog / branch.active) * 100 : 0;
   const pctRounded = Math.round(pct);
   const backlogNumColor = getBacklogColor(branch.backlog, branch.active);
   const progressColor = getProgressBarColor(pct);
-  const prev = PREVIOUS_DATA[branch.code] ?? branch.backlog;
-  const delta = branch.backlog - prev;
+  const prev = (prevData ?? PREVIOUS_DATA)[branch.code] ?? branch.backlog;
+  const delta = prev - branch.backlog;  // positive = improvement
 
   return (
     <div style={{
@@ -178,10 +178,10 @@ function BranchCard({ branch, filtered }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {delta !== 0 && (
             <span style={{
-              fontSize: 10, fontWeight: 800, color: delta < 0 ? '#86efac' : '#fca5a5',
+              fontSize: 10, fontWeight: 800, color: delta > 0 ? '#86efac' : '#fca5a5',
               background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '1px 6px',
             }}>
-              {delta < 0 ? `↓${Math.abs(delta)}` : `↑${delta}`}
+              {delta > 0 ? `↓${delta}` : `↑${Math.abs(delta)}`}
             </span>
           )}
           <span style={{
@@ -622,6 +622,13 @@ export function FaDashboardPage() {
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState(() => sharedBranch !== 'All' ? sharedBranch : '');
   const [showCrude, setShowCrude]   = useState(false);
+  const [previousData, setPreviousData] = useState<Record<string, number>>(() => {
+    try {
+      const stored = localStorage.getItem('fa_previous_backlog');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return PREVIOUS_DATA;
+  });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const user = getUser();
   const initials = user?.fullName
@@ -665,6 +672,12 @@ export function FaDashboardPage() {
   }, [sharedBranch]);
 
   async function handleSave(committed) {
+    // Snapshot current backlog as "previous" before applying new data
+    const snapshot: Record<string, number> = {};
+    branchData.forEach((b: any) => { snapshot[b.code] = b.backlog; });
+    localStorage.setItem('fa_previous_backlog', JSON.stringify(snapshot));
+    setPreviousData(snapshot);
+
     const rows = committed.map(b => ({
       branch_code: b.code,
       fa_active:   b.active,
@@ -715,9 +728,9 @@ export function FaDashboardPage() {
 
   /* Backlog chart — health bar delta data */
   const backlogChartData = useMemo(() => {
-    return [...branchData].sort((a, b) => a.backlog - b.backlog).map(b => {
-      const prev  = PREVIOUS_DATA[b.code] ?? b.backlog;
-      const delta = b.backlog - prev;
+    return ([...branchData] as any[]).sort((a: any, b: any) => a.backlog - b.backlog).map((b: any) => {
+      const prev  = previousData[b.code] ?? b.backlog;
+      const delta = prev - b.backlog;  // positive = improvement (backlog decreased)
       // For stacked bars:
       // mainBar  = the solid health-colored portion (min of current/prev)
       // ghostBar = cleared amount (grey ghost, if improved)
@@ -747,9 +760,9 @@ export function FaDashboardPage() {
         </g>
       );
     }
-    const sign = delta < 0 ? '↓' : '↑';
+    const sign = delta > 0 ? '↓' : '↑';  // delta = prev - current; positive = improvement
     const amt  = Math.abs(delta);
-    const col  = delta < 0 ? '#16a34a' : '#dc2626';
+    const col  = delta > 0 ? '#16a34a' : '#dc2626';
     return (
       <g>
         <text x={cx} y={cy + 4} fontSize={10} fontWeight={700} fill="#64748b">{currentVal}</text>
@@ -1136,7 +1149,7 @@ export function FaDashboardPage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
               {cardBranches.map(branch => (
-                <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} />
+                <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} prevData={previousData} />
               ))}
             </div>
           )}
