@@ -83,8 +83,12 @@ export function StudentDatabasePage() {
       if (res.data) {
         setStudents((prev: any[]) => prev.map(s => s.id === updated.id ? res.data : s));
       }
-    } catch {
+      setSuccessMsg('✅ Student saved successfully.');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err: any) {
       setStudents((prev: any[]) => prev.map(s => s.id === updated.id ? reconciled : s));
+      setSuccessMsg(`❌ Save failed: ${err?.data?.error || err?.message || 'server error'}`);
+      setTimeout(() => setSuccessMsg(''), 6000);
     }
     setEditStudent(null);
   }, [setStudents]);
