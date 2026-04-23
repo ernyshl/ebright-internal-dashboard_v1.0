@@ -18,7 +18,9 @@ fi
 : "${TELEGRAM_ALLOWED_CHATS:?TELEGRAM_ALLOWED_CHATS is not set (check $ENV_FILE)}"
 
 BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
-CHAT_ID="${TELEGRAM_ALLOWED_CHATS%%,*}"  # first chat ID only for scheduled pushes
+# Recipients for scheduled reports — comma-separated, broadcast to all.
+# Falls back to TELEGRAM_ALLOWED_CHATS if TELEGRAM_REPORT_CHATS is not set.
+REPORT_CHATS="${TELEGRAM_REPORT_CHATS:-$TELEGRAM_ALLOWED_CHATS}"
 DB_CONTAINER="${DB_CONTAINER:-ebright-dashboard-backend}"
 
 # Get current time in MYT
@@ -114,9 +116,18 @@ Total Leads Today: *${TOTAL}*
 Total Spend Today: *${FMT_SPEND}*
 Cost Per Lead: *${FMT_CPL}*"
 
-# Send to Telegram
-curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-  -H "Content-Type: application/json" \
-  -d "{\"chat_id\":${CHAT_ID},\"text\":$(echo "$MESSAGE" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))'),\"parse_mode\":\"Markdown\"}" > /dev/null
+# JSON-escape the message body once, then broadcast to every configured chat
+MESSAGE_JSON=$(python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' <<< "$MESSAGE")
 
-echo "Report sent at $(date)"
+IFS=',' read -ra CHATS <<< "$REPORT_CHATS"
+SENT=0
+for chat in "${CHATS[@]}"; do
+  chat_clean=$(echo "$chat" | tr -d ' ')
+  [ -z "$chat_clean" ] && continue
+  curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+    -H "Content-Type: application/json" \
+    -d "{\"chat_id\":${chat_clean},\"text\":${MESSAGE_JSON},\"parse_mode\":\"Markdown\"}" > /dev/null
+  SENT=$((SENT + 1))
+done
+
+echo "Report sent to ${SENT} chat(s) at $(date)"
