@@ -672,9 +672,9 @@ export function FaDashboardPage() {
   }, [sharedBranch]);
 
   async function handleSave(committed) {
-    // Snapshot current backlog as "previous" before applying new data
+    // Snapshot current CRUDE data as previous baseline before overwriting
     const snapshot: Record<string, number> = {};
-    branchData.forEach((b: any) => { snapshot[b.code] = b.backlog; });
+    savedData.forEach((b: any) => { snapshot[b.code] = b.backlog; });
     localStorage.setItem('fa_previous_backlog', JSON.stringify(snapshot));
     setPreviousData(snapshot);
 
@@ -704,8 +704,8 @@ export function FaDashboardPage() {
     return Object.values(map);
   }, [dbStudents]);
 
-  // Use student-derived data if students are loaded, else fall back to saved FA Dashboard data
-  const branchData = dbStudents.length > 0 ? studentBranchData : savedData;
+  // FA Dashboard always reads from CRUDE (savedData)
+  const branchData = savedData;
 
   const availableBranches = useMemo(() => {
     if (!selectedRegion) return branchData.map(b => b.code).sort();
