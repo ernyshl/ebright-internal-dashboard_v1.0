@@ -72,7 +72,7 @@ router.post('/bulk', async (req, res, next) => {
     const rows = await prisma.$queryRawUnsafe(`SELECT * FROM studentrecords ORDER BY name ASC`);
     return res.json({ ok: true, data: rows.map(rowToStudent) });
   } catch (err) {
-    return next(err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
 
