@@ -311,7 +311,7 @@ export function FaDashboardTestingPage() {
               <div style={{
                 background: 'var(--panel)', border: '1px solid var(--border)',
                 borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                padding: '24px 24px 16px',
+                padding: '24px 24px 16px', overflow: 'hidden',
               }}>
                 <h3 style={{ margin: '0 0 18px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
                   Backlog FA to Invite by Branch
