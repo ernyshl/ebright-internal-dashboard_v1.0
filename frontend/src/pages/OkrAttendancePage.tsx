@@ -403,7 +403,7 @@ export function OkrAttendancePage() {
                 </select>
               </div>
               <div className="formGroup">
-                <label>Week Date (Wednesday) *</label>
+                <label>Week Date *</label>
                 <input type="date" name="week_date" value={form.week_date} onChange={handleChange} required />
                 {form.week_date && <div className="okrWeekRangePill">{weekRange(form.week_date)}</div>}
               </div>
@@ -509,16 +509,26 @@ export function OkrAttendancePage() {
                 </strong>
               </div>
             </div>
-            <div className="okrEntryGrid4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
               {[
-                { name: 'not_enrolled',             label: '1a) Not Enrolled to Any Lesson' },
-                { name: 'outstanding_invoice_disc',  label: '1b) With Outstanding Invoice' },
-                { name: 'expired_package',           label: '1c) Expired Package' },
-                { name: 'newly_enrolled',            label: '1d) Newly Enrolled Student' },
+                { name: 'not_enrolled',            label: '1a) Not Enrolled to Any Lesson' },
+                { name: 'outstanding_invoice_disc', label: '1b) With Outstanding Invoice' },
+                { name: 'expired_package',          label: '1c) Expired Package' },
+                { name: 'newly_enrolled',           label: '1d) Newly Enrolled Student' },
               ].map(f => (
-                <div className="formGroup" key={f.name}>
-                  <label>{f.label}</label>
-                  <input type="number" name={f.name} value={form[f.name]} onChange={handleChange} min="0" placeholder="0" />
+                <div key={f.name} style={{ background: 'var(--bg, #f8fafc)', border: '2px dashed #cbd5e1', borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                    {f.label}
+                  </div>
+                  <input
+                    type="number"
+                    name={f.name}
+                    value={form[f.name]}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="Enter count..."
+                    style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #94a3b8', borderRadius: 7, padding: '9px 12px', fontSize: '1.05rem', fontWeight: 600, background: '#fff', color: 'var(--text)' }}
+                  />
                 </div>
               ))}
             </div>
