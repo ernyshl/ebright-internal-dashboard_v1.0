@@ -5,8 +5,97 @@ import { BRANCHES } from '../lib/studentTypes';
 import AddArchivedStudentModal from '../components/StudentDB/AddArchivedStudentModal';
 import { apiFetch } from '../lib/api';
 
+const SORTED_BRANCHES = [...BRANCHES].sort();
 const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
 const td = { padding:'10px 14px', fontSize:12 };
+const inp = { fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' as const };
+
+function EditArchivedModal({ student, onClose, onSave }: { student: any; onClose: () => void; onSave: (s: any) => void }) {
+  const [form, setForm] = useState({ ...student });
+  const [saving, setSaving] = useState(false);
+  const set = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const labelStyle = { fontSize:12, fontWeight:600 as const, color:'var(--muted)' as const, textTransform:'uppercase' as const, letterSpacing:0.5, marginBottom:4, display:'block' as const };
+  const fieldWrap = { display:'flex', flexDirection:'column' as const, gap:4 };
+
+  async function handleSave() {
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+  }
+
+  return (
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+      <div style={{ background:'var(--panel)', borderRadius:16, boxShadow:'0 25px 50px rgba(0,0,0,0.25)', width:'100%', maxWidth:700, maxHeight:'90vh', display:'flex', flexDirection:'column' }}>
+        <div style={{ padding:'16px 24px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <h2 style={{ fontSize:17, fontWeight:700, color:'var(--text)', margin:0 }}>Edit Archived Student</h2>
+            <p style={{ fontSize:11, color:'var(--muted)', margin:'2px 0 0' }}>{form.name}</p>
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'none', fontSize:22, color:'var(--muted)', cursor:'pointer' }}>&times;</button>
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:24, display:'flex', flexDirection:'column', gap:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Student ID</label>
+              <input type="text" value={form.studentId||''} onChange={e => set('studentId', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Name</label>
+              <input type="text" value={form.name||''} onChange={e => set('name', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Gender</label>
+              <select value={form.gender||'Male'} onChange={e => set('gender', e.target.value)} style={{ ...inp, cursor:'pointer' }}>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Branch</label>
+              <select value={form.branch||'ONL'} onChange={e => set('branch', e.target.value)} style={{ ...inp, cursor:'pointer' }}>
+                {SORTED_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Enrollment Date</label>
+              <input type="date" value={form.enrollmentDate||''} onChange={e => set('enrollmentDate', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Date of Birth</label>
+              <input type="date" value={form.dateOfBirth||''} onChange={e => set('dateOfBirth', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Created On</label>
+              <input type="date" value={form.createdOn||''} onChange={e => set('createdOn', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Archived On</label>
+              <input type="date" value={form.archivedOn||''} onChange={e => set('archivedOn', e.target.value)} style={inp} />
+            </div>
+            <div style={{ ...fieldWrap, gridColumn:'1 / -1' }}>
+              <label style={labelStyle}>Guardian Name</label>
+              <input type="text" value={form.guardianName||''} onChange={e => set('guardianName', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Guardian Mobile</label>
+              <input type="tel" value={form.guardianMobile||''} onChange={e => set('guardianMobile', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
+              <label style={labelStyle}>Guardian Email</label>
+              <input type="email" value={form.guardianEmail||''} onChange={e => set('guardianEmail', e.target.value)} style={inp} />
+            </div>
+          </div>
+        </div>
+        <div style={{ padding:'14px 24px', borderTop:'1px solid var(--border)', display:'flex', justifyContent:'flex-end', gap:12 }}>
+          <button onClick={onClose} style={{ fontSize:13, padding:'9px 20px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', cursor:'pointer' }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving} style={{ fontSize:13, padding:'9px 28px', borderRadius:8, border:'none', background:'#2563eb', color:'#fff', cursor:'pointer', fontWeight:700, opacity:saving?0.6:1 }}>
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ArchivedStudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -17,6 +106,7 @@ export function ArchivedStudentsPage() {
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
+  const [editStudent, setEditStudent] = useState<any>(null);
 
   const filtered = students.filter(s => {
     const branchOk = branch === 'All' || s.branch === branch;
@@ -73,6 +163,17 @@ export function ArchivedStudentsPage() {
       flash('❌ Restore failed: ' + (err?.data?.error || err?.message || 'server error'));
     }
     setConfirm(null);
+  }
+
+  async function handleEdit(updated: any) {
+    try {
+      await apiFetch(`/api/archived-students/${encodeURIComponent(updated.studentId)}`, { method: 'PUT', body: updated });
+      setStudents(prev => prev.map(s => s.studentId === updated.studentId ? { ...s, ...updated } : s));
+      flash('✅ Student updated successfully.');
+    } catch (err: any) {
+      flash('❌ Update failed: ' + (err?.data?.error || err?.message || 'server error'));
+    }
+    setEditStudent(null);
   }
 
   async function handleDeleteAll() {
@@ -205,6 +306,7 @@ export function ArchivedStudentsPage() {
                   <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{s.guardianEmail || '—'}</td>
                   <td style={td}>
                     <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setEditStudent(s)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(37,99,235,0.12)', color: '#2563eb', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                       <button onClick={() => setConfirm({ type: 'restore', student: s })} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(34,197,94,0.12)', color: '#16a34a', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>Restore</button>
                       <button onClick={() => setConfirm({ type: 'delete', student: s })} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(239,68,68,0.1)', color: '#dc2626', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
                     </div>
@@ -217,6 +319,9 @@ export function ArchivedStudentsPage() {
       </div>
 
       {showImport && <AddArchivedStudentModal onClose={() => setShowImport(false)} onImport={handleImport} />}
+
+      {/* Edit modal */}
+      {editStudent && <EditArchivedModal student={editStudent} onClose={() => setEditStudent(null)} onSave={handleEdit} />}
 
       {/* Single student confirm modal */}
       {confirm && (
