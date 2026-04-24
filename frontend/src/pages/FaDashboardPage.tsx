@@ -622,12 +622,13 @@ export function FaDashboardPage() {
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState(() => sharedBranch !== 'All' ? sharedBranch : '');
   const [showCrude, setShowCrude]   = useState(false);
+  const [baselineSet, setBaselineSet] = useState(false);
   const [previousData, setPreviousData] = useState<Record<string, number>>(() => {
     try {
       const stored = localStorage.getItem('fa_previous_backlog');
       if (stored) return JSON.parse(stored);
     } catch {}
-    return {};  // No arrows until user saves data to establish a baseline
+    return {};  // No arrows until user sets a baseline
   });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const user = getUser();
@@ -671,13 +672,16 @@ export function FaDashboardPage() {
     if (contextBranch !== selectedBranch) setSelectedBranch(contextBranch);
   }, [sharedBranch]);
 
-  async function handleSave(committed) {
-    // Snapshot current displayed data as previous baseline before overwriting
+  function handleSetBaseline() {
     const snapshot: Record<string, number> = {};
     (branchData as any[]).forEach((b: any) => { snapshot[b.code] = b.backlog; });
     localStorage.setItem('fa_previous_backlog', JSON.stringify(snapshot));
     setPreviousData(snapshot);
+    setBaselineSet(true);
+    setTimeout(() => setBaselineSet(false), 2000);
+  }
 
+  async function handleSave(committed) {
     const rows = committed.map(b => ({
       branch_code: b.code,
       fa_active:   b.active,
@@ -909,6 +913,23 @@ export function FaDashboardPage() {
                 {!dbLoaded ? 'Loading…' : loadError ? 'Local data' : 'Live data'}
               </span>
             </div>
+
+            {/* Set as Baseline button */}
+            <button
+              onClick={handleSetBaseline}
+              style={{
+                padding: '9px 20px', borderRadius: 11, fontSize: 13, fontWeight: 700,
+                background: baselineSet
+                  ? 'linear-gradient(135deg, #14532d, #16a34a)'
+                  : 'linear-gradient(135deg, rgba(34,197,94,0.5), rgba(16,185,129,0.4))',
+                color: '#fff',
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              }}
+            >
+              {baselineSet ? '✅ Baseline Set!' : '📌 Set as Baseline'}
+            </button>
 
             {/* Edit Data button */}
             <button
