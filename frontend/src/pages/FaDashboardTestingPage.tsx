@@ -234,7 +234,7 @@ export function FaDashboardTestingPage() {
         borderBottom: '1px solid rgba(99,102,241,0.2)',
         boxShadow: '0 4px 32px rgba(0,0,0,0.35)',
       }}>
-        <div style={{ maxWidth: 1600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <BackButton to="/" label="Back to Home" />
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 10 }}>
@@ -298,7 +298,7 @@ export function FaDashboardTestingPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '0 28px 40px' }}>
+      <div style={{ padding: '0 40px 40px' }}>
         {dbStudents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, color: 'var(--muted)', fontSize: 15 }}>
             Loading student records…
