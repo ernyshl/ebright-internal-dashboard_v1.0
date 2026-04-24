@@ -49,7 +49,7 @@ const REGIONS = {
   'Region C': ['PJY', 'KW', 'BBB', 'CJY', 'BSP', 'ONL'],
 };
 
-const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GB1','GB2'];
+const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GA3','GA4','GB1','GB2','GB3','GB4'];
 const BRANCH_LIST = ['ONL','ST','CJY','SA','PJY','AMP','BBB','DK','KLG','KD','SHA','DA','SP','BSP','EGR','BTHO','RBY','TSG','KW','KTG'];
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
