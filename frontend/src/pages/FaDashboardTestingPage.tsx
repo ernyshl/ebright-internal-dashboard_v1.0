@@ -11,6 +11,7 @@ import { getRoleLabel } from '../lib/roles';
 import { useAcademy } from '../context/AcademyContext';
 
 const BRANCH_LIST = ['ONL','ST','CJY','SA','PJY','AMP','BBB','DK','KLG','KD','SHA','DA','SP','BSP','EGR','BTHO','RBY','TSG','KW','KTG'];
+const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GA3','GA4','GB1','GB2','GB3','GB4'];
 
 const REGIONS: Record<string, string[]> = {
   'Region A': ['RBY', 'KLG', 'SHA', 'SA', 'DA', 'EGR', 'ST'],
@@ -24,6 +25,25 @@ function getBacklogColor(backlog: number, active: number) {
   if (pct > 50) return '#ef4444';
   if (pct >= 20) return '#f59e0b';
   return '#22c55e';
+}
+
+function CustomGradeTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+      border: '1px solid rgba(239,68,68,0.4)',
+      borderRadius: 12, padding: '8px 14px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      fontSize: 13, color: '#fff',
+    }}>
+      <strong style={{ fontSize: 14 }}>{d.grade}</strong>
+      <div style={{ color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+        Students: <strong style={{ color: '#fca5a5' }}>{d.count}</strong>
+      </div>
+    </div>
+  );
 }
 
 function CustomTooltip({ active, payload }: any) {
@@ -162,6 +182,17 @@ export function FaDashboardTestingPage() {
   const totalActive  = branchData.reduce((s, b) => s + b.active, 0);
   const totalBacklog = branchData.reduce((s, b) => s + b.backlog, 0);
 
+  const gradeChartData = useMemo(() => {
+    const active = dbStudents.filter((s: any) => s.status === 'Active');
+    const byBranch = selectedBranch ? active.filter((s: any) => s.branch === selectedBranch) : active;
+    return GRADE_OPTIONS.map(g => ({ grade: g, count: byBranch.filter((s: any) => s.grade === g).length }));
+  }, [dbStudents, selectedBranch]);
+
+  const gradeChartMax = useMemo(() => {
+    const max = Math.max(...gradeChartData.map(d => d.count), 1);
+    return Math.ceil(max / 2) * 2 + 2;
+  }, [gradeChartData]);
+
   const selectStyle: React.CSSProperties = {
     padding: '7px 32px 7px 12px', borderRadius: 9,
     border: '1.5px solid var(--border)', background: 'var(--inputBg)',
@@ -274,54 +305,92 @@ export function FaDashboardTestingPage() {
           </div>
         ) : (
           <>
-            {/* Bar Chart */}
-            <div style={{
-              background: 'var(--panel)', border: '1px solid var(--border)',
-              borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              padding: '24px 24px 16px', marginBottom: 28,
-            }}>
-              <h3 style={{ margin: '0 0 18px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
-                FA Backlog by Branch — Student Records
-              </h3>
-              <ResponsiveContainer width="100%" height={560}>
-                <BarChart data={chartData} layout="vertical"
-                  margin={{ top: 0, right: 60, left: 8, bottom: 0 }} barCategoryGap="25%">
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false}
-                    axisLine={{ stroke: 'var(--border)' }} />
-                  <YAxis dataKey="code" type="category"
-                    tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }}
-                    tickLine={false} axisLine={false} width={48} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
-                  <Bar dataKey="backlog" maxBarSize={18} radius={[0, 4, 4, 0]}>
-                    {chartData.map(entry => (
-                      <Cell key={entry.code}
-                        fill={filteredCodes && !filteredCodes.has(entry.code)
-                          ? '#e2e8f0'
-                          : getBacklogColor(entry.backlog, entry.active)} />
-                    ))}
-                    <LabelList content={(props: any) => {
-                      const { x, y, width, height, index } = props;
-                      if (index === undefined || !chartData[index]) return null;
-                      const d = chartData[index];
-                      const cx = x + (width ?? 0) + 6;
-                      const cy = y + (height ?? 0) / 2 + 4;
-                      const delta = d.delta ?? 0;
-                      if (delta === 0) return (
-                        <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} —</text>
-                      );
-                      const sign = delta > 0 ? '↓' : '↑';
-                      const col  = delta > 0 ? '#16a34a' : '#dc2626';
-                      return (
-                        <g>
-                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} </text>
-                          <text x={cx + 24} y={cy} fontSize={10} fontWeight={800} fill={col}>{sign}{Math.abs(delta)}</text>
-                        </g>
-                      );
-                    }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            {/* Two-column: Backlog chart + Grade chart */}
+            <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, marginBottom: 28 }}>
+              {/* Left — Backlog Bar Chart */}
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)',
+                borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                padding: '24px 24px 16px',
+              }}>
+                <h3 style={{ margin: '0 0 18px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
+                  Backlog FA to Invite by Branch
+                </h3>
+                <ResponsiveContainer width="100%" height={560}>
+                  <BarChart data={chartData} layout="vertical"
+                    margin={{ top: 0, right: 60, left: 8, bottom: 0 }} barCategoryGap="25%">
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false}
+                      axisLine={{ stroke: 'var(--border)' }} />
+                    <YAxis dataKey="code" type="category"
+                      tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }}
+                      tickLine={false} axisLine={false} width={48} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
+                    <Bar dataKey="backlog" maxBarSize={18} radius={[0, 4, 4, 0]}>
+                      {chartData.map(entry => (
+                        <Cell key={entry.code}
+                          fill={filteredCodes && !filteredCodes.has(entry.code)
+                            ? '#e2e8f0'
+                            : getBacklogColor(entry.backlog, entry.active)} />
+                      ))}
+                      <LabelList content={(props: any) => {
+                        const { x, y, width, height, index } = props;
+                        if (index === undefined || !chartData[index]) return null;
+                        const d = chartData[index];
+                        const cx = x + (width ?? 0) + 6;
+                        const cy = y + (height ?? 0) / 2 + 4;
+                        const delta = d.delta ?? 0;
+                        if (delta === 0) return (
+                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} —</text>
+                        );
+                        const sign = delta > 0 ? '↓' : '↑';
+                        const col  = delta > 0 ? '#16a34a' : '#dc2626';
+                        return (
+                          <g>
+                            <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} </text>
+                            <text x={cx + 24} y={cy} fontSize={10} fontWeight={800} fill={col}>{sign}{Math.abs(delta)}</text>
+                          </g>
+                        );
+                      }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Right — Grade Chart */}
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)',
+                borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                padding: '24px 24px 16px', display: 'flex', flexDirection: 'column',
+              }}>
+                <h3 style={{ margin: '0 0 14px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
+                  Student's Grade
+                </h3>
+                <div style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--bg)', padding: '16px 8px 8px', flex: 1 }}>
+                  <ResponsiveContainer width="100%" height={490}>
+                    <BarChart data={gradeChartData} margin={{ top: 16, right: 16, left: -8, bottom: 8 }}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="grade" tick={{ fontSize: 12, fill: '#64748b', fontWeight: 600 }}
+                        tickLine={false} axisLine={{ stroke: 'var(--border)' }}
+                        label={{ value: 'Grade', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#94a3b8' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false}
+                        label={{ value: 'Students', angle: -90, position: 'insideLeft', offset: 16, fontSize: 11, fill: '#94a3b8' }}
+                        domain={[0, gradeChartMax]} />
+                      <Tooltip content={<CustomGradeTooltip />} cursor={{ fill: 'rgba(239,68,68,0.06)' }} />
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                        {gradeChartData.map((entry, i) => (
+                          <Cell key={entry.grade} fill={[
+                            '#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4',
+                            '#3b82f6','#6366f1','#8b5cf6','#ec4899','#f43f5e','#84cc16',
+                          ][i % 12]} />
+                        ))}
+                        <LabelList dataKey="count" position="top"
+                          style={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
 
             {/* Branch Cards */}
