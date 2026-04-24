@@ -3,8 +3,18 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ';
-const ALLOWED_CHAT_IDS = (process.env.TELEGRAM_ALLOWED_CHATS || '178748547').split(',').map(s => s.trim());
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const ALLOWED_CHAT_IDS = (process.env.TELEGRAM_ALLOWED_CHATS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+if (!BOT_TOKEN) {
+  console.warn('[telegramBot] TELEGRAM_BOT_TOKEN not set — webhook will reject calls');
+}
+if (ALLOWED_CHAT_IDS.length === 0) {
+  console.warn('[telegramBot] TELEGRAM_ALLOWED_CHATS not set — webhook will ignore all messages');
+}
 
 function fmtRM(n) {
   return `RM ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -99,6 +109,7 @@ function buildReportMessage(leads, spend) {
 }
 
 async function sendTelegramMessage(chatId, text) {
+  if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
   await fetch(url, {
     method: 'POST',

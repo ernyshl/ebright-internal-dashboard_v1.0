@@ -37,7 +37,7 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#6366f1',
       links: [
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' }
       ]
     },
     {
@@ -192,7 +192,15 @@ export function DashboardHomePage() {
       gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
       links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
     }))
+<<<<<<< HEAD
     .filter(dept => dept.links.length > 0 || !!dept.gaReports);
+=======
+    .filter(dept => {
+      const hasLinks = dept.links.length > 0;
+      const hasGaReports = !!dept.gaReports;
+      return hasLinks || hasGaReports;
+    });
+>>>>>>> 052edda315be4fd6ff407f99bdd94add080c8726
 
   if (isLoading) {
     return (

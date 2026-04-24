@@ -2,9 +2,26 @@
 # Telegram Daily Report Bot
 # Runs via cron at 9am, 12pm, 3pm, 6pm, 9pm MYT
 
-BOT_TOKEN="8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ"
-CHAT_ID="178748547"
-DB_CONTAINER="ebright-dashboard-backend"
+set -euo pipefail
+
+# Load env from backend/.env (this script lives in backend/scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/../.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is not set (check $ENV_FILE)}"
+: "${TELEGRAM_ALLOWED_CHATS:?TELEGRAM_ALLOWED_CHATS is not set (check $ENV_FILE)}"
+
+BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
+# Recipients for scheduled reports — comma-separated, broadcast to all.
+# Falls back to TELEGRAM_ALLOWED_CHATS if TELEGRAM_REPORT_CHATS is not set.
+REPORT_CHATS="${TELEGRAM_REPORT_CHATS:-$TELEGRAM_ALLOWED_CHATS}"
+DB_CONTAINER="${DB_CONTAINER:-ebright-dashboard-backend}"
 
 # Get current time in MYT
 REPORT_TIME=$(TZ="Asia/Kuala_Lumpur" date '+%I:%M %p')
@@ -99,9 +116,18 @@ Total Leads Today: *${TOTAL}*
 Total Spend Today: *${FMT_SPEND}*
 Cost Per Lead: *${FMT_CPL}*"
 
-# Send to Telegram
-curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-  -H "Content-Type: application/json" \
-  -d "{\"chat_id\":${CHAT_ID},\"text\":$(echo "$MESSAGE" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))'),\"parse_mode\":\"Markdown\"}" > /dev/null
+# JSON-escape the message body once, then broadcast to every configured chat
+MESSAGE_JSON=$(python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' <<< "$MESSAGE")
 
-echo "Report sent at $(date)"
+IFS=',' read -ra CHATS <<< "$REPORT_CHATS"
+SENT=0
+for chat in "${CHATS[@]}"; do
+  chat_clean=$(echo "$chat" | tr -d ' ')
+  [ -z "$chat_clean" ] && continue
+  curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+    -H "Content-Type: application/json" \
+    -d "{\"chat_id\":${chat_clean},\"text\":${MESSAGE_JSON},\"parse_mode\":\"Markdown\"}" > /dev/null
+  SENT=$((SENT + 1))
+done
+
+echo "Report sent to ${SENT} chat(s) at $(date)"

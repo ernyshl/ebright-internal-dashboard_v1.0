@@ -2,18 +2,52 @@
 # Telegram alert if meta sync log hasn't updated in 15 minutes
 # Run via cron every 5 minutes
 
-BOT_TOKEN="8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ"
-CHAT_ID="178748547"
-LOG_FILE="/home/staff1/ebright-live-dashboard/meta_sync.log"
+set -euo pipefail
+
+# Load env from backend/.env (this script lives in backend/scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/../.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is not set (check $ENV_FILE)}"
+: "${TELEGRAM_ALLOWED_CHATS:?TELEGRAM_ALLOWED_CHATS is not set (check $ENV_FILE)}"
+
+BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
+# Recipients for ops alerts — comma-separated, broadcast to all.
+# Defaults to the FIRST chat in TELEGRAM_ALLOWED_CHATS so noisy alerts don't
+# fan out to the full allowlist unless explicitly configured.
+ALERT_CHATS="${TELEGRAM_ALERT_CHATS:-${TELEGRAM_ALLOWED_CHATS%%,*}}"
+LOG_FILE="${META_SYNC_LOG:-/home/staff1/ebright-live-dashboard/meta_sync.log}"
 ALERT_FLAG="/tmp/meta_alert_sent"
+
+# Broadcast a Markdown-formatted alert to every chat in ALERT_CHATS
+send_alert() {
+  local text="$1"
+  local payload
+  payload=$(python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' <<< "$text")
+  IFS=',' read -ra CHATS <<< "$ALERT_CHATS"
+  for chat in "${CHATS[@]}"; do
+    chat_clean=$(echo "$chat" | tr -d ' ')
+    [ -z "$chat_clean" ] && continue
+    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+      -H "Content-Type: application/json" \
+      -d "{\"chat_id\":${chat_clean},\"text\":${payload},\"parse_mode\":\"Markdown\"}" > /dev/null
+  done
+}
 
 # Check if log file exists
 if [ ! -f "$LOG_FILE" ]; then
-  # Only alert once per outage
   if [ ! -f "$ALERT_FLAG" ]; then
-    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-      -H "Content-Type: application/json" \
-      -d "{\"chat_id\":${CHAT_ID},\"text\":\"⚠️ *Meta Sync Alert*\n\nLog file not found: ${LOG_FILE}\n\nMeta sync may not be running.\",\"parse_mode\":\"Markdown\"}" > /dev/null
+    send_alert "⚠️ *Meta Sync Alert*
+
+Log file not found: ${LOG_FILE}
+
+Meta sync may not be running."
     touch "$ALERT_FLAG"
   fi
   exit 0
@@ -26,13 +60,15 @@ DIFF=$(( NOW - LAST_MOD ))
 
 # 30 minutes = 1800 seconds
 if [ "$DIFF" -gt 1800 ]; then
-  # Only alert once per outage (don't spam)
   if [ ! -f "$ALERT_FLAG" ]; then
     MINS=$(( DIFF / 60 ))
     LAST_TIME=$(date -d "@${LAST_MOD}" '+%I:%M %p')
-    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-      -H "Content-Type: application/json" \
-      -d "{\"chat_id\":${CHAT_ID},\"text\":\"⚠️ *Meta Sync Alert*\n\nMeta sync log hasn't updated in *${MINS} minutes*.\nLast update: ${LAST_TIME}\n\nCheck if the sync scripts are running and if Meta has paused your app.\",\"parse_mode\":\"Markdown\"}" > /dev/null
+    send_alert "⚠️ *Meta Sync Alert*
+
+Meta sync log hasn't updated in *${MINS} minutes*.
+Last update: ${LAST_TIME}
+
+Check if the sync scripts are running and if Meta has paused your app."
     touch "$ALERT_FLAG"
   fi
 else

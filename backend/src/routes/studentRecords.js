@@ -61,7 +61,7 @@ router.post('/bulk', async (req, res, next) => {
         s.status || 'Active',
         s.gender || 'Male',
         s.branch || 'ONL',
-        s.enrollmentDate || null,
+        (s.enrollmentDate && /^\d{4}-\d{2}-\d{2}$/.test(String(s.enrollmentDate))) ? s.enrollmentDate : null,
         `${s.grade || 'G1'} — ${s.chapter || 'C1'}`,
         JSON.stringify(s.faAttended  || []),
         toTotalStr(s.faAttended),
@@ -72,7 +72,7 @@ router.post('/bulk', async (req, res, next) => {
     const rows = await prisma.$queryRawUnsafe(`SELECT * FROM studentrecords ORDER BY name ASC`);
     return res.json({ ok: true, data: rows.map(rowToStudent) });
   } catch (err) {
-    return next(err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
 
@@ -112,11 +112,16 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-// ── DELETE /api/student-records  (delete ALL) ────────────────────────────────
+// ── DELETE /api/student-records  (delete ALL or by branch) ──────────────────
 
 router.delete('/', async (req, res, next) => {
+  const { branch } = req.query;
   try {
-    await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+    if (branch && branch !== 'All') {
+      await prisma.$queryRawUnsafe(`DELETE FROM studentrecords WHERE branch=$1`, branch);
+    } else {
+      await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+    }
     return res.json({ ok: true });
   } catch (err) {
     return next(err);

@@ -9,7 +9,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to production server
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          VITE_API_BASE_URL="" npm run build
+
+      - name: Upload dist, nginx config, and backend source to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 103.209.156.174
+          username: staff1
+          key: ${{ secrets.PROD_SSH_KEY }}
+          source: "frontend/dist,nginx,backend/src"
+          target: /home/staff1/_deploy_tmp
+
+      - name: Rebuild backend and nginx, then restart
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.174
@@ -17,15 +35,41 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 30m
           script: |
-            /home/staff1/deploy-prod.sh dashboard
-            # Patch env vars
-            for f in $(find /home/staff1 -name ".env" 2>/dev/null); do
-              grep -q "CORS_ORIGIN" "$f" && sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$f" || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$f"
-              grep -q "NODE_ENV" "$f" && sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$f" || echo "NODE_ENV=production" >> "$f"
+            # Step 1: git pull latest code
+            /home/staff1/deploy-prod.sh dashboard || true
+
+            # Step 2: Locate the real app directory
+            APP_DIR=""
+            for candidate in \
+              /home/staff1/apps/ebright-dashboard \
+              /home/staff1/ebright-dashboard \
+              /home/staff1/ebright-internal-dashboard_v1.0 \
+              /home/staff1/dashboard; do
+              if [ -f "$candidate/docker-compose.yml" ]; then APP_DIR="$candidate"; break; fi
             done
-            # Rebuild backend with new code then restart all services
-            for dir in $(find /home/staff1 -name "docker-compose.yml" -exec dirname {} \; 2>/dev/null); do
-              cd "$dir"
-              docker compose build --no-cache backend 2>/dev/null || docker-compose build --no-cache backend 2>/dev/null || true
-              docker compose up -d 2>/dev/null || docker-compose up -d 2>/dev/null || true
-            done
+            if [ -z "$APP_DIR" ]; then
+              APP_DIR=$(find /home/staff1 -maxdepth 6 -name "docker-compose.yml" ! -path "*/_deploy_tmp/*" 2>/dev/null | head -1 | xargs -I{} dirname {})
+            fi
+            echo "==> APP_DIR: $APP_DIR"
+            if [ -z "$APP_DIR" ]; then echo "ERROR: app dir not found"; exit 1; fi
+
+            # Step 3: Copy built frontend + nginx + backend src
+            mkdir -p "$APP_DIR/frontend/dist"
+            rsync -a --delete /home/staff1/_deploy_tmp/frontend/dist/ "$APP_DIR/frontend/dist/"
+            rsync -a /home/staff1/_deploy_tmp/nginx/ "$APP_DIR/nginx/"
+            mkdir -p "$APP_DIR/backend/src"
+            rsync -a --delete /home/staff1/_deploy_tmp/backend/src/ "$APP_DIR/backend/src/"
+
+            # Step 4: Patch env
+            sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$APP_DIR/backend/.env" 2>/dev/null \
+              || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$APP_DIR/backend/.env"
+            sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$APP_DIR/backend/.env" 2>/dev/null \
+              || echo "NODE_ENV=production" >> "$APP_DIR/backend/.env"
+
+            # Step 5: Rebuild backend + nginx
+            cd "$APP_DIR"
+            docker compose stop backend nginx 2>/dev/null || true
+            docker compose rm -f backend nginx 2>/dev/null || true
+            docker compose build --no-cache backend nginx 2>/dev/null || docker-compose build --no-cache backend nginx
+            docker compose up -d 2>/dev/null || docker-compose up -d
+            echo "==> Deploy complete!"
