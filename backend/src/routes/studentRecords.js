@@ -112,11 +112,16 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-// ── DELETE /api/student-records  (delete ALL) ────────────────────────────────
+// ── DELETE /api/student-records  (delete ALL or by branch) ──────────────────
 
 router.delete('/', async (req, res, next) => {
+  const { branch } = req.query;
   try {
-    await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+    if (branch && branch !== 'All') {
+      await prisma.$queryRawUnsafe(`DELETE FROM studentrecords WHERE branch=$1`, branch);
+    } else {
+      await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+    }
     return res.json({ ok: true });
   } catch (err) {
     return next(err);

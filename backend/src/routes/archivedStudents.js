@@ -186,11 +186,16 @@ router.put('/:student_id', async (req, res, next) => {
   }
 });
 
-// ── DELETE /api/archived-students  (delete ALL) ─────────────────────────────
+// ── DELETE /api/archived-students  (delete ALL or by branch) ────────────────
 
 router.delete('/', async (req, res, next) => {
+  const { branch } = req.query;
   try {
-    await pool.query(`DELETE FROM archived_students`);
+    if (branch && branch !== 'All') {
+      await pool.query(`DELETE FROM archived_students WHERE branch=$1`, [branch]);
+    } else {
+      await pool.query(`DELETE FROM archived_students`);
+    }
     return res.json({ ok: true });
   } catch (err) {
     return next(err);
