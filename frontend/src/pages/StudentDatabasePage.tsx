@@ -69,8 +69,11 @@ export function StudentDatabasePage() {
     try {
       const res = await apiFetch('/api/student-records/bulk', { method: 'POST', body: { students: newStudents } });
       if (res.data) setStudents(res.data);
-    } catch {
-      setStudents((prev: any[]) => [...prev, ...newStudents]);
+      setSuccessMsg(`✅ ${newStudents.length} student${newStudents.length !== 1 ? 's' : ''} saved successfully.`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setSuccessMsg(`❌ Save failed: ${err?.data?.error || err?.message || 'server error'}. Students not saved — please try again.`);
+      setTimeout(() => setSuccessMsg(''), 8000);
     }
   }, [setStudents]);
 
