@@ -104,6 +104,7 @@ export function ArchivedStudentsPage() {
   const [showImport, setShowImport] = useState(false);
   const [confirm, setConfirm] = useState<any>(null);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deleteAllBranch, setDeleteAllBranch] = useState('All');
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [editStudent, setEditStudent] = useState<any>(null);
@@ -178,9 +179,17 @@ export function ArchivedStudentsPage() {
 
   async function handleDeleteAll() {
     try {
-      await apiFetch('/api/archived-students', { method: 'DELETE' });
-      setStudents([]);
-      flash('✅ All archived records permanently deleted.');
+      const url = deleteAllBranch && deleteAllBranch !== 'All'
+        ? `/api/archived-students?branch=${encodeURIComponent(deleteAllBranch)}`
+        : '/api/archived-students';
+      await apiFetch(url, { method: 'DELETE' });
+      if (deleteAllBranch && deleteAllBranch !== 'All') {
+        setStudents(prev => prev.filter((s: any) => s.branch !== deleteAllBranch));
+        flash(`✅ All ${deleteAllBranch} archived records permanently deleted.`);
+      } else {
+        setStudents([]);
+        flash('✅ All archived records permanently deleted.');
+      }
     } catch (err: any) {
       flash('❌ Delete all failed: ' + (err?.data?.error || err?.message || 'server error'));
     }
@@ -221,7 +230,7 @@ export function ArchivedStudentsPage() {
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={exportToExcel} disabled={filtered.length === 0} style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: 600, opacity: filtered.length ? 1 : 0.4 }}>⬇ Export</button>
-            <button onClick={() => setShowDeleteAll(true)} disabled={students.length === 0} style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #dc2626', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontWeight: 600, opacity: students.length ? 1 : 0.4 }}>🗑 Delete All</button>
+            <button onClick={() => { setDeleteAllBranch(branch); setShowDeleteAll(true); }} disabled={students.length === 0} style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: '1.5px solid #dc2626', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontWeight: 600, opacity: students.length ? 1 : 0.4 }}>🗑 Delete All</button>
             <button onClick={() => setShowImport(true)} style={{ fontSize: 13, padding: '8px 20px', borderRadius: 8, border: 'none', background: '#4f46e5', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>+ Add Archived Students</button>
           </div>
         </div>
@@ -348,18 +357,39 @@ export function ArchivedStudentsPage() {
       {/* Delete All confirmation modal */}
       {showDeleteAll && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--panel)', borderRadius: 16, boxShadow: '0 25px 50px rgba(0,0,0,0.3)', width: '100%', maxWidth: 420, padding: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ background: 'var(--panel)', borderRadius: 16, boxShadow: '0 25px 50px rgba(0,0,0,0.3)', width: '100%', maxWidth: 460, padding: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <span style={{ fontSize: 28 }}>⚠️</span>
-              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#dc2626', margin: 0 }}>Delete All Archived Records</h3>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#dc2626', margin: 0 }}>Delete Archived Records</h3>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.6 }}>
-              Are you sure you want to permanently delete <strong style={{ color: 'var(--text)' }}>all {students.length} archived records</strong>?
+
+            {/* Branch selector */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
+                Select Branch to Clear
+              </label>
+              <select
+                value={deleteAllBranch}
+                onChange={e => setDeleteAllBranch(e.target.value)}
+                style={{ width: '100%', fontSize: 13, padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', cursor: 'pointer' }}
+              >
+                <option value="All">All Branches</option>
+                {[...BRANCHES].sort().map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+
+            {/* Dynamic warning */}
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 20px', lineHeight: 1.6, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,38,0.2)', borderRadius: 8, padding: '10px 14px' }}>
+              Are you sure you want to permanently delete{' '}
+              <strong style={{ color: '#dc2626' }}>
+                {deleteAllBranch === 'All' ? `all ${students.length} archived records` : `all archived students in ${deleteAllBranch}`}
+              </strong>?{' '}
+              This action <strong>cannot be undone.</strong>
             </p>
-            <p style={{ fontSize: 12, color: '#dc2626', margin: '0 0 24px', fontWeight: 600 }}>This action cannot be undone.</p>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <button onClick={() => setShowDeleteAll(false)} style={{ fontSize: 13, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', padding: '8px 20px', borderRadius: 8, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleDeleteAll} style={{ fontSize: 13, background: '#dc2626', color: '#fff', border: 'none', padding: '8px 24px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yes, Delete All</button>
+              <button onClick={handleDeleteAll} style={{ fontSize: 13, background: '#dc2626', color: '#fff', border: 'none', padding: '8px 24px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Yes, Delete</button>
             </div>
           </div>
         </div>
