@@ -61,7 +61,7 @@ router.post('/bulk', async (req, res, next) => {
         s.status || 'Active',
         s.gender || 'Male',
         s.branch || 'ONL',
-        s.enrollmentDate || null,
+        (s.enrollmentDate && /^\d{4}-\d{2}-\d{2}$/.test(String(s.enrollmentDate))) ? s.enrollmentDate : null,
         `${s.grade || 'G1'} — ${s.chapter || 'C1'}`,
         JSON.stringify(s.faAttended  || []),
         toTotalStr(s.faAttended),
