@@ -12,8 +12,8 @@ export function RequirePermission({ dashboard, roles, children }: { dashboard?: 
     const user = getUser();
     const { permissions, isLoading } = usePermissions();
 
-    // No session (local preview) or super admin — bypass all checks
-    if (!user || user?.role === 'super_admin') return children;
+    // Super admins bypass all permission checks
+    if (user?.role === 'super_admin') return children;
 
     // Role-based check (e.g. users page is super_admin only)
     if (roles && roles.length > 0) {

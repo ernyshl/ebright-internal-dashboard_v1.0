@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
-import { getUser } from '../lib/auth';
 
-export function DashboardHomePage({ previewMode = false }) {
+export function DashboardHomePage() {
   const navigate = useNavigate();
   const { permissions, dashboards, isLoading } = usePermissions();
 
@@ -187,32 +186,15 @@ export function DashboardHomePage({ previewMode = false }) {
     }
   ];
 
-  // When no user session, show all dashboards (local preview mode)
-  const noAuth = !getUser();
+  const filteredDepartments = departmentData
+    .map(dept => ({
+      ...dept,
+      gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
+      links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
+    }))
+    .filter(dept => dept.links.length > 0 || !!dept.gaReports);
 
-  // In preview mode, remap auth-protected routes to their preview equivalents
-  const PREVIEW_ROUTE_MAP = { '/okr-attendance': '/okr-preview' };
-  const resolvePreviewPath = (path) => previewMode ? (PREVIEW_ROUTE_MAP[path] ?? path) : path;
-
-  // Filter departments based on permissions (skipped in preview mode or when no auth)
-  const filteredDepartments = (previewMode || noAuth)
-    ? departmentData.map(dept => ({
-        ...dept,
-        links: dept.links.map(link => ({ ...link, path: resolvePreviewPath(link.path) })),
-      }))
-    : departmentData
-        .map(dept => ({
-          ...dept,
-          gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
-          links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
-        }))
-        .filter(dept => {
-          const hasLinks = dept.links.length > 0;
-          const hasGaReports = !!dept.gaReports;
-          return hasLinks || hasGaReports;
-        });
-
-  if (!previewMode && isLoading) {
+  if (isLoading) {
     return (
       <div className="dashboardHomePage">
         <div className="dashboardHomeHeader">

@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { DAYS } from '../../lib/okr/constants';
 import { n, weekRange, getRateColor, formatPct } from '../../lib/okr/utils';
 import { RateBar } from './RateBar';
 import { DailyAttendanceChart } from './DailyAttendanceChart';
 import { FourWeekChart } from './FourWeekChart';
+import { apiFetch } from '../../lib/api';
 
 const WEEK_LABELS = ['3 Weeks', '2 Weeks', 'Last Week', 'This Week'];
 
 export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
+  const qc = useQueryClient();
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(3);
+  const [activeStudentsInput, setActiveStudentsInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'ok' | 'error' | null>(null);
 
   // Resolve the record/metrics to display based on selected week toggle
   const displayRecord  = trendWeeks?.[selectedWeekIdx]?.record  || r;
@@ -18,14 +24,47 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
   const rec = displayRecord  || r;
   const met = displayMetrics || m;
 
+  // Sync local editable value whenever the displayed record changes
+  useEffect(() => {
+    setActiveStudentsInput(String(rec?.active_students ?? ''));
+  }, [rec?.id, rec?.branch, rec?.week_date, selectedWeekIdx]);
+
   if (!rec || !met) return null;
+
+  // Live recalculation of Outstanding Invoice %
+  const liveActiveStudents = n(activeStudentsInput);
+  const liveOutstandingPct = liveActiveStudents > 0
+    ? parseFloat(((n(rec.partially_paid_unpaid) / liveActiveStudents) * 100).toFixed(2))
+    : 0;
+
+  const hasChanged = String(rec.active_students ?? '') !== activeStudentsInput;
+
+  const handleSaveActiveStudents = async () => {
+    setIsSaving(true);
+    setSaveStatus(null);
+    try {
+      await apiFetch('/api/okr-attendance', {
+        method: 'POST',
+        body: { ...rec, active_students: liveActiveStudents, outstanding_invoice_pct: liveOutstandingPct },
+      });
+      qc.invalidateQueries({ queryKey: ['okr-week'] });
+      qc.invalidateQueries({ queryKey: ['okr-list'] });
+      qc.invalidateQueries({ queryKey: ['okr-dash'] });
+      setSaveStatus('ok');
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
 
   const kpis = [
     { label: 'Total Attendance',  value: met.totalAttendance,                       color: 'var(--info)' },
     { label: 'Attendance Rate',   value: formatPct(met.attendanceRate, 2),           color: getRateColor(met.attendanceRate) },
     { label: 'Rate w/ Freeze',    value: formatPct(met.attendanceRateWithFreeze, 2), color: getRateColor(met.attendanceRateWithFreeze) },
-    { label: 'Active Students',   value: rec.active_students ?? '—',                 color: 'var(--text)' },
-    { label: 'Outstanding Inv.',  value: formatPct(rec.outstanding_invoice_pct, 2),  color: parseFloat(rec.outstanding_invoice_pct) <= 25 ? 'var(--success)' : 'var(--brand)', unit: 'Target 20–25%' },
+    { label: 'Active Students',   value: activeStudentsInput || (rec.active_students ?? '—'), color: 'var(--text)' },
+    { label: 'Outstanding Inv.',  value: formatPct(liveOutstandingPct, 2),           color: liveOutstandingPct <= 25 ? 'var(--success)' : 'var(--brand)', unit: 'Target 20–25%' },
   ];
 
   return (
@@ -181,13 +220,40 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
           <div className="okrDetailSectionTitle">💰 Outstanding Invoices (AOne)</div>
           <div className="okrInvoiceWrap">
             <div className="okrInvoiceTarget">Target: 20–25%</div>
-            <div className="okrInvoicePct" style={{ color: parseFloat(rec.outstanding_invoice_pct) <= 25 ? 'var(--success)' : 'var(--brand)' }}>
-              {formatPct(rec.outstanding_invoice_pct, 2)}
+            <div className="okrInvoicePct" style={{ color: liveOutstandingPct <= 25 ? 'var(--success)' : 'var(--brand)' }}>
+              {formatPct(liveOutstandingPct, 2)}
             </div>
-            <RateBar value={parseFloat(rec.outstanding_invoice_pct || 0)} max={50} />
+            <RateBar value={liveOutstandingPct} max={50} />
             <div className="okrInfoList" style={{ marginTop: 12 }}>
               <div className="okrInfoRow"><span>Partially Paid + Unpaid</span><strong>{rec.partially_paid_unpaid}</strong></div>
-              <div className="okrInfoRow"><span>Active Students</span><strong>{rec.active_students}</strong></div>
+              <div className="okrInfoRow">
+                <span>Active Students</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number"
+                    min="0"
+                    value={activeStudentsInput}
+                    onChange={e => setActiveStudentsInput(e.target.value)}
+                    style={{ width: 80, padding: '2px 6px', border: '1px solid var(--border, #d1d5db)', borderRadius: 6, fontWeight: 600, fontSize: 14, textAlign: 'right' }}
+                  />
+                  {hasChanged && (
+                    <button
+                      type="button"
+                      onClick={handleSaveActiveStudents}
+                      disabled={isSaving}
+                      style={{ padding: '2px 10px', borderRadius: 6, border: 'none', background: 'var(--brand, #e1251b)', color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+                    >
+                      {isSaving ? '...' : 'Save'}
+                    </button>
+                  )}
+                  {saveStatus === 'ok'    && <span style={{ color: 'var(--success)', fontSize: 12 }}>✓ Saved</span>}
+                  {saveStatus === 'error' && <span style={{ color: 'var(--brand)',   fontSize: 12 }}>✗ Error</span>}
+                </span>
+              </div>
+              <div className="okrInfoRow" style={{ fontSize: 11, color: 'var(--text-muted, #6b7280)' }}>
+                <span>Outstanding Invoice %</span>
+                <span>{formatPct(liveOutstandingPct, 2)} = {rec.partially_paid_unpaid ?? 0} ÷ {liveActiveStudents} × 100</span>
+              </div>
             </div>
           </div>
         </div>

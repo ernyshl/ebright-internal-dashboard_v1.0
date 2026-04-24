@@ -29,7 +29,12 @@ export function OkrAttendancePage() {
   const [activeTab, setActiveTab]       = useState(initMode === 'weekly' ? 'entry' : 'dashboard');
   const [dashView, setDashView]         = useState<'weekly' | 'daily'>('weekly');
   const [dashBranch, setDashBranch]     = useState('');
-  const [dashWeek, setDashWeek]         = useState(USE_MOCK ? MOCK_WEEK : '');
+  const [dashWeek, setDashWeek]         = useState(() => {
+    if (USE_MOCK) return MOCK_WEEK;
+    const d = new Date();
+    d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+    return d.toISOString().slice(0, 10);
+  });
   const [filterBranch, setFilterBranch] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [saveStatus, setSaveStatus]     = useState(null);
@@ -525,23 +530,55 @@ export function OkrAttendancePage() {
               Outstanding Invoices (AOne)
               <span className="okrEntrySectionHint">Target: 20–25%</span>
             </div>
-            <div className="okrEntryGrid3">
-              <div className="formGroup">
-                <label>Partially Paid + Unpaid</label>
-                <input type="number" name="partially_paid_unpaid" value={form.partially_paid_unpaid} onChange={handleChange} min="0" placeholder="0" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+
+              {/* Partially Paid + Unpaid */}
+              <div style={{ background: 'var(--bg, #f8fafc)', border: '2px dashed #cbd5e1', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                  Partially Paid + Unpaid
+                </div>
+                <input
+                  type="number"
+                  name="partially_paid_unpaid"
+                  value={form.partially_paid_unpaid}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="Enter count..."
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #94a3b8', borderRadius: 7, padding: '9px 12px', fontSize: '1.05rem', fontWeight: 600, background: '#fff', color: 'var(--text)' }}
+                />
               </div>
-              <div className="formGroup">
-                <label>Active Students</label>
-                <input type="number" name="active_students" value={form.active_students} onChange={handleChange} min="0" placeholder="0" />
-                <span className="okrFieldNote">Also used for Discrepancy</span>
+
+              {/* Active Students */}
+              <div style={{ background: 'var(--bg, #f8fafc)', border: '2px dashed #cbd5e1', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  Active Students
+                  <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>
+                    Also used for Discrepancy
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  name="active_students"
+                  value={form.active_students}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="Enter count..."
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1.5px solid #94a3b8', borderRadius: 7, padding: '9px 12px', fontSize: '1.05rem', fontWeight: 600, background: '#fff', color: 'var(--text)' }}
+                />
               </div>
-              <div className="formGroup">
-                <label>Outstanding Invoice %</label>
-                <div className={`okrAutoCalcBox${liveMetrics.outstandingInvoicePct > 25 ? ' okrAutoCalcBoxWarn' : liveMetrics.outstandingInvoicePct > 0 ? ' okrAutoCalcBoxOk' : ''}`}>
+
+              {/* Outstanding Invoice % — auto-calculated */}
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                  Outstanding Invoice %
+                </div>
+                <div className={`okrAutoCalcBox${liveMetrics.outstandingInvoicePct > 25 ? ' okrAutoCalcBoxWarn' : liveMetrics.outstandingInvoicePct > 0 ? ' okrAutoCalcBoxOk' : ''}`}
+                  style={{ minHeight: 46 }}>
                   {liveMetrics.outstandingInvoicePct.toFixed(2)}%
                   <span className="okrAutoCalcBoxHint">Partially Paid ÷ Active × 100</span>
                 </div>
               </div>
+
             </div>
           </div>
 
