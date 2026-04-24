@@ -349,21 +349,6 @@ export function FaDashboardTestingPage() {
                 </div>
               ))}
             </div>
-            {/* Filters */}
-            <select value={selectedRegion} onChange={e => { setSelectedRegion(e.target.value); setSelectedBranch(''); }} style={selectStyle}>
-              <option value="">All Regions</option>
-              {Object.keys(REGIONS).map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} style={selectStyle}>
-              <option value="">All Branches</option>
-              {availableBranches.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-            {(selectedRegion || selectedBranch) && (
-              <button onClick={() => { setSelectedRegion(''); setSelectedBranch(''); }}
-                style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
-                ✕ Clear
-              </button>
-            )}
             <button onClick={handleSetBaseline} style={{
               padding: '9px 20px', borderRadius: 11, fontSize: 13, fontWeight: 700,
               background: baselineSet
@@ -443,6 +428,23 @@ export function FaDashboardTestingPage() {
                 borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 padding: '24px 24px 16px', display: 'flex', flexDirection: 'column',
               }}>
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <select value={selectedRegion} onChange={e => { setSelectedRegion(e.target.value); setSelectedBranch(''); }} style={selectStyle}>
+                    <option value="">Region ▾</option>
+                    {Object.keys(REGIONS).map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                  <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} style={selectStyle}>
+                    <option value="">Branch ▾</option>
+                    {availableBranches.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                  {(selectedRegion || selectedBranch) && (
+                    <button onClick={() => { setSelectedRegion(''); setSelectedBranch(''); }}
+                      style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6, fontWeight: 700 }}>
+                      ✕ Clear
+                    </button>
+                  )}
+                </div>
                 <h3 style={{ margin: '0 0 14px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
                   Student's Grade
                 </h3>
