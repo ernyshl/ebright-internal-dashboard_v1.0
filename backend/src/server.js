@@ -46,6 +46,26 @@ async function runMigrations() {
       UNIQUE(branch, week_date)
     )
   `);
+  // Drop any CHECK constraint on studentrecords.branch so all branches (incl. KTG) are accepted
+  await pool.query(`
+    DO $$
+    DECLARE
+      con_name TEXT;
+    BEGIN
+      SELECT conname INTO con_name
+      FROM pg_constraint
+      WHERE conrelid = 'studentrecords'::regclass
+        AND contype = 'c'
+        AND pg_get_constraintdef(oid) ILIKE '%branch%'
+      LIMIT 1;
+
+      IF con_name IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE studentrecords DROP CONSTRAINT ' || quote_ident(con_name);
+        RAISE NOTICE 'Dropped branch constraint: %', con_name;
+      END IF;
+    END
+    $$;
+  `);
   // eslint-disable-next-line no-console
   console.log('✅ DB migrations complete');
 }
