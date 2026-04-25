@@ -9,14 +9,17 @@ import { AllBranchesGrid } from './AllBranchesGrid';
 import { BranchDetailCard } from './BranchDetailCard';
 import { RateBar } from './RateBar';
 
+function localYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function toWednesday(dateStr: string) {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
+  return localYMD(d);
 }
 function thisWeekWed() {
-  return toWednesday(new Date().toISOString().slice(0, 10));
+  return toWednesday(localYMD(new Date()));
 }
 
 /** Zero out every day except `activeDay` so existing components treat it as weekly data */

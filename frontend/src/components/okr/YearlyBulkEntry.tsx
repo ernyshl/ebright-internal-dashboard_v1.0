@@ -15,11 +15,15 @@ const AONE_DAY_MAP: Record<string, string> = {
 const AONE_STATUS = new Set(['attended', 'absent', 'frozen', 'replaced']);
 const INFER_DAY: Record<number, string> = { 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat', 0: 'sun' };
 
+function localYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function toWednesday(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
+  return localYMD(d);
 }
 
 function parseExcelDate(val: any): Date | null {
@@ -69,7 +73,7 @@ function parseYearlyAone(file: File, branch: string): Promise<WeekEntry[]> {
           const date = parseExcelDate(row[colDate]);
           if (!date) return;
 
-          const wed = toWednesday(date.toISOString().slice(0, 10));
+          const wed = toWednesday(localYMD(date));
 
           let dayKey: string | undefined;
           if (colDay) dayKey = AONE_DAY_MAP[String(row[colDay] ?? '').toLowerCase().trim()];

@@ -19,7 +19,11 @@ export function prevWeekDate(dateStr, weeksBack = 1) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() - weeksBack * 7);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function localYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 // Snap any date to the Monday of its Mon–Sun week
@@ -28,7 +32,7 @@ export function toMonday(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
+  return localYMD(d);
 }
 
 // Keep alias for any legacy callers

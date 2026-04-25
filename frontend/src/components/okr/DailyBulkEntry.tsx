@@ -8,15 +8,17 @@ import { apiFetch } from '../../lib/api';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-function toWednesday(dateStr) {
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
+function localYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
+function toWednesday(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return localYMD(d);
+}
 function thisWeekWed() {
-  return toWednesday(new Date().toISOString().slice(0, 10));
+  return toWednesday(localYMD(new Date()));
 }
 
 function smartDay(records) {
