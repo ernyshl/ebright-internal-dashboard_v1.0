@@ -70,6 +70,22 @@ export function CtWithTimeSlotPage() {
     return REGION_PIPELINES[`Region ${region}`] || [];
   }, [region]);
 
+  // Aggregate totals across visible pipelines: per-day and grand total.
+  const summary = useMemo(() => {
+    const perDay: Record<string, number> = { Wednesday: 0, Thursday: 0, Friday: 0, Saturday: 0, Sunday: 0 };
+    let grand = 0;
+    for (const pipeline of visiblePipelines) {
+      const branchData = calMap[pipeline] || {};
+      for (const day of CAL_DAYS) {
+        const slots = SLOTS_FOR_DAY(day);
+        const dayTotal = slots.reduce((s, slot) => s + (branchData[day]?.[slot.code] || 0), 0);
+        perDay[day] += dayTotal;
+        grand += dayTotal;
+      }
+    }
+    return { perDay, grand };
+  }, [calMap, visiblePipelines]);
+
   // Tile click → open GHL Lead Centre filtered to this pipeline + CT stage + same date range.
   const openInLeadCentre = (pipeline: string) => {
     const params = new URLSearchParams({
@@ -123,6 +139,28 @@ export function CtWithTimeSlotPage() {
           <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading…</p>
         </div>
       ) : (
+        <>
+        {/* Summary across visible pipelines */}
+        <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ fontWeight: 600 }}>
+              Total CTs <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {region === 'all' ? 'All Regions' : `Region ${region}`} · {visiblePipelines.length} branch{visiblePipelines.length === 1 ? '' : 'es'}</span>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700 }}>{summary.grand}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+            {CAL_DAYS.map(day => (
+              <div key={`sum-${day}`} style={{
+                textAlign: 'center', padding: 10, borderRadius: 6,
+                background: summary.perDay[day] > 0 ? 'var(--brandLight, #dbeafe)' : 'var(--bg2, #f8fafc)',
+              }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{day.slice(0, 3)}</div>
+                <div style={{ fontSize: 22, fontWeight: 700 }}>{summary.perDay[day]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(640px, 1fr))', gap: 16 }}>
           {visiblePipelines.map(pipeline => {
             const branchName = PIPELINE_TO_BRANCH[pipeline] || pipeline;
@@ -198,6 +236,7 @@ export function CtWithTimeSlotPage() {
             );
           })}
         </div>
+        </>
       )}
     </div>
   );
