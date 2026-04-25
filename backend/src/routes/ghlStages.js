@@ -40,6 +40,8 @@ router.post('/webhook', async (req, res) => {
     const pipelineName = (data.pipeline_name || '').trim();
     const contactType = (data.contact_type || 'lead').trim();
     const leadSource  = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
+    const preferredDay = (data.preferred_day || '').trim();
+    const timeSlot    = (data.time_slot || '').trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) {
@@ -52,10 +54,10 @@ router.post('/webhook', async (req, res) => {
     // Upsert — ON CONFLICT DO NOTHING deduplicates permanently
     await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        ON CONFLICT (fingerprint) DO NOTHING`,
-      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource]
+      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
     return res.status(200).json({ status: 'ok' });
@@ -111,7 +113,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const [countResult, dataResult] = await Promise.all([
       pool.query(`SELECT COUNT(*) FROM ghl_stages ${where}`, params),
       pool.query(
-        `SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source,
+        `SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot,
                 (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at_local
          FROM ghl_stages ${where}
          ORDER BY received_at DESC
@@ -214,7 +216,7 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 // ──────────────────────────────────────────────────────────────
 router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
-    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '' } = req.body;
+    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '', preferred_day = '', time_slot = '' } = req.body;
 
     const stageKey = getStageKey(stage_raw);
     if (!stageKey) return res.status(400).json({ error: 'Invalid stage. Use: New Lead (NL), Confirmed (CT), Show-Up (SU), or Enrolled (ENR)' });
@@ -222,11 +224,11 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
     const fingerprint = `${email.trim().toLowerCase()}|${last_name.trim()}|${student_name.trim()}|${stage_raw.trim()}`.replace(/\s+/g, '');
 
     const { rows } = await pool.query(
-      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        ON CONFLICT (fingerprint) DO NOTHING
        RETURNING id`,
-      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim()]
+      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim(), preferred_day.trim(), time_slot.trim()]
     );
 
     if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same fingerprint already exists)' });
@@ -242,7 +244,7 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
 router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source } = req.body;
+    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot } = req.body;
 
     // Recalculate stage_key if stage_raw changed
     let stageKey;
@@ -264,6 +266,8 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     if (student_name !== undefined) { sets.push(`student_name = $${idx++}`);  params.push(student_name.trim()); }
     if (contact_type !== undefined) { sets.push(`contact_type = $${idx++}`);  params.push(contact_type.trim()); }
     if (lead_source !== undefined)  { sets.push(`lead_source = $${idx++}`);   params.push(lead_source.trim()); }
+    if (preferred_day !== undefined){ sets.push(`preferred_day = $${idx++}`); params.push(preferred_day.trim()); }
+    if (time_slot !== undefined)    { sets.push(`time_slot = $${idx++}`);     params.push(time_slot.trim()); }
 
     if (sets.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
@@ -323,6 +327,8 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       const studentName = (r.student_name || '').trim();
       const contactType = (r.contact_type || 'lead').trim();
       const leadSource  = (r.lead_source || '').trim();
+      const preferredDay = (r.preferred_day || '').trim();
+      const timeSlot    = (r.time_slot || '').trim();
       const receivedAt  = r.received_at || null;
 
       const stageKey = getStageKey(rawStage);
@@ -334,10 +340,10 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       const bulkFingerprint = `${fingerprint}|${receivedAt || Date.now()}|${inserted + skipped}`;
 
       const { rowCount } = await pool.query(
-        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, received_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, COALESCE($12::timestamptz, NOW()))
+        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, received_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, COALESCE($14::timestamptz, NOW()))
          ON CONFLICT (fingerprint) DO NOTHING`,
-        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, receivedAt]
+        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, preferredDay, timeSlot, receivedAt]
       );
 
       if (rowCount > 0) inserted++;
@@ -389,7 +395,7 @@ router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res,
     const ghlWhere = ghlConditions.length ? `WHERE ${ghlConditions.join(' AND ')}` : '';
 
     const { rows: ghlLeads } = await pool.query(
-      `SELECT email, last_name, phone, pipeline_name, stage_key, lead_source,
+      `SELECT email, last_name, phone, pipeline_name, stage_key, lead_source, preferred_day, time_slot,
               (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at
        FROM ghl_stages ${ghlWhere}
        ORDER BY received_at DESC`,
