@@ -109,9 +109,10 @@ export function YearlyBulkEntry() {
   const [selectedBranch, setSelectedBranch] = useState(ALL_BRANCHES[0]);
   const [selectedYear, setSelectedYear]     = useState(new Date().getFullYear());
   const [preview, setPreview]               = useState<WeekEntry[] | null>(null);
+  const [existingWeeks, setExistingWeeks]   = useState<Set<string>>(new Set());
   const [uploadStatus, setUploadStatus]     = useState<{ type: 'ok' | 'error'; msg: string } | null>(null);
   const [isSaving, setIsSaving]             = useState(false);
-  const [saveStatus, setSaveStatus]         = useState<{ saved: number; skipped: number } | null>(null);
+  const [saveStatus, setSaveStatus]         = useState<{ added: number; updated: number; skipped: number } | null>(null);
   const [isUploading, setIsUploading]       = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,9 +124,18 @@ export function YearlyBulkEntry() {
     setUploadStatus(null);
     setPreview(null);
     setSaveStatus(null);
+    setExistingWeeks(new Set());
 
     try {
-      const entries = await parseYearlyAone(file, selectedBranch);
+      const [entries, existingData] = await Promise.all([
+        parseYearlyAone(file, selectedBranch),
+        apiFetch(`/api/okr-attendance?branch=${encodeURIComponent(selectedBranch)}&limit=500`),
+      ]);
+      const existingSet = new Set<string>(
+        (existingData?.records ?? []).map((r: any) => r.week_date?.slice(0, 10))
+      );
+      setExistingWeeks(existingSet);
+
       const filtered = entries.filter(e => {
         const start = new Date(e.week_date + 'T00:00:00');
         const end   = new Date(e.week_date + 'T00:00:00');
@@ -135,8 +145,13 @@ export function YearlyBulkEntry() {
       if (!filtered.length) {
         setUploadStatus({ type: 'error', msg: `No data found for ${selectedYear}. File may contain data for a different year.` });
       } else {
+        const dupeCount = filtered.filter(w => existingSet.has(w.week_date)).length;
+        const newCount  = filtered.length - dupeCount;
+        const hint = dupeCount > 0
+          ? ` (${newCount} new, ${dupeCount} will overwrite existing)`
+          : '';
         setPreview(filtered);
-        setUploadStatus({ type: 'ok', msg: `Found ${filtered.length} week${filtered.length !== 1 ? 's' : ''} of data for ${selectedBranch} in ${selectedYear}. Preview and confirm below.` });
+        setUploadStatus({ type: 'ok', msg: `Found ${filtered.length} week${filtered.length !== 1 ? 's' : ''} for ${selectedBranch} in ${selectedYear}${hint}.` });
       }
     } catch (err: any) {
       setUploadStatus({ type: 'error', msg: err.message });
@@ -150,9 +165,11 @@ export function YearlyBulkEntry() {
     setIsSaving(true);
     setSaveStatus(null);
 
-    let saved = 0;
+    let added = 0;
+    let updated = 0;
     let skipped = 0;
     for (const entry of preview) {
+      const isExisting = existingWeeks.has(entry.week_date);
       try {
         const payload: Record<string, any> = {
           branch: entry.branch,
@@ -167,7 +184,7 @@ export function YearlyBulkEntry() {
         const metrics = calcMetrics(payload);
         payload.outstanding_invoice_pct = metrics.outstandingInvoicePct;
         await apiFetch('/api/okr-attendance', { method: 'POST', body: payload });
-        saved++;
+        if (isExisting) updated++; else added++;
       } catch {
         skipped++;
       }
@@ -178,7 +195,8 @@ export function YearlyBulkEntry() {
     qc.invalidateQueries({ queryKey: ['okr-dash'] });
     qc.invalidateQueries({ queryKey: ['okr-yearly'] });
     setIsSaving(false);
-    setSaveStatus({ saved, skipped });
+    setSaveStatus({ added, updated, skipped });
+    setExistingWeeks(new Set());
     setPreview(null);
   };
 
@@ -199,7 +217,7 @@ export function YearlyBulkEntry() {
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Branch</div>
           <select
             value={selectedBranch}
-            onChange={e => { setSelectedBranch(e.target.value); setPreview(null); setSaveStatus(null); }}
+            onChange={e => { setSelectedBranch(e.target.value); setPreview(null); setSaveStatus(null); setExistingWeeks(new Set()); }}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #cbd5e1', borderRadius: 8, fontSize: '0.95rem', fontWeight: 600, background: '#fff' }}
           >
             {Object.entries(REGIONS).map(([region, branches]) => (
@@ -213,7 +231,7 @@ export function YearlyBulkEntry() {
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Year</div>
           <select
             value={selectedYear}
-            onChange={e => { setSelectedYear(Number(e.target.value)); setPreview(null); setSaveStatus(null); }}
+            onChange={e => { setSelectedYear(Number(e.target.value)); setPreview(null); setSaveStatus(null); setExistingWeeks(new Set()); }}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #cbd5e1', borderRadius: 8, fontSize: '0.95rem', fontWeight: 600, background: '#fff' }}
           >
             {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -252,42 +270,57 @@ export function YearlyBulkEntry() {
       {/* ── Preview table ── */}
       {preview && preview.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontWeight: 700, marginBottom: 10, fontSize: '0.9rem' }}>
-            Preview — {preview.length} weeks to save
-          </div>
-          <div style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr', background: '#f1f5f9', padding: '8px 14px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <span>Week</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span><span>Rows</span>
-            </div>
-            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-              {preview.map(e => (
-                <div key={e.week_date} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr', padding: '7px 14px', borderTop: '1px solid var(--border)', fontSize: '0.82rem' }}>
-                  <span style={{ fontWeight: 600 }}>{weekRange(e.week_date)}</span>
-                  {['wed','thu','fri','sat','sun'].map(d => (
-                    <span key={d} style={{ color: 'var(--textSecondary)' }}>
-                      {e.counts[d].attended}a / {e.counts[d].absent}x
-                    </span>
-                  ))}
-                  <span style={{ color: 'var(--textSecondary)' }}>{e.rows}</span>
+          {(() => {
+            const overwriteCount = preview.filter(w => existingWeeks.has(w.week_date)).length;
+            const newCount = preview.length - overwriteCount;
+            return (
+              <>
+                <div style={{ fontWeight: 700, marginBottom: 10, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  Preview — {preview.length} weeks
+                  {newCount > 0 && <span style={{ fontSize: '0.72rem', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', borderRadius: 5, padding: '2px 8px', fontWeight: 700 }}>{newCount} new</span>}
+                  {overwriteCount > 0 && <span style={{ fontSize: '0.72rem', background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74', borderRadius: 5, padding: '2px 8px', fontWeight: 700 }}>{overwriteCount} will overwrite</span>}
                 </div>
-              ))}
-            </div>
-          </div>
+                <div style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.5fr 0.6fr', background: '#f1f5f9', padding: '8px 14px', fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span>Week</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span><span>Rows</span><span>Status</span>
+                  </div>
+                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {preview.map(e => {
+                      const isExisting = existingWeeks.has(e.week_date);
+                      return (
+                        <div key={e.week_date} style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.5fr 0.6fr', padding: '7px 14px', borderTop: '1px solid var(--border)', fontSize: '0.82rem', background: isExisting ? '#fffbeb' : undefined }}>
+                          <span style={{ fontWeight: 600 }}>{weekRange(e.week_date)}</span>
+                          {['wed','thu','fri','sat','sun'].map(d => (
+                            <span key={d} style={{ color: 'var(--textSecondary)' }}>
+                              {e.counts[d].attended}a / {e.counts[d].absent}x
+                            </span>
+                          ))}
+                          <span style={{ color: 'var(--textSecondary)' }}>{e.rows}</span>
+                          {isExisting
+                            ? <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#c2410c' }}>overwrite</span>
+                            : <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#15803d' }}>new</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-          <div className="okrSaveRow" style={{ marginTop: 16 }}>
-            <button type="button" className="okrSaveBtn" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? `Saving...` : `✓ Save ${preview.length} weeks`}
-            </button>
-            <button type="button" className="okrClearBtn" onClick={() => { setPreview(null); setUploadStatus(null); }}>✕ Cancel</button>
-          </div>
+                <div className="okrSaveRow" style={{ marginTop: 16 }}>
+                  <button type="button" className="okrSaveBtn" onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : `✓ Save ${preview.length} weeks${overwriteCount > 0 ? ` (${overwriteCount} overwrite)` : ''}`}
+                  </button>
+                  <button type="button" className="okrClearBtn" onClick={() => { setPreview(null); setUploadStatus(null); setExistingWeeks(new Set()); }}>✕ Cancel</button>
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
       {/* ── Save result ── */}
       {saveStatus && (
         <div style={{ padding: '12px 16px', borderRadius: 8, background: '#f0fdf4', border: '1.5px solid #86efac', fontSize: '0.85rem', fontWeight: 600, color: '#15803d' }}>
-          ✅ Saved {saveStatus.saved} weeks successfully{saveStatus.skipped > 0 ? ` (${saveStatus.skipped} skipped due to errors)` : ''}.
-          Weekly entries now appear in the Yearly View automatically.
+          ✅ {saveStatus.added > 0 && `${saveStatus.added} new week${saveStatus.added !== 1 ? 's' : ''} added`}{saveStatus.added > 0 && saveStatus.updated > 0 && ', '}{saveStatus.updated > 0 && `${saveStatus.updated} week${saveStatus.updated !== 1 ? 's' : ''} updated`}.{saveStatus.skipped > 0 && ` (${saveStatus.skipped} skipped due to errors)`} Yearly View now reflects the latest data.
         </div>
       )}
     </div>
