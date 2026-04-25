@@ -14,6 +14,7 @@ import { AllBranchesGrid } from '../components/okr/AllBranchesGrid';
 import { DailyBulkEntry } from '../components/okr/DailyBulkEntry';
 import { DailyAttendanceView } from '../components/okr/DailyAttendanceView';
 import { YearlyDashboardView } from '../components/okr/YearlyDashboardView';
+import { YearlyBulkEntry } from '../components/okr/YearlyBulkEntry';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
 const TABS = [
@@ -57,7 +58,7 @@ export function OkrAttendancePage() {
   const { data: yearlyData, isLoading: yearlyLoading } = useQuery({
     queryKey: ['okr-yearly'],
     queryFn: () => apiFetch(`/api/okr-attendance?limit=2000`),
-    enabled: dashView === 'yearly' || entryMode === 'yearly',
+    enabled: dashView === 'yearly',
   });
 
   // ── Derived ──
@@ -365,19 +366,13 @@ export function OkrAttendancePage() {
             <button type="button"
               className={`okrEntryModeBtn${entryMode === 'yearly' ? ' okrEntryModeBtnActive' : ''}`}
               onClick={() => setEntryMode('yearly')}>
-              📆 Yearly View
+              📆 Yearly Entry
             </button>
           </div>
 
           {entryMode === 'yearly' && (
             <div>
-              <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: '0.85rem', color: '#0369a1' }}>
-                📆 Yearly data is auto-aggregated from weekly entries. Add data via <button className="okrInlineBtn" onClick={() => setEntryMode('weekly')}>Weekly Entry</button> and it will appear here automatically.
-              </div>
-              {yearlyLoading
-                ? <p className="okrHistLoading">Loading yearly data...</p>
-                : <YearlyDashboardView allRecords={(yearlyData as any)?.records ?? []} />
-              }
+              <YearlyBulkEntry />
             </div>
           )}
 

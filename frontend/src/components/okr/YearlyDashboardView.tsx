@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
@@ -6,57 +6,49 @@ import {
 import { CHART_COLORS as C } from '../../lib/okr/constants';
 import { calcMetrics, getRateColor } from '../../lib/okr/utils';
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
 function n(val: any): number {
   const v = parseFloat(val);
   return isNaN(v) ? 0 : v;
 }
 
-interface YearGroup {
-  year: number;
-  weeks: number;
-  totalAbsent: number;
-  totalAttended: number;
-  totalFrozen: number;
-  totalReplaced: number;
-  totalAttendance: number;
-  avgRate: number;
-  avgRateWithFreeze: number;
-  totalActive: number;
-  branchCount: number;
+function buildMonthData(records: any[], year: number) {
+  return MONTHS.map((label, i) => {
+    const month = i + 1;
+    const recs = records.filter(r => {
+      const d = new Date((r.week_date ?? '').slice(0, 10) + 'T00:00:00');
+      return d.getFullYear() === year && (d.getMonth() + 1) === month;
+    });
+    const metrics = recs.map(r => calcMetrics(r));
+    return {
+      month:        label,
+      Absent:       metrics.reduce((s, m) => s + m.totalAbsent, 0),
+      Attended:     metrics.reduce((s, m) => s + m.totalAttended, 0),
+      Frozen:       metrics.reduce((s, m) => s + m.totalFrozen, 0),
+      Replaced:     metrics.reduce((s, m) => s + m.totalReplaced, 0),
+      AttendedLine: metrics.reduce((s, m) => s + m.totalAttended, 0),
+    };
+  });
 }
 
-function buildYearGroups(records: any[]): YearGroup[] {
-  const byYear: Record<number, any[]> = {};
-  for (const r of records) {
-    const year = new Date((r.week_date ?? '').slice(0, 10) + 'T00:00:00').getFullYear();
-    if (!isNaN(year)) {
-      if (!byYear[year]) byYear[year] = [];
-      byYear[year].push(r);
-    }
-  }
-  return Object.entries(byYear)
-    .map(([yearStr, recs]) => {
-      const year = Number(yearStr);
-      const metrics = recs.map(r => calcMetrics(r));
-      const totalAbsent   = metrics.reduce((s, m) => s + m.totalAbsent, 0);
-      const totalAttended = metrics.reduce((s, m) => s + m.totalAttended, 0);
-      const totalFrozen   = metrics.reduce((s, m) => s + m.totalFrozen, 0);
-      const totalReplaced = metrics.reduce((s, m) => s + m.totalReplaced, 0);
-      const totalAttendance = totalAbsent + totalAttended + totalFrozen + totalReplaced;
-      const avgRate = metrics.length > 0
-        ? metrics.reduce((s, m) => s + m.attendanceRate, 0) / metrics.length : 0;
-      const avgRateWithFreeze = metrics.length > 0
-        ? metrics.reduce((s, m) => s + m.attendanceRateWithFreeze, 0) / metrics.length : 0;
-      const totalActive = recs.reduce((s: number, r: any) => s + n(r.active_students), 0);
-      const uniqueWeeks = new Set(recs.map((r: any) => r.week_date?.slice(0, 10))).size;
-      const uniqueBranches = new Set(recs.map((r: any) => r.branch)).size;
-      return {
-        year, weeks: uniqueWeeks, branchCount: uniqueBranches,
-        totalAbsent, totalAttended, totalFrozen, totalReplaced, totalAttendance,
-        avgRate, avgRateWithFreeze, totalActive,
-      };
-    })
-    .sort((a, b) => a.year - b.year);
+function buildYearMetrics(records: any[], year: number) {
+  const recs = records.filter(r => {
+    const d = new Date((r.week_date ?? '').slice(0, 10) + 'T00:00:00');
+    return d.getFullYear() === year;
+  });
+  if (!recs.length) return null;
+  const metrics = recs.map(r => calcMetrics(r));
+  const totalAbsent   = metrics.reduce((s, m) => s + m.totalAbsent, 0);
+  const totalAttended = metrics.reduce((s, m) => s + m.totalAttended, 0);
+  const totalFrozen   = metrics.reduce((s, m) => s + m.totalFrozen, 0);
+  const totalReplaced = metrics.reduce((s, m) => s + m.totalReplaced, 0);
+  const totalAttendance = totalAbsent + totalAttended + totalFrozen + totalReplaced;
+  const avgRate = metrics.reduce((s, m) => s + m.attendanceRate, 0) / metrics.length;
+  const avgFreeze = metrics.reduce((s, m) => s + m.attendanceRateWithFreeze, 0) / metrics.length;
+  const uniqueWeeks = new Set(recs.map(r => r.week_date?.slice(0, 10))).size;
+  const uniqueBranches = new Set(recs.map(r => r.branch)).size;
+  return { totalAbsent, totalAttended, totalFrozen, totalReplaced, totalAttendance, avgRate, avgFreeze, uniqueWeeks, uniqueBranches };
 }
 
 function ChartTip({ active, payload, label }: any) {
@@ -76,9 +68,22 @@ function ChartTip({ active, payload, label }: any) {
 }
 
 export function YearlyDashboardView({ allRecords }: { allRecords: any[] }) {
-  const yearGroups = useMemo(() => buildYearGroups(allRecords), [allRecords]);
+  const availableYears = useMemo(() => {
+    const ys = new Set<number>();
+    for (const r of allRecords) {
+      const y = new Date((r.week_date ?? '').slice(0, 10) + 'T00:00:00').getFullYear();
+      if (!isNaN(y)) ys.add(y);
+    }
+    return Array.from(ys).sort((a, b) => a - b);
+  }, [allRecords]);
 
-  if (!yearGroups.length) {
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+
+  const activeYear = availableYears.includes(selectedYear) ? selectedYear : (availableYears[availableYears.length - 1] ?? new Date().getFullYear());
+  const monthData  = useMemo(() => buildMonthData(allRecords, activeYear), [allRecords, activeYear]);
+  const yearMet    = useMemo(() => buildYearMetrics(allRecords, activeYear), [allRecords, activeYear]);
+
+  if (!allRecords.length) {
     return (
       <div className="okrEmptyHero">
         <div className="okrEmptyIcon">📆</div>
@@ -88,106 +93,65 @@ export function YearlyDashboardView({ allRecords }: { allRecords: any[] }) {
     );
   }
 
-  const chartData = yearGroups.map(g => ({
-    year: String(g.year),
-    Absent:       g.totalAbsent,
-    Attended:     g.totalAttended,
-    Frozen:       g.totalFrozen,
-    Replaced:     g.totalReplaced,
-    AttendedLine: g.totalAttended,
-  }));
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-      {/* ── Year metric cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
-        {yearGroups.map(g => (
-          <div key={g.year} style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: 14, padding: '18px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)' }}>{g.year}</span>
-              <span style={{ fontSize: '0.7rem', background: '#f1f5f9', color: 'var(--textSecondary)', borderRadius: 6, padding: '2px 8px', fontWeight: 600 }}>
-                {g.weeks} weeks · {g.branchCount} branches
-              </span>
-            </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: getRateColor(g.avgRate), lineHeight: 1 }}>
-              {g.avgRate.toFixed(1)}%
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--textSecondary)', marginTop: 2, marginBottom: 12 }}>Avg Attendance Rate</div>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
-              {[
-                ['Rate w/ Freeze', `${g.avgRateWithFreeze.toFixed(1)}%`, getRateColor(g.avgRateWithFreeze)],
-                ['Total Attendance', g.totalAttendance.toLocaleString(), 'var(--text)'],
-                ['Total Attended', g.totalAttended.toLocaleString(), C.Attended],
-                ['Total Absent', g.totalAbsent.toLocaleString(), C.Absent],
-                ['Total Frozen', g.totalFrozen.toLocaleString(), C.Frozen],
-                ['Total Replaced', g.totalReplaced.toLocaleString(), C.Replaced],
-              ].map(([label, val, color]) => (
-                <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                  <span style={{ color: 'var(--textSecondary)' }}>{label}</span>
-                  <strong style={{ color: color as string }}>{val}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* ── Year selector ── */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {availableYears.map(y => (
+          <button key={y} type="button" onClick={() => setSelectedYear(y)} style={{
+            padding: '7px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15,
+            background: activeYear === y ? 'var(--brand, #e1251b)' : '#e5e7eb',
+            color: activeYear === y ? '#fff' : '#374151',
+          }}>{y}</button>
         ))}
       </div>
 
-      {/* ── Year-over-year attendance bar chart ── */}
+      {/* ── Month-by-month chart (same style as daily chart) ── */}
       <div className="okrChartWrap">
         <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
-          Year-over-Year Attendance Breakdown
+          {activeYear} — Monthly Attendance Breakdown
         </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: -20, bottom: 0 }} barCategoryGap="30%">
+        <ResponsiveContainer width="100%" height={260}>
+          <ComposedChart data={monthData} margin={{ top: 8, right: 16, left: -20, bottom: 0 }} barCategoryGap="24%">
             <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="year" tick={{ fontSize: 14, fontWeight: 700, fill: 'var(--textSecondary)' }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 700, fill: 'var(--textSecondary)' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={<ChartTip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.78rem', paddingTop: 8 }}
               formatter={(val) => val === 'AttendedLine' ? null : val} />
-            <Bar dataKey="Absent"   fill={C.Absent}   radius={[4,4,0,0]} maxBarSize={60} />
-            <Bar dataKey="Attended" fill={C.Attended} radius={[4,4,0,0]} maxBarSize={60} />
-            <Bar dataKey="Frozen"   fill={C.Frozen}   radius={[4,4,0,0]} maxBarSize={60} />
-            <Bar dataKey="Replaced" fill={C.Replaced} radius={[4,4,0,0]} maxBarSize={60} />
-            <Line dataKey="AttendedLine" name="AttendedLine" stroke={C.Attended} strokeWidth={2.5}
-              dot={{ r: 5, fill: C.Attended, stroke: '#fff', strokeWidth: 2 }}
-              activeDot={{ r: 7 }} type="monotone" legendType="none" />
+            <Bar dataKey="Absent"   fill={C.Absent}   radius={[4,4,0,0]} maxBarSize={22} />
+            <Bar dataKey="Attended" fill={C.Attended} radius={[4,4,0,0]} maxBarSize={22} />
+            <Bar dataKey="Frozen"   fill={C.Frozen}   radius={[4,4,0,0]} maxBarSize={22} />
+            <Bar dataKey="Replaced" fill={C.Replaced} radius={[4,4,0,0]} maxBarSize={22} />
+            <Line dataKey="AttendedLine" name="AttendedLine" stroke={C.Attended} strokeWidth={2}
+              dot={{ r: 4, fill: C.Attended, stroke: '#fff', strokeWidth: 2 }}
+              activeDot={{ r: 6 }} type="monotone" legendType="none" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* ── Attendance rate horizontal bars ── */}
-      <div className="okrChartWrap">
-        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 16 }}>
-          Avg Attendance Rate — Year over Year
+      {/* ── Year summary metrics ── */}
+      {yearMet && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14 }}>
+          {[
+            { label: 'Avg Rate',         val: `${yearMet.avgRate.toFixed(1)}%`,         color: getRateColor(yearMet.avgRate) },
+            { label: 'Rate w/ Freeze',   val: `${yearMet.avgFreeze.toFixed(1)}%`,       color: getRateColor(yearMet.avgFreeze) },
+            { label: 'Total Attendance', val: yearMet.totalAttendance.toLocaleString(), color: 'var(--text)' },
+            { label: 'Attended',         val: yearMet.totalAttended.toLocaleString(),   color: C.Attended },
+            { label: 'Absent',           val: yearMet.totalAbsent.toLocaleString(),     color: C.Absent },
+            { label: 'Frozen',           val: yearMet.totalFrozen.toLocaleString(),     color: C.Frozen },
+            { label: 'Replaced',         val: yearMet.totalReplaced.toLocaleString(),   color: C.Replaced },
+            { label: 'Weeks of Data',    val: String(yearMet.uniqueWeeks),             color: 'var(--text)' },
+            { label: 'Branches',         val: String(yearMet.uniqueBranches),          color: 'var(--text)' },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 800, color }}>{val}</div>
+            </div>
+          ))}
         </div>
-        {yearGroups.map(g => (
-          <div key={g.year} style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 5 }}>
-              <span style={{ width: 44, fontWeight: 800, fontSize: '0.9rem', color: 'var(--text)' }}>{g.year}</span>
-              <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 8, height: 22, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(g.avgRate, 100)}%`, height: '100%', background: getRateColor(g.avgRate), borderRadius: 8, transition: 'width 0.6s ease', display: 'flex', alignItems: 'center', paddingLeft: 8 }} />
-              </div>
-              <span style={{ width: 56, textAlign: 'right', fontWeight: 700, color: getRateColor(g.avgRate), fontSize: '0.95rem' }}>
-                {g.avgRate.toFixed(1)}%
-              </span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--textSecondary)', minWidth: 60 }}>({g.weeks} wks)</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 44, fontSize: '0.7rem', color: 'var(--textSecondary)' }}>+Freeze</span>
-              <div style={{ flex: 1, background: '#f1f5f9', borderRadius: 8, height: 13, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(g.avgRateWithFreeze, 100)}%`, height: '100%', background: getRateColor(g.avgRateWithFreeze), opacity: 0.55, borderRadius: 8, transition: 'width 0.6s ease' }} />
-              </div>
-              <span style={{ width: 56, textAlign: 'right', fontSize: '0.8rem', color: getRateColor(g.avgRateWithFreeze) }}>
-                {g.avgRateWithFreeze.toFixed(1)}%
-              </span>
-              <span style={{ minWidth: 60 }} />
-            </div>
-          </div>
-        ))}
-      </div>
-
+      )}
     </div>
   );
 }
