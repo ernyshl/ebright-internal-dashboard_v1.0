@@ -42,14 +42,26 @@ async function getLeadsToday() {
   return rows;
 }
 
-async function getSpendToday() {
+async function getSpendBreakdown() {
+  // Each table uses its own latest data_date (syncs run independently).
   const { rows } = await pool.query(`
-    WITH latest AS (SELECT MAX(data_date::date) as today FROM meta_spend)
-    SELECT COALESCE(SUM(spend), 0) as total_spend
-    FROM meta_spend
-    WHERE data_date::date = (SELECT today FROM latest);
+    SELECT
+      (SELECT COALESCE(SUM(spend), 0) FROM meta_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)) AS meta,
+      (SELECT COALESCE(SUM(spend), 0) FROM google_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)) AS google,
+      (SELECT COALESCE(SUM(spend), 0) FROM tiktok_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)) AS tiktok
   `);
-  return Number(rows[0]?.total_spend || 0);
+  const meta = Number(rows[0]?.meta || 0);
+  const google = Number(rows[0]?.google || 0);
+  const tiktok = Number(rows[0]?.tiktok || 0);
+  return { meta, google, tiktok, total: meta + google + tiktok };
+}
+
+async function getSpendToday() {
+  const { total } = await getSpendBreakdown();
+  return total;
 }
 
 async function getLeadsByBranch() {
@@ -156,8 +168,13 @@ router.post('/webhook', async (req, res) => {
     }
 
     else if (text === '/spend') {
-      const spend = await getSpendToday();
-      await sendTelegramMessage(chatId, `💰 *Total Spend Today:* ${fmtRM(spend)}`);
+      const b = await getSpendBreakdown();
+      const msg = `💰 *Today's Ad Spend*\n━━━━━━━━━━━━━━━━━━\n` +
+        `Meta: *${fmtRM(b.meta)}*\n` +
+        `Google: *${fmtRM(b.google)}*\n` +
+        `TikTok: *${fmtRM(b.tiktok)}*\n` +
+        `━━━━━━━━━━━━━━━━━━\nTOTAL: *${fmtRM(b.total)}*`;
+      await sendTelegramMessage(chatId, msg);
     }
 
     else if (text === '/help') {

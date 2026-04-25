@@ -47,12 +47,18 @@ GROUP BY 1
 ORDER BY count DESC;
 "
 
-# Query total spend today from meta_spend
+# Query total spend today across Meta + Google + TikTok (each uses its own latest date)
 SPEND_SQL="
-WITH latest AS (SELECT MAX(data_date::date) as today FROM meta_spend)
-SELECT COALESCE(SUM(spend), 0) as total_spend
-FROM meta_spend
-WHERE data_date::date = (SELECT today FROM latest);
+SELECT
+  (SELECT COALESCE(SUM(spend), 0) FROM meta_spend
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend))
+  +
+  (SELECT COALESCE(SUM(spend), 0) FROM google_spend
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend))
+  +
+  (SELECT COALESCE(SUM(spend), 0) FROM tiktok_spend
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend))
+  AS total_spend;
 "
 
 # Execute queries
