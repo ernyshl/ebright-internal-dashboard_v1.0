@@ -22,6 +22,15 @@ export function prevWeekDate(dateStr, weeksBack = 1) {
   return d.toISOString().slice(0, 10);
 }
 
+// Snap any date to the Wednesday of its Wed–Tue week
+export function toWednesday(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+  return d.toISOString().slice(0, 10);
+}
+
 export function calcMetrics(r) {
   const totalAttended = DAYS.reduce((s, d) => s + n(r[`${d.key}_attended`]), 0);
   const totalAbsent   = DAYS.reduce((s, d) => s + n(r[`${d.key}_absent`]), 0);
@@ -35,12 +44,10 @@ export function calcMetrics(r) {
   const attendanceRate = (totalAttended + totalAbsent) > 0
     ? (totalAttended / (totalAttended + totalAbsent)) * 100 : 0;
 
-  // Rate WITH FREEZE: (Sat attended + Sun attended) / Total Attendance
-  // Matches Excel formula: =SUM(KD567:KD568)/SUM(KD562:KD570)
-  const satAttended = n(r.sat_attended);
-  const sunAttended = n(r.sun_attended);
+  // Rate WITH FREEZE: Total Attended / Total Attendance
+  // Matches Excel formula: =SUM(KD58:KD62)/SUM(KD53:KD64) — all attended ÷ all (absent+attended+frozen+replaced)
   const attendanceRateWithFreeze = totalAttendance > 0
-    ? ((satAttended + sunAttended) / totalAttendance) * 100 : 0;
+    ? (totalAttended / totalAttendance) * 100 : 0;
 
   // Discrepancy = Active Students − Total Attendance
   const discrepancy = n(r.active_students) - totalAttendance;

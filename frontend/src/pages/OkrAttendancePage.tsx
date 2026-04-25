@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 
 import { REGIONS, BRANCH_META, DAYS, EMPTY_FORM } from '../lib/okr/constants';
-import { weekRange, calcMetrics, getRateColor, parseExcelPaste } from '../lib/okr/utils';
+import { weekRange, calcMetrics, getRateColor, parseExcelPaste, toWednesday } from '../lib/okr/utils';
 import { useOkrData } from '../lib/okr/useOkrData';
 
 import { CompanyHealthBanner } from '../components/okr/CompanyHealthBanner';
@@ -77,7 +77,10 @@ export function OkrAttendancePage() {
     setPastePreview(null);
   };
 
-  const handleChange = (e) => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(p => ({ ...p, [name]: name === 'week_date' ? toWednesday(value) : value }));
+  };
 
   const handleImport = () => {
     const text = pasteTextareaRef.current?.value || '';

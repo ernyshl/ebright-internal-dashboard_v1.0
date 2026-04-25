@@ -15,6 +15,14 @@ router.get('/branches', requireAuth, requireRole(ALLOWED_ROLES), async (_req, re
   } catch (err) { return next(err); }
 });
 
+// Snap any date string to the Wednesday of its Wed–Tue week
+function toWednesday(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+  return d.toISOString().slice(0, 10);
+}
+
 // GET /api/okr-attendance — list with optional filters
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
@@ -23,8 +31,13 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const params = [];
     let idx = 1;
 
-    if (branch)    { conditions.push(`branch = $${idx++}`);          params.push(branch); }
-    if (week_date) { conditions.push(`week_date = $${idx++}::date`); params.push(week_date); }
+    if (branch) { conditions.push(`branch = $${idx++}`); params.push(branch); }
+    if (week_date) {
+      // Match any record whose week_date falls within the same Wed–Tue week as the queried date
+      const wed = toWednesday(week_date);
+      conditions.push(`week_date >= $${idx++}::date AND week_date <= $${idx++}::date + INTERVAL '6 days'`);
+      params.push(wed, wed);
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await pool.query(
@@ -38,7 +51,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
 // POST /api/okr-attendance — upsert (insert or update by branch + week_date)
 router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
-    const b = req.body;
+    const b = { ...req.body, week_date: toWednesday(req.body.week_date) };
 
     const result = await pool.query(
       `INSERT INTO branch_okr_attendance (
