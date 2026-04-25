@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DAYS } from '../../lib/okr/constants';
-import { n, weekRange, getRateColor, formatPct } from '../../lib/okr/utils';
+import { n, weekRange, getRateColor, formatPct, toWednesday } from '../../lib/okr/utils';
 import { RateBar } from './RateBar';
 import { DailyAttendanceChart } from './DailyAttendanceChart';
 import { FourWeekChart } from './FourWeekChart';
@@ -74,7 +74,7 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
           <div className="okrDetailBranchIcon">🏢</div>
           <div>
             <h2 className="okrDetailBranch">{rec.branch}</h2>
-            <span className="okrDetailWeek">Week of {weekRange(rec.week_date?.slice(0, 10))}</span>
+            <span className="okrDetailWeek">Week of {weekRange(toWednesday(rec.week_date?.slice(0, 10) ?? ''))}</span>
           </div>
         </div>
         <div className="okrDetailHeaderRight">

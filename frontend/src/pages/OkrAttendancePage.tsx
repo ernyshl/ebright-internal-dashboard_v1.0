@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
+import { apiFetch } from '../lib/api';
 
 import { REGIONS, BRANCH_META, DAYS, EMPTY_FORM } from '../lib/okr/constants';
 import { weekRange, calcMetrics, getRateColor, parseExcelPaste, toWednesday } from '../lib/okr/utils';
 import { useOkrData } from '../lib/okr/useOkrData';
 
-import { CompanyHealthBanner } from '../components/okr/CompanyHealthBanner';
 import { RateBar } from '../components/okr/RateBar';
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
 import { AllBranchesGrid } from '../components/okr/AllBranchesGrid';
@@ -27,7 +28,8 @@ export function OkrAttendancePage() {
   const [form, setForm]                 = useState(EMPTY_FORM);
   const [editingId, setEditingId]       = useState(null);
   const [activeTab, setActiveTab]       = useState(initMode === 'weekly' ? 'entry' : 'dashboard');
-  const [dashView, setDashView]         = useState<'weekly' | 'daily'>('weekly');
+  const [dashView, setDashView]         = useState<'weekly' | 'daily' | 'yearly'>('weekly');
+  const [yearlyYear, setYearlyYear]     = useState(new Date().getFullYear());
   const [dashBranch, setDashBranch]     = useState('');
   const [dashWeek, setDashWeek]         = useState(() => {
     if (USE_MOCK) return MOCK_WEEK;
@@ -51,8 +53,44 @@ export function OkrAttendancePage() {
     saveMutation, deleteMutation,
   } = useOkrData({ dashBranch, dashWeek });
 
+  // ── Yearly data ──
+  const { data: yearlyData, isLoading: yearlyLoading } = useQuery({
+    queryKey: ['okr-yearly', yearlyYear],
+    queryFn: () => apiFetch(`/api/okr-attendance?limit=500`),
+    enabled: dashView === 'yearly' || entryMode === 'yearly',
+  });
+
   // ── Derived ──
   const liveMetrics = useMemo(() => calcMetrics(form), [form]);
+
+  const yearlyWeekGroups = useMemo(() => {
+    const recs = (yearlyData as any)?.records ?? [];
+    const filtered = recs.filter((r: any) => {
+      const y = new Date((r.week_date ?? '').slice(0, 10) + 'T00:00:00').getFullYear();
+      return y === yearlyYear;
+    });
+    const groups: Record<string, any[]> = {};
+    for (const r of filtered) {
+      const w = (r.week_date ?? '').slice(0, 10);
+      if (!groups[w]) groups[w] = [];
+      groups[w].push(r);
+    }
+    return Object.entries(groups)
+      .map(([week, records]) => {
+        const metrics = records.map((r: any) => calcMetrics(r));
+        const avgRate = metrics.reduce((s, m) => s + m.attendanceRate, 0) / metrics.length;
+        const avgFreeze = metrics.reduce((s, m) => s + m.attendanceRateWithFreeze, 0) / metrics.length;
+        return {
+          week,
+          branches: records.length,
+          totalAttendance: metrics.reduce((s, m) => s + m.totalAttendance, 0),
+          avgRate,
+          avgFreeze,
+          totalActive: records.reduce((s: number, r: any) => s + (r.active_students ?? 0), 0),
+        };
+      })
+      .sort((a, b) => b.week.localeCompare(a.week));
+  }, [yearlyData, yearlyYear]);
 
   const rankedRecords = useMemo(() =>
     weekRecords
@@ -148,6 +186,7 @@ export function OkrAttendancePage() {
       active_students:          rec.active_students          ?? '',
     });
     setEditingId(rec.id);
+    setEntryMode('weekly');
     setActiveTab('entry');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -211,30 +250,58 @@ export function OkrAttendancePage() {
       {activeTab === 'dashboard' && (
         <div className="okrDashWrap">
 
-          {/* ── Weekly / Daily view toggle ── */}
+          {/* ── Weekly / Daily / Yearly view toggle ── */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <button type="button"
-              onClick={() => setDashView('weekly')}
-              style={{
+            {(['weekly','daily','yearly'] as const).map(v => (
+              <button key={v} type="button" onClick={() => setDashView(v)} style={{
                 padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
-                background: dashView === 'weekly' ? 'var(--brand, #e1251b)' : '#e5e7eb',
-                color: dashView === 'weekly' ? '#fff' : '#374151',
+                background: dashView === v ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                color: dashView === v ? '#fff' : '#374151',
               }}>
-              📋 Weekly View
-            </button>
-            <button type="button"
-              onClick={() => setDashView('daily')}
-              style={{
-                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
-                background: dashView === 'daily' ? 'var(--brand, #e1251b)' : '#e5e7eb',
-                color: dashView === 'daily' ? '#fff' : '#374151',
-              }}>
-              📅 Daily View
-            </button>
+                {v === 'weekly' ? '📋 Weekly View' : v === 'daily' ? '📅 Daily View' : '📆 Yearly View'}
+              </button>
+            ))}
           </div>
 
           {/* ── Daily View ── */}
           {dashView === 'daily' && <DailyAttendanceView />}
+
+          {/* ── Yearly View ── */}
+          {dashView === 'yearly' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <span style={{ fontWeight: 600, color: 'var(--textSecondary)' }}>Year:</span>
+                {[new Date().getFullYear() - 1, new Date().getFullYear()].map(y => (
+                  <button key={y} type="button" onClick={() => setYearlyYear(y)} style={{
+                    padding: '6px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                    background: yearlyYear === y ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                    color: yearlyYear === y ? '#fff' : '#374151',
+                  }}>{y}</button>
+                ))}
+              </div>
+              {yearlyLoading ? <p className="okrHistLoading">Loading...</p> : yearlyWeekGroups.length === 0 ? (
+                <div className="okrEmptyHero"><div className="okrEmptyIcon">📆</div><h3>No data for {yearlyYear}</h3></div>
+              ) : (
+                <div className="okrHistTable">
+                  <div className="okrHistHead" style={{ gridTemplateColumns: '1.4fr 0.7fr 1fr 1fr 1fr 0.8fr' }}>
+                    <span>Week</span><span>Branches</span><span>Total Attendance</span>
+                    <span>Avg Rate</span><span>Avg w/ Freeze</span><span>Total Active</span>
+                  </div>
+                  {yearlyWeekGroups.map(g => (
+                    <div key={g.week} className="okrHistRow" style={{ cursor: 'pointer', gridTemplateColumns: '1.4fr 0.7fr 1fr 1fr 1fr 0.8fr' }}
+                      onClick={() => { setDashWeek(g.week); setDashView('weekly'); }}>
+                      <span className="okrHistWeek">{weekRange(g.week)}</span>
+                      <span>{g.branches}</span>
+                      <span>{g.totalAttendance}</span>
+                      <span style={{ color: getRateColor(g.avgRate), fontWeight: 600 }}>{g.avgRate.toFixed(1)}%</span>
+                      <span style={{ color: getRateColor(g.avgFreeze), fontWeight: 600 }}>{g.avgFreeze.toFixed(1)}%</span>
+                      <span>{g.totalActive}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Weekly View ── */}
           {dashView === 'weekly' && (
@@ -243,7 +310,7 @@ export function OkrAttendancePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                 <div className="okrHeroSelect">
                   <span className="okrSelectIcon">📅</span>
-                  <input type="date" value={dashWeek} onChange={e => { setDashWeek(e.target.value); setDashBranch(''); }} />
+                  <input type="date" value={dashWeek} onChange={e => { setDashWeek(toWednesday(e.target.value)); setDashBranch(''); }} />
                 </div>
                 {dashWeek && <span className="okrWeekRangePill">{weekRange(dashWeek)}</span>}
               </div>
@@ -256,8 +323,6 @@ export function OkrAttendancePage() {
                 </div>
               ) : (
                 <>
-                  {rankedRecords.length > 0 && <CompanyHealthBanner records={weekRecords} />}
-
                   {rankedRecords.length > 0 && (
                     <div className="okrRankCard">
                       <div className="okrRankCardHeader">
@@ -356,9 +421,49 @@ export function OkrAttendancePage() {
               onClick={() => setEntryMode('weekly')}>
               📋 Weekly Entry
             </button>
+            <button type="button"
+              className={`okrEntryModeBtn${entryMode === 'yearly' ? ' okrEntryModeBtnActive' : ''}`}
+              onClick={() => setEntryMode('yearly')}>
+              📆 Yearly View
+            </button>
           </div>
 
-          {entryMode === 'daily' ? <DailyBulkEntry /> : (
+          {entryMode === 'yearly' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <span style={{ fontWeight: 600, color: 'var(--textSecondary)' }}>Year:</span>
+                {[new Date().getFullYear() - 1, new Date().getFullYear()].map(y => (
+                  <button key={y} type="button" onClick={() => setYearlyYear(y)} style={{
+                    padding: '6px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                    background: yearlyYear === y ? 'var(--brand, #e1251b)' : '#e5e7eb',
+                    color: yearlyYear === y ? '#fff' : '#374151',
+                  }}>{y}</button>
+                ))}
+              </div>
+              {yearlyLoading ? <p className="okrHistLoading">Loading...</p> : yearlyWeekGroups.length === 0 ? (
+                <div className="okrEmptyHero"><div className="okrEmptyIcon">📆</div><h3>No data for {yearlyYear}</h3></div>
+              ) : (
+                <div className="okrHistTable">
+                  <div className="okrHistHead" style={{ gridTemplateColumns: '1.4fr 0.7fr 1fr 1fr 1fr 0.8fr' }}>
+                    <span>Week</span><span>Branches</span><span>Total Attendance</span>
+                    <span>Avg Rate</span><span>Avg w/ Freeze</span><span>Total Active</span>
+                  </div>
+                  {yearlyWeekGroups.map(g => (
+                    <div key={g.week} className="okrHistRow" style={{ gridTemplateColumns: '1.4fr 0.7fr 1fr 1fr 1fr 0.8fr' }}>
+                      <span className="okrHistWeek">{weekRange(g.week)}</span>
+                      <span>{g.branches}</span>
+                      <span>{g.totalAttendance}</span>
+                      <span style={{ color: getRateColor(g.avgRate), fontWeight: 600 }}>{g.avgRate.toFixed(1)}%</span>
+                      <span style={{ color: getRateColor(g.avgFreeze), fontWeight: 600 }}>{g.avgFreeze.toFixed(1)}%</span>
+                      <span>{g.totalActive}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {entryMode === 'daily' ? <DailyBulkEntry /> : entryMode === 'weekly' ? (
         <form className="okrEntryForm" onSubmit={handleSubmit}>
           <div className="okrEntryHeader">
             <h2>{editingId ? '✏️ Edit Record' : '➕ New Record'}</h2>
@@ -604,7 +709,7 @@ export function OkrAttendancePage() {
             {saveStatus === 'auth'  && <div className="okrSaveStatus okrSaveStatusErr">🔒 Session expired — please log in again.</div>}
           </div>
         </form>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -645,7 +750,7 @@ export function OkrAttendancePage() {
                     <span style={{ color: getRateColor(m.attendanceRateWithFreeze), fontWeight: 600 }}>{m.attendanceRateWithFreeze.toFixed(1)}%</span>
                     <span>{r.active_students ?? '—'}</span>
                     <span className="okrHistActions">
-                      <button className="okrActBtn okrActView" onClick={() => { setDashBranch(r.branch); setDashWeek(r.week_date?.slice(0, 10)); setActiveTab('dashboard'); }}>View</button>
+                      <button className="okrActBtn okrActView" onClick={() => { setDashBranch(r.branch); setDashWeek(toWednesday(r.week_date?.slice(0, 10) ?? '')); setDashView('weekly'); setActiveTab('dashboard'); }}>View</button>
                       <button className="okrActBtn okrActEdit" onClick={() => handleEdit(r)}>Edit</button>
                       <button className="okrActBtn okrActDel" onClick={() => handleDelete(r.id)}>Del</button>
                     </span>
