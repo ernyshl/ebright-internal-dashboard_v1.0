@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
-import { ALL_BRANCHES, DAYS } from '../../lib/okr/constants';
+import { ALL_BRANCHES, DAYS, REGIONS } from '../../lib/okr/constants';
 import { apiFetch } from '../../lib/api';
 import { calcMetrics, weekRange } from '../../lib/okr/utils';
 
@@ -202,7 +202,11 @@ export function YearlyBulkEntry() {
             onChange={e => { setSelectedBranch(e.target.value); setPreview(null); setSaveStatus(null); }}
             style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #cbd5e1', borderRadius: 8, fontSize: '0.95rem', fontWeight: 600, background: '#fff' }}
           >
-            {ALL_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+            {Object.entries(REGIONS).map(([region, branches]) => (
+              <optgroup key={region} label={`Region ${region}`}>
+                {branches.map(b => <option key={b.name} value={b.name}>{b.name} - {b.code}</option>)}
+              </optgroup>
+            ))}
           </select>
         </div>
         <div>

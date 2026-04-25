@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
-import { ALL_BRANCHES, DAYS } from '../../lib/okr/constants';
+import { ALL_BRANCHES, DAYS, REGIONS } from '../../lib/okr/constants';
 import { weekRange } from '../../lib/okr/utils';
 import { USE_MOCK, MOCK_WEEK, MOCK_RECORDS } from '../../lib/okr/mock';
 import { apiFetch } from '../../lib/api';
@@ -293,7 +293,11 @@ export function DailyBulkEntry({ filterBranch = null }) {
             <div className="okrUploadBranchSelect">
               <label>Branch</label>
               <select value={uploadBranch} onChange={e => setUploadBranch(e.target.value)}>
-                {ALL_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                {Object.entries(REGIONS).map(([region, branches]) => (
+                  <optgroup key={region} label={`Region ${region}`}>
+                    {branches.map(b => <option key={b.name} value={b.name}>{b.name} - {b.code}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </div>
           )}
