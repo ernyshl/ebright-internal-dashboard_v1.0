@@ -13,6 +13,15 @@ function localYMD(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// Normalise any stored week_date (may be Wed-anchored from old data) to Monday
+function normToMonday(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return localYMD(d);
+}
+
 // Returns all Mon-anchored week start dates that overlap a given year
 function getYearWeeks(year: number): string[] {
   const result: string[] = [];
@@ -267,10 +276,13 @@ export function YearlyDashboardView({ allRecords }: { allRecords: any[] }) {
                   <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: 'var(--textSecondary)', borderRadius: 5, padding: '2px 7px', fontWeight: 600 }}>R{b.region}</span>
                   {(() => {
                     const total = getYearWeeks(activeYear).length;
-                    const missing = total - b.weeks;
+                    const yearWeekSet = new Set(getYearWeeks(activeYear));
+                    const branchRecs = allRecords.filter(r => r.branch === b.branch && getYear(r) === activeYear);
+                    const uploaded = new Set(branchRecs.map(r => normToMonday(r.week_date?.slice(0, 10) ?? ''))).size;
+                    const missing = yearWeekSet.size - uploaded;
                     return (
                       <span style={{ fontSize: '0.72rem', color: missing > 0 ? '#b45309' : 'var(--textSecondary)', minWidth: 68, fontWeight: missing > 0 ? 700 : 400 }}>
-                        {b.weeks}/{total} wks{missing > 0 ? ` ⚠${missing}` : ''}
+                        {uploaded}/{total} wks{missing > 0 ? ` ⚠${missing}` : ''}
                       </span>
                     );
                   })()}
@@ -286,7 +298,7 @@ export function YearlyDashboardView({ allRecords }: { allRecords: any[] }) {
                 {selectedBranch === b.branch && branchMonthData && (() => {
                   const savedWeekSet = new Set(
                     allRecords.filter(r => r.branch === b.branch && getYear(r) === activeYear)
-                      .map(r => r.week_date?.slice(0, 10))
+                      .map(r => normToMonday(r.week_date?.slice(0, 10) ?? ''))
                   );
                   const allYearWeeks  = getYearWeeks(activeYear);
                   const missingWeeks  = allYearWeeks.filter(w => !savedWeekSet.has(w));
