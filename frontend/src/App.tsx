@@ -47,6 +47,7 @@ import { UiUxTestingPage } from './pages/UiUxTestingPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
 import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
+import { CtWithTimeSlotPage } from './pages/CtWithTimeSlotPage';
 
 export default function App() {
   return (
@@ -152,6 +153,9 @@ export default function App() {
           {/* Testing */}
           <Route path="/ghl-lead-centre" element={
             <RequirePermission dashboard="testing"><GhlLeadsCentrePage /></RequirePermission>
+          } />
+          <Route path="/ct-with-time-slot" element={
+            <RequirePermission dashboard="testing"><CtWithTimeSlotPage /></RequirePermission>
           } />
           <Route path="/ghl-dashboard" element={
             <RequirePermission dashboard="testing"><GhlDashboardPage /></RequirePermission>

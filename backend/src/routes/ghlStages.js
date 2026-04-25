@@ -361,7 +361,7 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
 // ──────────────────────────────────────────────────────────────
 // GET /api/ghl-stages/tally — raw DB leads vs GHL leads for comparison
 // ──────────────────────────────────────────────────────────────
-router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '', pipeline = '', lead_source = '' } = req.query;
 
@@ -405,6 +405,39 @@ router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res,
     );
 
     return res.json({ rawLeads, ghlLeads });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/ghl-stages/ct-calendar — CT counts grouped by pipeline × preferred_day × time_slot
+// Used by the Trial Slot calendar on the Tally page so BMs can plan manpower.
+// ──────────────────────────────────────────────────────────────
+router.get('/ct-calendar', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
+  try {
+    const { date_from = '', date_to = '' } = req.query;
+    const conditions = [`stage_key = 'CT'`, `preferred_day <> ''`, `time_slot <> ''`];
+    const params = [];
+    let idx = 1;
+    if (date_from) {
+      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+      params.push(date_from);
+    }
+    if (date_to) {
+      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+      params.push(date_to);
+    }
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const { rows } = await pool.query(
+      `SELECT pipeline_name, preferred_day, time_slot, COUNT(*)::int AS n
+       FROM ghl_stages
+       ${where}
+       GROUP BY pipeline_name, preferred_day, time_slot
+       ORDER BY pipeline_name, preferred_day, time_slot`,
+      params,
+    );
+    return res.json({ rows });
   } catch (err) {
     return next(err);
   }
