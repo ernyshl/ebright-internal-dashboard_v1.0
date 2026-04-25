@@ -7,6 +7,20 @@ const router = express.Router();
 
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv'];
 
+// `master_leads_powerbi` was simplified upstream and dropped PII columns
+// (full_name, email, phone). Pull from `master_leads_base` and alias the
+// columns so existing query text below keeps working unchanged.
+const LEADS_SRC = `(SELECT
+    source           AS lead_source,
+    full_name,
+    email,
+    phone            AS phone_number,
+    branch           AS clean_branch,
+    branch           AS raw_branch_text,
+    NULL::text       AS region,
+    submission_date  AS submitted_at
+  FROM master_leads_base) AS leads_view`;
+
 function getStageKey(raw) {
   const s = (raw || '').toLowerCase();
   if (s.includes('new lead'))   return 'NL';
@@ -195,14 +209,14 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 
     const { rows } = await pool.query(
       `SELECT
-         COALESCE(NULLIF(TRIM(m.lead_source),''), 'Unknown') AS lead_source,
+         COALESCE(NULLIF(TRIM(leads_view.lead_source),''), 'Unknown') AS lead_source,
          COUNT(*) FILTER (WHERE g.stage_key = 'CT')  AS ct,
          COUNT(*) FILTER (WHERE g.stage_key = 'SU')  AS su,
          COUNT(*) FILTER (WHERE g.stage_key = 'ENR') AS enr
        FROM ghl_stages g
-       LEFT JOIN master_leads_powerbi m ON LOWER(TRIM(m.email)) = g.email
+       LEFT JOIN ${LEADS_SRC} ON LOWER(TRIM(leads_view.email)) = g.email
        WHERE ${conditions.join(' AND ')}
-       GROUP BY COALESCE(NULLIF(TRIM(m.lead_source),''), 'Unknown')
+       GROUP BY COALESCE(NULLIF(TRIM(leads_view.lead_source),''), 'Unknown')
        ORDER BY ct DESC`,
       params,
     );
@@ -365,7 +379,7 @@ router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
   try {
     const { date_from = '', date_to = '', pipeline = '', lead_source = '' } = req.query;
 
-    // Raw leads from master_leads_powerbi
+    // Raw leads — see LEADS_SRC at top (master_leads_base aliased to old powerbi contract)
     const rawConditions = [];
     const rawParams = [];
     let ridx = 1;
@@ -378,7 +392,7 @@ router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
     const { rows: rawLeads } = await pool.query(
       `SELECT LOWER(TRIM(email)) AS email, full_name, phone_number AS phone, clean_branch AS branch, lead_source,
               (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
-       FROM master_leads_powerbi ${rawWhere}
+       FROM ${LEADS_SRC} ${rawWhere}
        ORDER BY submitted_at DESC`,
       rawParams,
     );

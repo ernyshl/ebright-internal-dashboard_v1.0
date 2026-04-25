@@ -10,6 +10,21 @@ const REGION_BRANCHES = {
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
 
+// `master_leads_powerbi` was simplified upstream and dropped PII columns.
+// Pull from `master_leads_base` (full row data) and alias columns to the
+// names the rest of the file already uses. Inlined as a subquery so we
+// don't need a CTE in every query.
+const LEADS_SRC = `(SELECT
+    source           AS lead_source,
+    full_name,
+    email,
+    phone            AS phone_number,
+    branch           AS clean_branch,
+    branch           AS raw_branch_text,
+    NULL::text       AS region,
+    submission_date  AS submitted_at
+  FROM master_leads_base) AS leads_view`;
+
 function sanitizeSearchTerm(term) {
   // Escape LIKE wildcards to prevent SQL injection via search
   return term.replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -83,7 +98,7 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
 
     // Get total count
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM master_leads_powerbi ${whereClause}`,
+      `SELECT COUNT(*) FROM ${LEADS_SRC} ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].count, 10);
@@ -91,17 +106,17 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
     // Get filtered data — use actual columns from the table
     const dataResult = await pool.query(
       `SELECT lead_source, full_name, phone_number, email, submitted_at, raw_branch_text, clean_branch, region
-       FROM master_leads_powerbi ${whereClause}
+       FROM ${LEADS_SRC} ${whereClause}
        ORDER BY submitted_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, Number(limit), offset]
     );
 
     // Get filter options — filter branches by selected region if provided
     const [sourcesResult, branchesResult] = await Promise.all([
-      pool.query('SELECT DISTINCT lead_source FROM master_leads_powerbi WHERE lead_source IS NOT NULL AND TRIM(lead_source) != \'\' ORDER BY lead_source'),
+      pool.query(`SELECT DISTINCT lead_source FROM ${LEADS_SRC} WHERE lead_source IS NOT NULL AND TRIM(lead_source) != '' ORDER BY lead_source`),
       region && REGION_BRANCHES[region]
-        ? pool.query(`SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE TRIM(clean_branch) ILIKE ANY($1) AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`, [REGION_BRANCHES[region]])
-        : pool.query('SELECT DISTINCT clean_branch FROM master_leads_powerbi WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != \'\' AND clean_branch NOT ILIKE \'Unspecified\' AND clean_branch NOT ILIKE \'Unknown Branch\' ORDER BY clean_branch'),
+        ? pool.query(`SELECT DISTINCT clean_branch FROM ${LEADS_SRC} WHERE TRIM(clean_branch) ILIKE ANY($1) AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`, [REGION_BRANCHES[region]])
+        : pool.query(`SELECT DISTINCT clean_branch FROM ${LEADS_SRC} WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != '' AND clean_branch NOT ILIKE 'Unspecified' AND clean_branch NOT ILIKE 'Unknown Branch' ORDER BY clean_branch`),
     ]);
 
     return res.json({
@@ -144,7 +159,7 @@ router.get('/export', requireAuth, requireRole(['super_admin', 'ceo', 'marketing
     const { rows } = await pool.query(
       `SELECT full_name, email, phone_number, lead_source, clean_branch,
               (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
-       FROM master_leads_powerbi ${where}
+       FROM ${LEADS_SRC} ${where}
        ORDER BY submitted_at DESC`,
       params,
     );
@@ -169,7 +184,7 @@ router.get('/email-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
   try {
     const { rows } = await pool.query(
       `SELECT LOWER(TRIM(email)) AS email, lead_source
-       FROM master_leads_powerbi
+       FROM ${LEADS_SRC}
        WHERE email IS NOT NULL AND TRIM(email) != '' AND lead_source IS NOT NULL AND TRIM(lead_source) != ''`
     );
     // Build map: email → most common lead_source (in case of duplicates)
@@ -201,7 +216,7 @@ router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
     const where = `WHERE ${conditions.join(' AND ')}`;
     const { rows } = await pool.query(
       `SELECT COALESCE(NULLIF(TRIM(lead_source),''), 'Unknown') AS lead_source, COUNT(*) AS nl
-       FROM master_leads_powerbi ${where}
+       FROM ${LEADS_SRC} ${where}
        GROUP BY COALESCE(NULLIF(TRIM(lead_source),''), 'Unknown')
        ORDER BY nl DESC`,
       params,
@@ -216,7 +231,7 @@ router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
 router.get('/emails', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (_req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT DISTINCT LOWER(TRIM(email)) AS email FROM master_leads_powerbi WHERE email IS NOT NULL AND TRIM(email) != ''`
+      `SELECT DISTINCT LOWER(TRIM(email)) AS email FROM ${LEADS_SRC} WHERE email IS NOT NULL AND TRIM(email) != ''`
     );
     return res.json({ emails: rows.map(r => r.email) });
   } catch (err) {
@@ -252,7 +267,7 @@ router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'mar
 
     const result = await pool.query(
       `SELECT TRIM(clean_branch) AS branch, COUNT(*) AS nl
-       FROM master_leads_powerbi
+       FROM ${LEADS_SRC}
        ${where}
        GROUP BY TRIM(clean_branch)
        ORDER BY branch`,
