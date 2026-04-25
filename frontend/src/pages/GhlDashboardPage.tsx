@@ -8,7 +8,6 @@ import {
   getApiDateRange,
   REGION_PIPELINES,
   ALL_PIPELINES,
-  BRANCH_TO_PIPELINE,
 } from '../lib/leadsSheet';
 
 const PRESETS = [
@@ -32,16 +31,7 @@ function pct(a, b) {
   return b > 0 ? (a / b * 100).toFixed(2) + '%' : 'No data';
 }
 
-function buildNlByPipeline(nlRows) {
-  const map = {};
-  for (const row of (nlRows || [])) {
-    const pipeline = BRANCH_TO_PIPELINE[row.branch];
-    if (pipeline) map[pipeline] = (map[pipeline] || 0) + Number(row.nl);
-  }
-  return map;
-}
-
-function buildGhlAllByPipeline(ghlRows) {
+function buildGhlByPipeline(ghlRows) {
   const map = {};
   for (const row of (ghlRows || [])) {
     if (!row.pipeline_name) continue;
@@ -55,28 +45,18 @@ function buildGhlAllByPipeline(ghlRows) {
   return map;
 }
 
-function mergeData(dbNlByPipeline, ghlByPipeline, pipelines) {
-  const result = {};
+function computeSectionMetrics(pipelines, ghlByPipeline) {
+  const tot = { NL: 0, CT: 0, SU: 0, ENR: 0 };
   for (const pip of pipelines) {
-    const dbNl  = dbNlByPipeline[pip] || 0;
-    const ghl   = ghlByPipeline[pip]  || { NL: 0, CT: 0, SU: 0, ENR: 0 };
-    result[pip] = { NL: dbNl, GHL_NL: ghl.NL, CT: ghl.CT, SU: ghl.SU, ENR: ghl.ENR };
-  }
-  return result;
-}
-
-function computeSectionMetrics(pipelines, merged) {
-  const tot = { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
-  for (const pip of pipelines) {
-    const r = merged[pip] || { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
-    tot.NL += r.NL; tot.GHL_NL += r.GHL_NL; tot.CT += r.CT; tot.SU += r.SU; tot.ENR += r.ENR;
+    const r = ghlByPipeline[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
+    tot.NL += r.NL; tot.CT += r.CT; tot.SU += r.SU; tot.ENR += r.ENR;
   }
   return {
     ...tot,
-    convRate:   pct(tot.ENR, tot.NL),
-    confRate:   pct(tot.CT, tot.NL),
-    showUpRate: pct(tot.SU, tot.CT),
-    enrolRate:  pct(tot.ENR, tot.SU),
+    convRate:   pct(tot.ENR, tot.NL),  // NL → ENR funnel
+    confRate:   pct(tot.CT,  tot.NL),  // NL → CT
+    showUpRate: pct(tot.SU,  tot.CT),  // CT → SU
+    enrolRate:  pct(tot.ENR, tot.SU),  // SU → ENR
   };
 }
 
@@ -91,8 +71,8 @@ function MetricBox({ label, value, to }) {
   );
 }
 
-function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
-  const m = computeSectionMetrics(pipelines, merged);
+function RegionSummary({ label, pipelines, ghlByPipeline, preset, regionKey }) {
+  const m = computeSectionMetrics(pipelines, ghlByPipeline);
   const regionParam = regionKey ? `&region=${encodeURIComponent(regionKey)}` : '';
   const ghlBase = `/ghl-lead-centre?preset=${preset}${regionParam}`;
   return (
@@ -100,14 +80,7 @@ function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
       <div className="ldRegionLabel">{label}</div>
       <div className="ldRegionRight">
         <div className="ldMetricGrid">
-          <div className="ldMetricBox">
-            <div className="ldMetricLabel">NL (Raw | GHL)</div>
-            <div className="ldMetricValue">
-              <Link to={`/leads-centre?date_from=${preset === 'today' ? '' : ''}`} className="ldMetricLink">{m.NL}</Link>
-              <span style={{ margin: '0 6px', color: 'var(--muted)' }}>|</span>
-              <Link to={`${ghlBase}&stage=NL`} className="ldMetricLink" style={m.NL !== m.GHL_NL ? { color: 'var(--brand)' } : {}}>{m.GHL_NL}</Link>
-            </div>
-          </div>
+          <MetricBox label="NL"  value={m.NL}  to={`${ghlBase}&stage=NL`} />
           <MetricBox label="CT"  value={m.CT}  to={`${ghlBase}&stage=CT`} />
           <MetricBox label="SU"  value={m.SU}  to={`${ghlBase}&stage=SU`} />
           <MetricBox label="ENR" value={m.ENR} to={`${ghlBase}&stage=ENR`} />
@@ -123,16 +96,16 @@ function RegionSummary({ label, pipelines, merged, preset, regionKey }) {
   );
 }
 
-function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
-  const totals = { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
+function PipelineTable({ title, pipelines, ghlByPipeline, preset, regionKey }) {
+  const totals = { NL: 0, CT: 0, SU: 0, ENR: 0 };
   const regionParam = regionKey ? `&region=${encodeURIComponent(regionKey)}` : '';
   const ghlBase = `/ghl-lead-centre?preset=${preset}${regionParam}`;
 
   const tableRows = pipelines.map(pip => {
-    const r = merged[pip] || { NL: 0, GHL_NL: 0, CT: 0, SU: 0, ENR: 0 };
-    totals.NL += r.NL; totals.GHL_NL += r.GHL_NL; totals.CT += r.CT; totals.SU += r.SU; totals.ENR += r.ENR;
+    const r = ghlByPipeline[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
+    totals.NL += r.NL; totals.CT += r.CT; totals.SU += r.SU; totals.ENR += r.ENR;
     return { pip, ...r };
-  }).filter(r => r.NL + r.GHL_NL + r.CT + r.SU + r.ENR > 0);
+  }).filter(r => r.NL + r.CT + r.SU + r.ENR > 0);
 
   return (
     <div className="card ldTableCard">
@@ -142,7 +115,7 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
           <thead>
             <tr>
               <th>Pipeline</th>
-              <th>NL (Raw | GHL) <span className="ldColHint">(Conv%)</span></th>
+              <th>NL <span className="ldColHint">(Conv%)</span></th>
               <th>CT <span className="ldColHint">(Conf%)</span></th>
               <th>SU <span className="ldColHint">(ShowUp%)</span></th>
               <th>ENR <span className="ldColHint">(Enrol%)</span></th>
@@ -151,23 +124,18 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
           <tbody>
             {tableRows.length === 0 ? (
               <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)' }}>No data</td></tr>
-            ) : tableRows.map(r => {
-              const nlMismatch = r.NL !== r.GHL_NL;
-              return (
-                <tr key={r.pip}>
-                  <td>{r.pip}</td>
-                  <td>
-                    <Link to={`/leads-centre?branch=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.NL}</Link>
-                    <span style={{ margin: '0 4px', color: 'var(--muted)' }}>|</span>
-                    <Link to={`${ghlBase}&stage=NL&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink" style={nlMismatch ? { color: 'var(--brand)', fontWeight: 600 } : {}}>{r.GHL_NL}</Link>
-                    {' '}<span className="ldPct">({pct(r.ENR, r.NL)})</span>
-                  </td>
-                  <td><Link to={`${ghlBase}&stage=CT&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.CT}</Link> <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
-                  <td><Link to={`${ghlBase}&stage=SU&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.SU}</Link> <span className="ldPct">({pct(r.SU, r.CT)})</span></td>
-                  <td><Link to={`${ghlBase}&stage=ENR&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.ENR}</Link> <span className="ldPct">({pct(r.ENR, r.SU)})</span></td>
-                </tr>
-              );
-            })}
+            ) : tableRows.map(r => (
+              <tr key={r.pip}>
+                <td>{r.pip}</td>
+                <td>
+                  <Link to={`${ghlBase}&stage=NL&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.NL}</Link>
+                  {' '}<span className="ldPct">({pct(r.ENR, r.NL)})</span>
+                </td>
+                <td><Link to={`${ghlBase}&stage=CT&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.CT}</Link> <span className="ldPct">({pct(r.CT, r.NL)})</span></td>
+                <td><Link to={`${ghlBase}&stage=SU&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.SU}</Link> <span className="ldPct">({pct(r.SU, r.CT)})</span></td>
+                <td><Link to={`${ghlBase}&stage=ENR&pipeline=${encodeURIComponent(r.pip)}`} className="ldMetricLink">{r.ENR}</Link> <span className="ldPct">({pct(r.ENR, r.SU)})</span></td>
+              </tr>
+            ))}
           </tbody>
           {tableRows.length > 0 && (
             <tfoot>
@@ -175,8 +143,6 @@ function PipelineTable({ title, pipelines, merged, preset, regionKey }) {
                 <td><strong>Total</strong></td>
                 <td>
                   <strong>{totals.NL}</strong>
-                  <span style={{ margin: '0 4px', color: 'var(--muted)' }}>|</span>
-                  <strong style={totals.NL !== totals.GHL_NL ? { color: 'var(--brand)' } : {}}>{totals.GHL_NL}</strong>
                   {' '}<span className="ldPct">({pct(totals.ENR, totals.NL)})</span>
                 </td>
                 <td><strong>{totals.CT}</strong> <span className="ldPct">({pct(totals.CT, totals.NL)})</span></td>
@@ -195,26 +161,14 @@ export function GhlDashboardPage() {
   const [preset, setPreset] = useState('today');
   const { date_from, date_to } = getApiDateRange(preset);
 
-  // NL from database
-  const { data: nlData, isLoading: nlLoading, refetch: refetchNl } = useQuery({
-    queryKey: ['ghlDashNl', date_from, date_to],
-    queryFn: () => apiFetch(`/api/leads-centre/nl-by-branch?date_from=${date_from}&date_to=${date_to}`),
-    staleTime: 3 * 60 * 1000,
-  });
-
-  // CT/SU/ENR from ghl_stages DB
-  const { data: ghlData, isLoading: ghlLoading, refetch: refetchGhl } = useQuery({
+  // NL/CT/SU/ENR from ghl_stages DB — single source of truth for the funnel.
+  const { data: ghlData, isLoading, refetch } = useQuery({
     queryKey: ['ghlDashPipeline', date_from, date_to],
     queryFn: () => apiFetch(`/api/ghl-stages/by-pipeline?date_from=${date_from}&date_to=${date_to}`),
     staleTime: 3 * 60 * 1000,
   });
 
-  const isLoading = nlLoading || ghlLoading;
-  const handleRefresh = () => { refetchNl(); refetchGhl(); };
-
-  const nlByPipeline  = buildNlByPipeline(nlData?.nl || []);
-  const ghlByPipeline = buildGhlAllByPipeline(ghlData?.byPipeline || []);
-  const merged        = mergeData(nlByPipeline, ghlByPipeline, ALL_PIPELINES);
+  const ghlByPipeline = buildGhlByPipeline(ghlData?.byPipeline || []);
   const dateLabel     = formatDateRange(preset);
 
   return (
@@ -223,7 +177,7 @@ export function GhlDashboardPage() {
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
           <h1 className="pageHeaderTitle">GHL Dashboard</h1>
-          <p className="headerSubtitle">CT to NL — Overall · {dateLabel} · Data from GHL webhook DB</p>
+          <p className="headerSubtitle">NL → CT → SU → ENR · {dateLabel} · Source: GHL webhook DB</p>
         </div>
       </div>
 
@@ -237,7 +191,7 @@ export function GhlDashboardPage() {
             {p.label}
           </button>
         ))}
-        <button className="btn btnGhost btnSmall" onClick={handleRefresh} style={{ marginLeft: 'auto' }}>
+        <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>
           ↺ Refresh
         </button>
       </div>
@@ -251,12 +205,12 @@ export function GhlDashboardPage() {
         <>
           <div className="ldSummarySection">
             {SECTIONS.map(s => (
-              <RegionSummary key={s.key} label={s.label} pipelines={s.pipelines} merged={merged} preset={preset} regionKey={s.regionKey} />
+              <RegionSummary key={s.key} label={s.label} pipelines={s.pipelines} ghlByPipeline={ghlByPipeline} preset={preset} regionKey={s.regionKey} />
             ))}
           </div>
           <div className="ldTablesSection">
             {SECTIONS.map(s => (
-              <PipelineTable key={s.key} title={s.label} pipelines={s.pipelines} merged={merged} preset={preset} regionKey={s.regionKey} />
+              <PipelineTable key={s.key} title={s.label} pipelines={s.pipelines} ghlByPipeline={ghlByPipeline} preset={preset} regionKey={s.regionKey} />
             ))}
           </div>
         </>
