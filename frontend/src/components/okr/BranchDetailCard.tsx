@@ -166,7 +166,7 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
               <div className="okrRateVisualLabel">Rate WITH FREEZE</div>
               <div className="okrRateVisualValue" style={{ color: getRateColor(met.attendanceRateWithFreeze) }}>{met.attendanceRateWithFreeze.toFixed(2)}%</div>
               <RateBar value={met.attendanceRateWithFreeze} />
-              <div className="okrRateFormula">(Sat attended + Sun attended) ÷ Total Attendance</div>
+              <div className="okrRateFormula">Total Attended ÷ Total Attendance</div>
             </div>
           </div>
         </div>
