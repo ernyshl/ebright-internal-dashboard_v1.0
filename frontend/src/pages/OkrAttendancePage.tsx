@@ -35,7 +35,7 @@ export function OkrAttendancePage() {
   const [dashWeek, setDashWeek]         = useState(() => {
     if (USE_MOCK) return MOCK_WEEK;
     const d = new Date();
-    d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
     return d.toISOString().slice(0, 10);
   });
   const [filterBranch, setFilterBranch] = useState('');

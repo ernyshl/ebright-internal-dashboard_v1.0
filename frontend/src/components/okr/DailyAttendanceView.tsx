@@ -12,7 +12,7 @@ import { RateBar } from './RateBar';
 function toWednesday(dateStr: string) {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 }
 function thisWeekWed() {

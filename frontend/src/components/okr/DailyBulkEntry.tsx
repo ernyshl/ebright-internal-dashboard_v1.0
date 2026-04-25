@@ -11,7 +11,7 @@ import { apiFetch } from '../../lib/api';
 function toWednesday(dateStr) {
   const d = new Date(dateStr);
   if (isNaN(d)) return dateStr;
-  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 }
 

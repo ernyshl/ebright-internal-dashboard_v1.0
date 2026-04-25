@@ -22,14 +22,17 @@ export function prevWeekDate(dateStr, weeksBack = 1) {
   return d.toISOString().slice(0, 10);
 }
 
-// Snap any date to the Wednesday of its Wed–Tue week
-export function toWednesday(dateStr: string): string {
+// Snap any date to the Monday of its Mon–Sun week
+export function toMonday(dateStr: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 }
+
+// Keep alias for any legacy callers
+export const toWednesday = toMonday;
 
 export function calcMetrics(r) {
   const totalAttended = DAYS.reduce((s, d) => s + n(r[`${d.key}_attended`]), 0);

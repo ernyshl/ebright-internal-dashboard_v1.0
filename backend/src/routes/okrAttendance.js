@@ -15,11 +15,11 @@ router.get('/branches', requireAuth, requireRole(ALLOWED_ROLES), async (_req, re
   } catch (err) { return next(err); }
 });
 
-// Snap any date string to the Wednesday of its Wed–Tue week
+// Snap any date string to the Monday of its Mon–Sun week
 function toWednesday(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return d.toISOString().slice(0, 10);
 }
 
@@ -33,7 +33,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
 
     if (branch) { conditions.push(`branch = $${idx++}`); params.push(branch); }
     if (week_date) {
-      // Match any record whose week_date falls within the same Wed–Tue week as the queried date
+      // Match any record whose week_date falls within the same Mon–Sun week as the queried date
       const wed = toWednesday(week_date);
       conditions.push(`week_date >= $${idx++}::date AND week_date <= $${idx++}::date + INTERVAL '6 days'`);
       params.push(wed, wed);
