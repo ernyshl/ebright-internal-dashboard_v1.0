@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
 import { ALL_BRANCHES, DAYS } from '../../lib/okr/constants';
 import { apiFetch } from '../../lib/api';
-import { calcMetrics } from '../../lib/okr/utils';
+import { calcMetrics, weekRange } from '../../lib/okr/utils';
 
 const AONE_DAY_MAP: Record<string, string> = {
   wednesday: 'wed', wed: 'wed',
@@ -127,14 +127,16 @@ export function YearlyBulkEntry() {
     try {
       const entries = await parseYearlyAone(file, selectedBranch);
       const filtered = entries.filter(e => {
-        const y = new Date(e.week_date + 'T00:00:00').getFullYear();
-        return y === selectedYear;
+        const start = new Date(e.week_date + 'T00:00:00');
+        const end   = new Date(e.week_date + 'T00:00:00');
+        end.setDate(end.getDate() + 6);
+        return start.getFullYear() === selectedYear || end.getFullYear() === selectedYear;
       });
       if (!filtered.length) {
         setUploadStatus({ type: 'error', msg: `No data found for ${selectedYear}. File may contain data for a different year.` });
       } else {
         setPreview(filtered);
-        setUploadStatus({ type: 'ok', msg: `Found ${filtered.length} weeks of data for ${selectedBranch} in ${selectedYear}.` });
+        setUploadStatus({ type: 'ok', msg: `Found ${filtered.length} week${filtered.length !== 1 ? 's' : ''} of data for ${selectedBranch} in ${selectedYear}. Preview and confirm below.` });
       }
     } catch (err: any) {
       setUploadStatus({ type: 'error', msg: err.message });
@@ -256,7 +258,7 @@ export function YearlyBulkEntry() {
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               {preview.map(e => (
                 <div key={e.week_date} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr', padding: '7px 14px', borderTop: '1px solid var(--border)', fontSize: '0.82rem' }}>
-                  <span style={{ fontWeight: 600 }}>{e.week_date}</span>
+                  <span style={{ fontWeight: 600 }}>{weekRange(e.week_date)}</span>
                   {['wed','thu','fri','sat','sun'].map(d => (
                     <span key={d} style={{ color: 'var(--textSecondary)' }}>
                       {e.counts[d].attended}a / {e.counts[d].absent}x
