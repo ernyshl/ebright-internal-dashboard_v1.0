@@ -152,10 +152,10 @@ export default function App() {
           } />
           {/* Testing */}
           <Route path="/ghl-lead-centre" element={
-            <RequirePermission dashboard="testing"><GhlLeadsCentrePage /></RequirePermission>
+            <RequirePermission dashboard="operations"><GhlLeadsCentrePage /></RequirePermission>
           } />
           <Route path="/ct-with-time-slot" element={
-            <RequirePermission dashboard="testing"><CtWithTimeSlotPage /></RequirePermission>
+            <RequirePermission dashboard="operations"><CtWithTimeSlotPage /></RequirePermission>
           } />
           <Route path="/ghl-dashboard" element={
             <RequirePermission dashboard="testing"><GhlDashboardPage /></RequirePermission>

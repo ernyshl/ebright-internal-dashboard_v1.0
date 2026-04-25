@@ -27,8 +27,8 @@ export function DashboardHomePage() {
       icon: '🎯',
       color: '#0ea5e9',
       links: [
-        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'testing' },
-        { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'testing' },
+        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations' },
+        { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations' },
       ]
     },
     {
