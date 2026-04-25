@@ -1,40 +1,8 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
-import { getApiDateRange, formatDateRange, PIPELINE_TO_BRANCH, BRANCH_TO_PIPELINE, REGION_PIPELINES } from '../lib/leadsSheet';
-
-// Operational days + canonical CT slots per day type.
-// Match by HHMM prefix because GHL's full string varies (e.g. "1800 | 6:00pm" vs "1800 | 06:00pm").
-const CAL_DAYS = ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
-const WEEKDAY_SLOTS = [
-  { code: '1800', label: '1800 | 6:00pm' },
-  { code: '1915', label: '1915 | 7:15pm' },
-  { code: '2030', label: '2030 | 8:30pm' },
-];
-const WEEKEND_SLOTS = [
-  { code: '0915', label: '0915 | 09:15am' },
-  { code: '1030', label: '1030 | 10:30am' },
-  { code: '1200', label: '1200 | 12:00pm' },
-  { code: '1315', label: '1315 | 01:15pm' },
-];
-const SLOTS_FOR_DAY = (day: string) =>
-  (day === 'Saturday' || day === 'Sunday') ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
-
-// Mon-Sun of the current MYT week, returned as YYYY-MM-DD strings.
-function thisWeekMonSun() {
-  const now = new Date();
-  // Convert to MYT (UTC+8) for week boundary
-  const myt = new Date(now.getTime() + (8 * 60 - now.getTimezoneOffset()) * 60 * 1000);
-  const dow = myt.getUTCDay(); // 0=Sun..6=Sat
-  const diffToMon = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(myt);
-  mon.setUTCDate(myt.getUTCDate() + diffToMon);
-  const sun = new Date(mon);
-  sun.setUTCDate(mon.getUTCDate() + 6);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { from: fmt(mon), to: fmt(sun) };
-}
+import { getApiDateRange, formatDateRange, PIPELINE_TO_BRANCH, BRANCH_TO_PIPELINE } from '../lib/leadsSheet';
 
 const PRESETS = [
   { key: 'today',      label: 'Today' },
@@ -66,36 +34,6 @@ export function TallyPage() {
     queryFn: () => apiFetch(`/api/ghl-stages/tally?${params}`),
     staleTime: 2 * 60 * 1000,
   });
-
-  // Trial Slot calendar — always Mon-Sun of the current MYT week.
-  const week = useMemo(() => thisWeekMonSun(), []);
-  const [region, setRegion] = useState<'A' | 'B' | 'C' | 'all'>('all');
-  const { data: calData, isLoading: calLoading, refetch: calRefetch } = useQuery({
-    queryKey: ['ct-calendar', week.from, week.to],
-    queryFn: () => apiFetch(`/api/ghl-stages/ct-calendar?date_from=${week.from}&date_to=${week.to}`),
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // Aggregate { pipeline -> day -> slotCode -> count }
-  const calMap = useMemo(() => {
-    const m: Record<string, Record<string, Record<string, number>>> = {};
-    for (const r of (calData?.rows || [])) {
-      const code = String(r.time_slot || '').split('|')[0].trim();
-      const day = String(r.preferred_day || '').trim();
-      if (!r.pipeline_name || !code || !day) continue;
-      m[r.pipeline_name] ??= {};
-      m[r.pipeline_name][day] ??= {};
-      m[r.pipeline_name][day][code] = (m[r.pipeline_name][day][code] || 0) + Number(r.n || 0);
-    }
-    return m;
-  }, [calData]);
-
-  const visiblePipelines = useMemo(() => {
-    if (region === 'all') {
-      return [...REGION_PIPELINES['Region A'], ...REGION_PIPELINES['Region B'], ...REGION_PIPELINES['Region C']];
-    }
-    return REGION_PIPELINES[`Region ${region}`] || [];
-  }, [region]);
 
   const rawLeads = data?.rawLeads || [];
   const ghlLeads = data?.ghlLeads || [];
@@ -290,96 +228,6 @@ export function TallyPage() {
           </div>
         </>
       )}
-
-      {/* ───── Trial Slot Calendar (CT bookings, this week Mon-Sun) ───── */}
-      <div style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Trial Slots — This Week</h2>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            CTs received {week.from} → {week.to}
-          </span>
-          <button className="btn btnGhost btnSmall" onClick={() => calRefetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
-        </div>
-
-        <div className="ldFilterBar" style={{ marginBottom: 16 }}>
-          {(['all', 'A', 'B', 'C'] as const).map(r => (
-            <button
-              key={r}
-              className={`btn ${region === r ? 'btnPrimary' : 'btnGhost'} btnSmall`}
-              onClick={() => setRegion(r)}
-            >
-              {r === 'all' ? 'All Regions' : `Region ${r}`}
-            </button>
-          ))}
-        </div>
-
-        {calLoading ? (
-          <div className="card" style={{ textAlign: 'center', padding: 24 }}>
-            <div className="loadingDots"><span /><span /><span /></div>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(640px, 1fr))', gap: 16 }}>
-            {visiblePipelines.map(pipeline => {
-              const branchName = PIPELINE_TO_BRANCH[pipeline] || pipeline;
-              const branchData = calMap[pipeline] || {};
-              return (
-                <div key={pipeline} className="card" style={{ padding: 16 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 12 }}>
-                    {pipeline} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {branchName}</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-                    {/* Day headers */}
-                    {CAL_DAYS.map(day => (
-                      <div key={`h-${day}`} style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', padding: '4px 0', color: 'var(--muted)' }}>
-                        {day.slice(0, 3)}
-                      </div>
-                    ))}
-                    {/* Day totals */}
-                    {CAL_DAYS.map(day => {
-                      const slots = SLOTS_FOR_DAY(day);
-                      const total = slots.reduce((sum, s) => sum + (branchData[day]?.[s.code] || 0), 0);
-                      return (
-                        <div key={`t-${day}`} style={{
-                          textAlign: 'center', padding: 8, borderRadius: 6,
-                          background: total > 0 ? 'var(--brandLight, #dbeafe)' : 'var(--bg2, #f8fafc)',
-                          fontWeight: 700, fontSize: 18,
-                        }}>
-                          {total}
-                        </div>
-                      );
-                    })}
-                    {/* Slot rows — up to 4 (weekend) */}
-                    {[0, 1, 2, 3].map(rowIdx => (
-                      <Fragment key={`row-${rowIdx}`}>
-                        {CAL_DAYS.map(day => {
-                          const slots = SLOTS_FOR_DAY(day);
-                          const slot = slots[rowIdx];
-                          if (!slot) {
-                            return <div key={`s-${day}-${rowIdx}`} />;
-                          }
-                          const count = branchData[day]?.[slot.code] || 0;
-                          return (
-                            <div key={`s-${day}-${rowIdx}`} style={{
-                              border: '1px solid var(--border)',
-                              borderRadius: 6,
-                              padding: '6px 4px',
-                              textAlign: 'center',
-                              background: count > 0 ? 'var(--successLight, #dcfce7)' : 'transparent',
-                            }}>
-                              <div style={{ fontSize: 9, color: 'var(--muted)' }}>{slot.label}</div>
-                              <div style={{ fontSize: 16, fontWeight: 700 }}>{count}</div>
-                            </div>
-                          );
-                        })}
-                      </Fragment>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
