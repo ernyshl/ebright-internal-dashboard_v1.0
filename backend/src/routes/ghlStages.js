@@ -31,6 +31,9 @@ router.post('/webhook', async (req, res) => {
 
     const data = req.body;
 
+    // Temporary diagnostic — remove once preferred_day/time_slot confirmed arriving
+    console.log('[GHL payload]', JSON.stringify(data));
+
     const email       = (data.email        || '').trim().toLowerCase();
     const lastName    = (data.last_name    || '').trim();
     const rawStage    = (data.pipleline_stage || data.pipeline_stage || data.Stage || data.stage || '').trim();
