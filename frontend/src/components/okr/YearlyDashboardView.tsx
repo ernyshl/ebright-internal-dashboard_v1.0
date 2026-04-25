@@ -5,9 +5,29 @@ import {
   BarChart, Cell,
 } from 'recharts';
 import { CHART_COLORS as C, BRANCH_META } from '../../lib/okr/constants';
-import { calcMetrics, getRateColor } from '../../lib/okr/utils';
+import { calcMetrics, getRateColor, weekRange } from '../../lib/okr/utils';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function localYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Returns all Mon-anchored week start dates that overlap a given year
+function getYearWeeks(year: number): string[] {
+  const result: string[] = [];
+  const d = new Date(year, 0, 1);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // back to Monday
+  while (d.getFullYear() <= year) {
+    const weekEnd = new Date(d);
+    weekEnd.setDate(d.getDate() + 6);
+    if (d.getFullYear() === year || weekEnd.getFullYear() === year) {
+      result.push(localYMD(d));
+    }
+    d.setDate(d.getDate() + 7);
+  }
+  return result;
+}
 
 function getYear(rec: any): number {
   return new Date((rec.week_date ?? '').slice(0, 10) + 'T00:00:00').getFullYear();
@@ -245,7 +265,15 @@ export function YearlyDashboardView({ allRecords }: { allRecords: any[] }) {
                   <span style={{ width: 22, height: 22, borderRadius: '50%', background: getRateColor(b.avgRate), color: '#fff', fontSize: '0.68rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
                   <span style={{ fontWeight: 700, flex: 1 }}>{b.branch}</span>
                   <span style={{ fontSize: '0.72rem', background: '#f1f5f9', color: 'var(--textSecondary)', borderRadius: 5, padding: '2px 7px', fontWeight: 600 }}>R{b.region}</span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--textSecondary)', minWidth: 55 }}>{b.weeks} wks</span>
+                  {(() => {
+                    const total = getYearWeeks(activeYear).length;
+                    const missing = total - b.weeks;
+                    return (
+                      <span style={{ fontSize: '0.72rem', color: missing > 0 ? '#b45309' : 'var(--textSecondary)', minWidth: 68, fontWeight: missing > 0 ? 700 : 400 }}>
+                        {b.weeks}/{total} wks{missing > 0 ? ` ⚠${missing}` : ''}
+                      </span>
+                    );
+                  })()}
                   {/* Rate bar */}
                   <div style={{ width: 120, background: '#f1f5f9', borderRadius: 6, height: 8, overflow: 'hidden' }}>
                     <div style={{ width: `${Math.min(b.avgRate, 100)}%`, height: '100%', background: getRateColor(b.avgRate), borderRadius: 6 }} />
@@ -255,45 +283,80 @@ export function YearlyDashboardView({ allRecords }: { allRecords: any[] }) {
                 </div>
 
                 {/* Drill-down: monthly chart for this branch */}
-                {selectedBranch === b.branch && branchMonthData && (
-                  <div>
-                    {/* Branch KPI row */}
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-                      {[
-                        { label: 'Rate+Freeze', val: `${b.avgFreeze.toFixed(1)}%`, color: getRateColor(b.avgFreeze) },
-                        { label: 'Attended',    val: b.totalAttended.toLocaleString(),   color: C.Attended },
-                        { label: 'Absent',      val: b.totalAbsent.toLocaleString(),     color: C.Absent },
-                        { label: 'Frozen',      val: b.totalFrozen.toLocaleString(),     color: C.Frozen },
-                        { label: 'Replaced',    val: b.totalReplaced.toLocaleString(),   color: C.Replaced },
-                        { label: 'Total',       val: b.totalAttendance.toLocaleString(), color: 'var(--text)' },
-                      ].map(({ label, val, color }) => (
-                        <div key={label} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', minWidth: 90 }}>
-                          <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-                          <div style={{ fontSize: '1rem', fontWeight: 800, color }}>{val}</div>
-                        </div>
-                      ))}
-                    </div>
+                {selectedBranch === b.branch && branchMonthData && (() => {
+                  const savedWeekSet = new Set(
+                    allRecords.filter(r => r.branch === b.branch && getYear(r) === activeYear)
+                      .map(r => r.week_date?.slice(0, 10))
+                  );
+                  const allYearWeeks  = getYearWeeks(activeYear);
+                  const missingWeeks  = allYearWeeks.filter(w => !savedWeekSet.has(w));
+                  const coveragePct   = Math.round((savedWeekSet.size / allYearWeeks.length) * 100);
 
-                    {/* Branch monthly chart */}
-                    <ResponsiveContainer width="100%" height={200}>
-                      <ComposedChart data={branchMonthData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }} barCategoryGap="24%">
-                        <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="label" tick={{ fontSize: 11, fontWeight: 600, fill: 'var(--textSecondary)' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: 'var(--muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <Tooltip content={<ChartTip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
-                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.75rem', paddingTop: 6 }}
-                          formatter={(val) => val === 'AttendedLine' ? null : val} />
-                        <Bar dataKey="Absent"   fill={C.Absent}   radius={[3,3,0,0]} maxBarSize={18} />
-                        <Bar dataKey="Attended" fill={C.Attended} radius={[3,3,0,0]} maxBarSize={18} />
-                        <Bar dataKey="Frozen"   fill={C.Frozen}   radius={[3,3,0,0]} maxBarSize={18} />
-                        <Bar dataKey="Replaced" fill={C.Replaced} radius={[3,3,0,0]} maxBarSize={18} />
-                        <Line dataKey="AttendedLine" name="AttendedLine" stroke={C.Attended} strokeWidth={2}
-                          dot={{ r: 3, fill: C.Attended, stroke: '#fff', strokeWidth: 2 }}
-                          activeDot={{ r: 5 }} type="monotone" legendType="none" />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                  return (
+                    <div>
+                      {/* Branch KPI row */}
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                        {[
+                          { label: 'Rate+Freeze', val: `${b.avgFreeze.toFixed(1)}%`, color: getRateColor(b.avgFreeze) },
+                          { label: 'Attended',    val: b.totalAttended.toLocaleString(),   color: C.Attended },
+                          { label: 'Absent',      val: b.totalAbsent.toLocaleString(),     color: C.Absent },
+                          { label: 'Frozen',      val: b.totalFrozen.toLocaleString(),     color: C.Frozen },
+                          { label: 'Replaced',    val: b.totalReplaced.toLocaleString(),   color: C.Replaced },
+                          { label: 'Total',       val: b.totalAttendance.toLocaleString(), color: 'var(--text)' },
+                        ].map(({ label, val, color }) => (
+                          <div key={label} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', minWidth: 90 }}>
+                            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color }}>{val}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Branch monthly chart */}
+                      <ResponsiveContainer width="100%" height={200}>
+                        <ComposedChart data={branchMonthData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }} barCategoryGap="24%">
+                          <CartesianGrid strokeDasharray="4 4" stroke="var(--border)" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fontSize: 11, fontWeight: 600, fill: 'var(--textSecondary)' }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: 'var(--muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip content={<ChartTip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.75rem', paddingTop: 6 }}
+                            formatter={(val) => val === 'AttendedLine' ? null : val} />
+                          <Bar dataKey="Absent"   fill={C.Absent}   radius={[3,3,0,0]} maxBarSize={18} />
+                          <Bar dataKey="Attended" fill={C.Attended} radius={[3,3,0,0]} maxBarSize={18} />
+                          <Bar dataKey="Frozen"   fill={C.Frozen}   radius={[3,3,0,0]} maxBarSize={18} />
+                          <Bar dataKey="Replaced" fill={C.Replaced} radius={[3,3,0,0]} maxBarSize={18} />
+                          <Line dataKey="AttendedLine" name="AttendedLine" stroke={C.Attended} strokeWidth={2}
+                            dot={{ r: 3, fill: C.Attended, stroke: '#fff', strokeWidth: 2 }}
+                            activeDot={{ r: 5 }} type="monotone" legendType="none" />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+
+                      {/* ── Data coverage / missing weeks ── */}
+                      <div style={{ marginTop: 14, background: missingWeeks.length === 0 ? '#f0fdf4' : '#fffbeb', border: `1px solid ${missingWeeks.length === 0 ? '#86efac' : '#fcd34d'}`, borderRadius: 8, padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: missingWeeks.length > 0 ? 10 : 0 }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: missingWeeks.length === 0 ? '#15803d' : '#92400e' }}>
+                            {missingWeeks.length === 0
+                              ? `✓ All ${allYearWeeks.length} weeks have data`
+                              : `⚠ ${savedWeekSet.size} / ${allYearWeeks.length} weeks uploaded (${missingWeeks.length} missing)`}
+                          </span>
+                          {/* coverage bar */}
+                          <div style={{ flex: 1, background: '#e5e7eb', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                            <div style={{ width: `${coveragePct}%`, height: '100%', background: missingWeeks.length === 0 ? '#22c55e' : '#f59e0b', borderRadius: 4, transition: 'width 0.3s' }} />
+                          </div>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--textSecondary)' }}>{coveragePct}%</span>
+                        </div>
+                        {missingWeeks.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {missingWeeks.map(w => (
+                              <span key={w} style={{ fontSize: '0.7rem', fontWeight: 600, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 5, padding: '2px 7px' }}>
+                                {weekRange(w)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
