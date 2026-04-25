@@ -574,6 +574,8 @@ model ghl_stages {
   fingerprint   String   @unique
   received_at   DateTime @default(now()) @db.Timestamptz(6)
   lead_source   String   @default("")
+  preferred_day String   @default("")
+  time_slot     String   @default("")
 
   @@index([email], map: "idx_ghl_stages_email")
   @@index([pipeline_name], map: "idx_ghl_stages_pipeline")

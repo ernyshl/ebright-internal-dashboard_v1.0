@@ -191,13 +191,15 @@ export function TallyPage() {
                     <th>Pipeline</th>
                     <th>Stage</th>
                     <th>Source</th>
+                    <th>Preferred Day</th>
+                    <th>Time Slot</th>
                     <th>Date</th>
                     <th>In DB?</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ghlLeads.length === 0 ? (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24 }}>No GHL leads</td></tr>
+                    <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24 }}>No GHL leads</td></tr>
                   ) : ghlLeads.map((r, i) => {
                     const inDb = r.email && rawLeads.some(d => d.email === r.email);
                     return (
@@ -208,6 +210,8 @@ export function TallyPage() {
                         <td style={{ fontSize: 12 }}>{PIPELINE_TO_BRANCH[r.pipeline_name] || r.pipeline_name || '—'}</td>
                         <td style={{ fontSize: 12 }}>{r.stage_key || '—'}</td>
                         <td style={{ fontSize: 11 }}>{r.lead_source || '—'}</td>
+                        <td style={{ fontSize: 11 }}>{r.preferred_day || '—'}</td>
+                        <td style={{ fontSize: 11 }}>{r.time_slot || '—'}</td>
                         <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{fmtDate(r.received_at)}</td>
                         <td style={{ textAlign: 'center' }}>
                           {inDb
