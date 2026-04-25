@@ -30,9 +30,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     const data = req.body;
-
-    // Temporary diagnostic — remove once preferred_day/time_slot confirmed arriving
-    console.log('[GHL payload]', JSON.stringify(data));
+    const cd   = data.customData || {};
 
     const email       = (data.email        || '').trim().toLowerCase();
     const lastName    = (data.last_name    || '').trim();
@@ -43,8 +41,9 @@ router.post('/webhook', async (req, res) => {
     const pipelineName = (data.pipeline_name || '').trim();
     const contactType = (data.contact_type || 'lead').trim();
     const leadSource  = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
-    const preferredDay = (data.preferred_day || '').trim();
-    const timeSlot    = (data.time_slot || '').trim();
+    // GHL nests custom fields under customData; keep the root fallback for safety
+    const preferredDay = (cd.preferred_day || data.preferred_day || '').trim();
+    const timeSlot    = (cd.time_slot     || data.time_slot     || '').trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) {
