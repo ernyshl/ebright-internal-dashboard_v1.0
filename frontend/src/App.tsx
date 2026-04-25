@@ -158,7 +158,7 @@ export default function App() {
             <RequirePermission dashboard="operations"><CtWithTimeSlotPage /></RequirePermission>
           } />
           <Route path="/ghl-dashboard" element={
-            <RequirePermission dashboard="testing"><GhlDashboardPage /></RequirePermission>
+            <RequirePermission dashboard="operations"><GhlDashboardPage /></RequirePermission>
           } />
           <Route path="/tally" element={
             <RequirePermission dashboard="testing"><TallyPage /></RequirePermission>

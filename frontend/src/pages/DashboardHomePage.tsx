@@ -28,6 +28,7 @@ export function DashboardHomePage() {
       color: '#0ea5e9',
       links: [
         { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations' },
+        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations' },
         { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations' },
       ]
     },
@@ -174,7 +175,6 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#f97316',
       links: [
-        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
         { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
       ]
