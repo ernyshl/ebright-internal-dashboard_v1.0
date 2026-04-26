@@ -48,6 +48,7 @@ import { StudentDatabasePage } from './pages/StudentDatabasePage';
 import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
 import { CtWithTimeSlotPage } from './pages/CtWithTimeSlotPage';
+import { BranchPerformancePage } from './pages/BranchPerformancePage';
 
 export default function App() {
   return (
@@ -177,6 +178,9 @@ export default function App() {
           } />
           <Route path="/ui-ux-testing" element={
             <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>
+          } />
+          <Route path="/branch-performance" element={
+            <RequirePermission dashboard="testing"><BranchPerformancePage /></RequirePermission>
           } />
           <Route path="/student-database" element={
             <RequirePermission dashboard="student_db"><StudentDatabasePage /></RequirePermission>
