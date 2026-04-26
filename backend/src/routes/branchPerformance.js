@@ -46,7 +46,7 @@ router.get('/rates', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
 
     const { rows } = await pool.query(
       `SELECT
-         DATE_TRUNC('${trunc}', (received_at AT TIME ZONE 'Asia/Kuala_Lumpur'))::date AS bucket,
+         TO_CHAR(DATE_TRUNC('${trunc}', (received_at AT TIME ZONE 'Asia/Kuala_Lumpur')), 'YYYY-MM-DD') AS bucket,
          pipeline_name,
          stage_key,
          COUNT(*)::int AS n
