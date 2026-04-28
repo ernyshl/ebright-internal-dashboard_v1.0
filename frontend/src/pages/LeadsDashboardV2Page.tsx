@@ -29,10 +29,10 @@ function MetricCard({ label, value, onClick }: { label: string; value: number; o
         borderRadius: 10,
         padding: '18px 12px',
         textAlign: 'center',
-        cursor: onClick && value > 0 ? 'pointer' : 'default',
+        cursor: onClick ? 'pointer' : 'default',
         transition: 'border-color 120ms',
       }}
-      onMouseEnter={e => { if (onClick && value > 0) e.currentTarget.style.borderColor = 'var(--brand)'; }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = 'var(--brand)'; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border, #e5e7eb)'; }}
     >
       <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>

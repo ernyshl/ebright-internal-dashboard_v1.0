@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 import { getApiDateRange, formatDateRange, PIPELINE_TO_BRANCH, REGION_PIPELINES, ALL_PIPELINES } from '../lib/leadsSheet';
@@ -16,26 +17,38 @@ const PRESETS = [
 
 const CAL_DAYS = ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function MetricCard({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
   return (
-    <div style={{
-      background: 'var(--inputBg, #f9fafb)',
-      border: '1px solid var(--border, #e5e7eb)',
-      borderRadius: 10,
-      padding: '18px 12px',
-      textAlign: 'center',
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        background: 'var(--inputBg, #f9fafb)',
+        border: '1px solid var(--border, #e5e7eb)',
+        borderRadius: 10,
+        padding: '18px 12px',
+        textAlign: 'center',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'border-color 120ms',
+      }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = 'var(--brand)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border, #e5e7eb)'; }}
+    >
       <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontSize: 30, fontWeight: 700, color: value > 0 ? 'var(--text)' : 'var(--muted)' }}>
+      <div style={{ fontSize: 30, fontWeight: 700, color: value > 0 && onClick ? 'var(--brand)' : (value > 0 ? 'var(--text)' : 'var(--muted)') }}>
         {value}
       </div>
     </div>
   );
 }
 
-function Row({ label, values, bold = false }: { label: string; values: Record<string, number>; bold?: boolean }) {
+function Row({ label, values, onCellClick, bold = false }: {
+  label: string;
+  values: Record<string, number>;
+  onCellClick?: (day: string) => void;
+  bold?: boolean;
+}) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 20,
@@ -53,7 +66,12 @@ function Row({ label, values, bold = false }: { label: string; values: Record<st
       }}>{label}</div>
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
         {CAL_DAYS.map(d => (
-          <MetricCard key={d} label={d.slice(0, 3)} value={values[d] || 0} />
+          <MetricCard
+            key={d}
+            label={d.slice(0, 3)}
+            value={values[d] || 0}
+            onClick={onCellClick ? () => onCellClick(d) : undefined}
+          />
         ))}
       </div>
     </div>
@@ -61,6 +79,7 @@ function Row({ label, values, bold = false }: { label: string; values: Record<st
 }
 
 export function DayDistributionPage() {
+  const navigate = useNavigate();
   const [preset, setPreset]         = useState('today');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo]     = useState('');
@@ -109,6 +128,14 @@ export function DayDistributionPage() {
     }
     return totals;
   }, [dayMap, visiblePipelines]);
+
+  // GHL Lead Centre doesn't filter by preferred_day, so the day click just opens
+  // CT records for that pipeline + date range. Day is passed as a hint param.
+  const goToLeadCentre = (pip: string, _day: string) => {
+    const p = new URLSearchParams({ stage: 'CT', preset });
+    if (pip) p.set('pipeline', pip);
+    navigate(`/ghl-lead-centre?${p}`);
+  };
 
   return (
     <div className="dashboardPage">
@@ -175,10 +202,15 @@ export function DayDistributionPage() {
       ) : (
         <div>
           {/* Overall row */}
-          <Row label="Overall" values={overall} bold />
+          <Row label="Overall" values={overall} onCellClick={(d) => goToLeadCentre('', d)} bold />
           {/* Branch rows — always shown so layout is consistent regardless of data */}
           {visiblePipelines.map(pip => (
-            <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={dayMap[pip] || {}} />
+            <Row
+              key={pip}
+              label={PIPELINE_TO_BRANCH[pip] || pip}
+              values={dayMap[pip] || {}}
+              onCellClick={(d) => goToLeadCentre(pip, d)}
+            />
           ))}
         </div>
       )}
