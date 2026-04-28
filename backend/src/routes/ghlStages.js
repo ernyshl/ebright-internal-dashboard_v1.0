@@ -67,12 +67,27 @@ router.post('/webhook', async (req, res) => {
     // Fingerprint: same logic as GSheet code
     const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
-    // Upsert — ON CONFLICT DO NOTHING deduplicates permanently
+    // Upsert with merge: when the same fingerprint fires again (e.g. the BM
+    // updated preferred_day / time_slot in GHL after the first stage-change
+    // webhook), prefer the NEW payload's value when it's non-empty, otherwise
+    // keep what's already stored. Empty incoming fields never overwrite real
+    // values. stage_raw / stage_key never need updating because the fingerprint
+    // includes stage_raw, so a conflict guarantees they're identical.
     await pool.query(
       `INSERT INTO ghl_stages
          (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-       ON CONFLICT (fingerprint) DO NOTHING`,
+       ON CONFLICT (fingerprint) DO UPDATE SET
+         email         = COALESCE(NULLIF(EXCLUDED.email, ''),         ghl_stages.email),
+         last_name     = COALESCE(NULLIF(EXCLUDED.last_name, ''),     ghl_stages.last_name),
+         phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
+         pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
+         branch        = COALESCE(NULLIF(EXCLUDED.branch, ''),        ghl_stages.branch),
+         student_name  = COALESCE(NULLIF(EXCLUDED.student_name, ''),  ghl_stages.student_name),
+         contact_type  = COALESCE(NULLIF(EXCLUDED.contact_type, ''),  ghl_stages.contact_type),
+         lead_source   = COALESCE(NULLIF(EXCLUDED.lead_source, ''),   ghl_stages.lead_source),
+         preferred_day = COALESCE(NULLIF(EXCLUDED.preferred_day, ''), ghl_stages.preferred_day),
+         time_slot     = COALESCE(NULLIF(EXCLUDED.time_slot, ''),     ghl_stages.time_slot)`,
       [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
