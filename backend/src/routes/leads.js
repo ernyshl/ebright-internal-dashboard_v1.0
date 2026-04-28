@@ -11,7 +11,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
     const today     = `(NOW() AT TIME ZONE ${TZ})::date`;
     const asDate    = `(submitted_at AT TIME ZONE ${TZ})::date`;
 
-    // A) Lead source breakdown — 8 groups
+    // A) Lead source breakdown — without siblings (sibling_index = 1 = primary lead row)
     const queryTotal = `
       SELECT
         CASE
@@ -29,6 +29,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
+      WHERE sibling_index = 1
       GROUP BY 1
       ORDER BY count_30_days DESC;
     `;
@@ -119,14 +120,15 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
       );
     `;
 
-    // E) Grand total
+    // E) Grand total — without siblings, matches the Lead Sources section
     const queryGrandTotal = `
       SELECT
         COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
         COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-      FROM master_leads_powerbi;
+      FROM master_leads_powerbi
+      WHERE sibling_index = 1;
     `;
 
     // F) Others breakdown — show distinct raw lead_source values that fall into 'Others'
