@@ -91,6 +91,15 @@ export function HrfsAttendanceDashboardPage() {
 
   const [view, setView] = useState('today');
 
+  // Newest first: rows with no clockIn (didn't come) at top, then latest clockIn
+  // (most-late) descending. Surfaces exceptions immediately.
+  const sortNewestFirst = (records) => records.slice().sort((a, b) => {
+    if (!a.clockIn && !b.clockIn) return 0;
+    if (!a.clockIn) return -1;
+    if (!b.clockIn) return 1;
+    return String(b.clockIn).localeCompare(String(a.clockIn));
+  });
+
   return (
     <div className="dashboardPage">
       <div className="dashboardHeader">
@@ -106,10 +115,20 @@ export function HrfsAttendanceDashboardPage() {
         <div className="card" style={{ textAlign: 'center', padding: 40 }}><div className="loadingDots"><span /><span /><span /></div></div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="sourcesGrid" style={{ marginBottom: 16 }}>
-            <SummaryCard title="Today" icon="📅" color="#3b82f6" summary={today} active={view === 'today'} onClick={() => setView('today')} />
-            <SummaryCard title="Yesterday" icon="📆" color="#f59e0b" summary={yesterday} active={view === 'yesterday'} onClick={() => setView('yesterday')} />
+          {/* Summary Cards — centered, two-up */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 16,
+            flexWrap: 'wrap',
+            marginBottom: 16,
+          }}>
+            <div style={{ flex: '0 1 360px', minWidth: 280, maxWidth: 420 }}>
+              <SummaryCard title="Today" icon="📅" color="#3b82f6" summary={today} active={view === 'today'} onClick={() => setView('today')} />
+            </div>
+            <div style={{ flex: '0 1 360px', minWidth: 280, maxWidth: 420 }}>
+              <SummaryCard title="Yesterday" icon="📆" color="#f59e0b" summary={yesterday} active={view === 'yesterday'} onClick={() => setView('yesterday')} />
+            </div>
           </div>
 
           {/* Toggle */}
@@ -118,10 +137,10 @@ export function HrfsAttendanceDashboardPage() {
             <button className={`btn ${view === 'yesterday' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('yesterday')}>Yesterday ({yesterday.total})</button>
           </div>
 
-          {/* Staff List */}
+          {/* Staff List — newest first (no clock-in at top, then latest clock-in) */}
           <StaffTable
             title={view === 'today' ? 'Today' : 'Yesterday'}
-            records={view === 'today' ? today.records : yesterday.records}
+            records={sortNewestFirst(view === 'today' ? today.records : yesterday.records)}
             color={view === 'today' ? '#3b82f6' : '#f59e0b'}
           />
         </>
