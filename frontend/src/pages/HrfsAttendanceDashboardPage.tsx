@@ -91,14 +91,15 @@ export function HrfsAttendanceDashboardPage() {
 
   const [view, setView] = useState('today');
 
-  // Newest first: rows with no clockIn (didn't come) at top, then latest clockIn
-  // (most-late) descending. Surfaces exceptions immediately.
-  const sortNewestFirst = (records) => records.slice().sort((a, b) => {
-    if (!a.clockIn && !b.clockIn) return 0;
-    if (!a.clockIn) return -1;
-    if (!b.clockIn) return 1;
-    return String(b.clockIn).localeCompare(String(a.clockIn));
-  });
+  // Split into two lists:
+  //   left  — staff who clocked in, sorted latest → earliest (most-late at top)
+  //   right — staff who haven't clocked in / didn't come
+  const splitRecords = (records) => {
+    const clockedIn = records.filter(r => r.clockIn);
+    const noClockIn = records.filter(r => !r.clockIn);
+    clockedIn.sort((a, b) => String(b.clockIn).localeCompare(String(a.clockIn)));
+    return { clockedIn, noClockIn };
+  };
 
   return (
     <div className="dashboardPage">
@@ -137,12 +138,17 @@ export function HrfsAttendanceDashboardPage() {
             <button className={`btn ${view === 'yesterday' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('yesterday')}>Yesterday ({yesterday.total})</button>
           </div>
 
-          {/* Staff List — newest first (no clock-in at top, then latest clock-in) */}
-          <StaffTable
-            title={view === 'today' ? 'Today' : 'Yesterday'}
-            records={sortNewestFirst(view === 'today' ? today.records : yesterday.records)}
-            color={view === 'today' ? '#3b82f6' : '#f59e0b'}
-          />
+          {/* Staff lists — clocked-in (latest first) | no clock-in */}
+          {(() => {
+            const { clockedIn, noClockIn } = splitRecords(view === 'today' ? today.records : yesterday.records);
+            const dayColor = view === 'today' ? '#3b82f6' : '#f59e0b';
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <StaffTable title="Clocked In · latest → earliest" records={clockedIn} color={dayColor} />
+                <StaffTable title="Not Clocked In Yet" records={noClockIn} color="var(--muted)" />
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
