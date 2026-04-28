@@ -367,9 +367,11 @@ export function UiUxTestingPage() {
         <div className="errorText">{q.error?.data?.error || 'Failed to load leads data.'}</div>
       ) : (
         <>
-          {/* Hourly Target + Summary Stats */}
-          <div className="summaryStatsRow" style={{ marginBottom: 24 }}>
-            <HourlyTargetCard currentLeads={todayTotal} />
+          {/* Hourly Target + Summary Stats — integrated flex row */}
+          <div style={{ display: 'flex', gap: 14, marginBottom: 24, alignItems: 'stretch' }}>
+            <div style={{ position: 'relative', width: 220, minHeight: 180, flexShrink: 0 }}>
+              <HourlyTargetCard currentLeads={todayTotal} />
+            </div>
             <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               <StatCard title="Total Leads (30d)" value={totalLeads} icon="L" color="#3b82f6" subtitle="All sources combined" to={getLeadCentreUrl('', '30days')} />
               <StatCard title="Today's Leads | Online" value={todayTotal - onlineToday} bracketValue={onlineToday} icon="T" color="#10b981" subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`} to={getLeadCentreUrl('', 'today')} />
