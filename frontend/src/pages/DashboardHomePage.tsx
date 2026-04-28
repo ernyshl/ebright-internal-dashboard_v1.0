@@ -181,6 +181,17 @@ export function DashboardHomePage() {
       ]
     },
     {
+      id: 'manjeet',
+      name: 'For Manjeet',
+      icon: '🎯',
+      color: '#f59e0b',
+      links: [
+        { label: 'Leads Dashboard v2', path: '/leads-dashboard-v2', dashboard: 'testing' },
+        { label: 'Day Distribution',    path: '/day-distribution',    dashboard: 'testing' },
+        { label: 'Time Slot Distribution', path: '/time-slot-distribution', dashboard: 'testing' },
+      ]
+    },
+    {
       id: 'rm_dashboard',
       name: 'For Regional Manager',
       icon: '📊',
