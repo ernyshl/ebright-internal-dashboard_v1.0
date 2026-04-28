@@ -5,9 +5,9 @@ import { getRateColor } from '../../lib/okr/utils';
 
 const REGIONS = ['All', 'A', 'B', 'C'] as const;
 
-function ChartTooltip({ active, payload, label, chartData }) {
+function ChartTooltip({ active, payload, label, chartData }: any) {
   if (!active || !payload?.length) return null;
-  const entry = chartData.find(d => d.branch === label);
+  const entry = chartData.find((d: any) => d.branch === label);
   return (
     <div className="okrChartTooltip">
       <div className="okrChartTooltipTitle">{entry?.fullName || label}</div>
@@ -33,22 +33,23 @@ export function AllBranchesGrid({ records, onSelect }) {
     </div>
   );
 
-  // All records with global rank (index in already-sorted rankedRecords)
-  const allChartData = records.map((r, i) => ({
-    globalRank: i + 1,
-    branch:     BRANCH_META[r.branch]?.code || r.branch,
-    fullName:   r.branch,
-    region:     BRANCH_META[r.branch]?.region,
-    Attended:   r._m.totalAttended,
-    Absent:     r._m.totalAbsent,
-    Frozen:     r._m.totalFrozen,
-    Replaced:   r._m.totalReplaced,
-    Rate:       parseFloat(r._m.attendanceRate.toFixed(1)),
+  // Build chart data using fixed branch numbers (not attendance rank)
+  const allChartData = records.map(r => ({
+    num:      BRANCH_META[r.branch]?.num ?? 99,
+    branch:   BRANCH_META[r.branch]?.code || r.branch,
+    fullName: r.branch,
+    region:   BRANCH_META[r.branch]?.region,
+    Attended: r._m.totalAttended,
+    Absent:   r._m.totalAbsent,
+    Frozen:   r._m.totalFrozen,
+    Replaced: r._m.totalReplaced,
+    Rate:     parseFloat(r._m.attendanceRate.toFixed(1)),
   }));
 
-  const filteredChartData = regionFilter === 'All'
+  const filteredChartData = (regionFilter === 'All'
     ? allChartData
-    : allChartData.filter(d => d.region === regionFilter);
+    : allChartData.filter(d => d.region === regionFilter)
+  ).sort((a, b) => a.num - b.num); // always ascending by fixed branch number
 
   const handleChartClick = (data) => {
     if (!data?.activeLabel) return;
@@ -110,7 +111,7 @@ export function AllBranchesGrid({ records, onSelect }) {
               fontSize: '0.65rem', fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              {String(d.globalRank).padStart(2, '0')}
+              {String(d.num).padStart(2, '0')}
             </span>
             {d.branch}
           </button>
