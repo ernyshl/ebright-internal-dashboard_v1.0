@@ -131,7 +131,7 @@ router.get('/leave-transactions', requireAuth, requireRole(ALLOWED_ROLES), async
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
-      conditions.push(`(lt."EmployeeCode" ILIKE $${idx} OR bs."name" ILIKE $${idx})`);
+      conditions.push(`(lt."EmployeeCode" ILIKE $${idx} OR lt."EmployeeName" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
     if (status) { conditions.push(`lt."ApplyStatus" = $${idx++}`); params.push(status); }
@@ -143,17 +143,16 @@ router.get('/leave-transactions', requireAuth, requireRole(ALLOWED_ROLES), async
     const offset = (Number(page) - 1) * Number(limit);
 
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."LeaveTransaction" lt LEFT JOIN hrfs."BranchStaff" bs ON lt."EmployeeCode" = bs."employeeId" ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM hrfs."LeaveTransaction" lt ${where}`, params),
       pool.query(
-        `SELECT lt.id, lt."EmployeeCode", lt."LeaveTypeCode", lt."LeaveTransId",
+        `SELECT lt.id, lt."EmployeeCode", lt."EmployeeName" AS employee_name,
+                lt."LeaveTypeCode", lt."LeaveTransId",
                 lt."ApplyDate", lt."ApplyReason", lt."ApplyStatus", lt."Attachment",
                 lt."DayNo", lt."HourNo", lt."Days", lt."Source", lt."LeaveAdjustmentId",
                 lt."LeaveDate", lt."FromTime", lt."ToTime", lt."IsHourly", lt."IsAdjustment",
                 lt."LeaveCreditId", lt."ActionRemark", lt."RequiredThirdParty",
-                lt."WorkingHours", lt."created_at",
-                bs."name" AS employee_name, bs."department", bs."branch"
+                lt."WorkingHours", lt."created_at"
          FROM hrfs."LeaveTransaction" lt
-         LEFT JOIN hrfs."BranchStaff" bs ON lt."EmployeeCode" = bs."employeeId"
          ${where}
          ORDER BY lt."created_at" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
