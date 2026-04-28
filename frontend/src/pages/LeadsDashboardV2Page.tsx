@@ -15,6 +15,66 @@ const PRESETS = [
   { key: 'custom',     label: 'Custom' },
 ];
 
+const STAGES = ['NL', 'CT', 'SU', 'ENR'] as const;
+
+type StageMap = { NL: number; CT: number; SU: number; ENR: number };
+
+function MetricCard({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: 'var(--inputBg, #f9fafb)',
+        border: '1px solid var(--border, #e5e7eb)',
+        borderRadius: 10,
+        padding: '18px 12px',
+        textAlign: 'center',
+        cursor: onClick && value > 0 ? 'pointer' : 'default',
+        transition: 'border-color 120ms',
+      }}
+      onMouseEnter={e => { if (onClick && value > 0) e.currentTarget.style.borderColor = 'var(--brand)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border, #e5e7eb)'; }}
+    >
+      <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: value > 0 && onClick ? 'var(--brand)' : 'var(--text)' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, values, onCellClick, bold = false }: {
+  label: string;
+  values: StageMap;
+  onCellClick?: (stage: typeof STAGES[number]) => void;
+  bold?: boolean;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 20,
+      background: 'var(--panel)',
+      border: '1px solid var(--border, #e5e7eb)',
+      borderRadius: 12,
+      padding: '16px 24px',
+      marginBottom: 12,
+    }}>
+      <div style={{
+        minWidth: 140, flexShrink: 0,
+        fontSize: bold ? 18 : 16,
+        fontWeight: bold ? 800 : 600,
+        color: 'var(--text)',
+      }}>{label}</div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {STAGES.map(s => (
+          <MetricCard key={s} label={s} value={values[s]} onClick={onCellClick ? () => onCellClick(s) : undefined} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function LeadsDashboardV2Page() {
   const navigate = useNavigate();
   const [preset, setPreset]         = useState('today');
@@ -43,7 +103,7 @@ export function LeadsDashboardV2Page() {
   });
 
   const byPipeline = useMemo(() => {
-    const m: Record<string, { NL: number; CT: number; SU: number; ENR: number }> = {};
+    const m: Record<string, StageMap> = {};
     for (const r of (data?.byPipeline || [])) {
       m[r.pipeline_name] = { NL: Number(r.nl)||0, CT: Number(r.ct)||0, SU: Number(r.su)||0, ENR: Number(r.enr)||0 };
     }
@@ -53,29 +113,19 @@ export function LeadsDashboardV2Page() {
   const regionPipelines = region === 'all' ? ALL_PIPELINES : (REGION_PIPELINES[`Region ${region}`] || []);
   const visiblePipelines = branch ? [branch] : regionPipelines;
 
-  const overall = useMemo(() => visiblePipelines.reduce(
+  const overall: StageMap = useMemo(() => visiblePipelines.reduce(
     (acc, pip) => {
       const r = byPipeline[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
       return { NL: acc.NL + r.NL, CT: acc.CT + r.CT, SU: acc.SU + r.SU, ENR: acc.ENR + r.ENR };
     },
-    { NL: 0, CT: 0, SU: 0, ENR: 0 }
+    { NL: 0, CT: 0, SU: 0, ENR: 0 } as StageMap
   ), [byPipeline, visiblePipelines]);
 
   const goToLeadCentre = (pip: string, stage: string) => {
-    const p = new URLSearchParams({ stage });
-    if (preset === 'custom') { p.set('preset', 'custom'); }
-    else { p.set('preset', preset); }
+    const p = new URLSearchParams({ stage, preset });
     if (pip) p.set('pipeline', pip);
     navigate(`/ghl-lead-centre?${p}`);
   };
-
-  const numCell = (val: number, pip: string, stage: string) => (
-    <td style={{ textAlign: 'right' }}>
-      {val > 0
-        ? <span style={{ cursor: 'pointer', color: 'var(--brand)', fontWeight: 600 }} onClick={() => goToLeadCentre(pip, stage)}>{val}</span>
-        : <span style={{ color: 'var(--muted)' }}>0</span>}
-    </td>
-  );
 
   return (
     <div className="dashboardPage">
@@ -119,7 +169,7 @@ export function LeadsDashboardV2Page() {
         ))}
       </div>
 
-      {/* Branch filter — shown only when a region is selected */}
+      {/* Branch filter */}
       {region !== 'all' && (
         <div className="ldFilterBar" style={{ marginBottom: 16, flexWrap: 'wrap' }}>
           <button className={`btn ${branch === '' ? 'btnPrimary' : 'btnGhost'} btnSmall`}
@@ -140,41 +190,22 @@ export function LeadsDashboardV2Page() {
           <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading…</p>
         </div>
       ) : (
-        <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
-          <table className="dataTable">
-            <thead>
-              <tr>
-                <th>Branch</th>
-                <th style={{ textAlign: 'right' }}>NL</th>
-                <th style={{ textAlign: 'right' }}>CT</th>
-                <th style={{ textAlign: 'right' }}>SU</th>
-                <th style={{ textAlign: 'right' }}>ENR</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Overall summary row */}
-              <tr style={{ background: 'var(--bg2)' }}>
-                <td><strong>Overall</strong></td>
-                {numCell(overall.NL,  '', 'NL')}
-                {numCell(overall.CT,  '', 'CT')}
-                {numCell(overall.SU,  '', 'SU')}
-                {numCell(overall.ENR, '', 'ENR')}
-              </tr>
-              {visiblePipelines.map(pip => {
-                const r = byPipeline[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
-                if (r.NL + r.CT + r.SU + r.ENR === 0) return null;
-                return (
-                  <tr key={pip}>
-                    <td>{PIPELINE_TO_BRANCH[pip] || pip}</td>
-                    {numCell(r.NL,  pip, 'NL')}
-                    {numCell(r.CT,  pip, 'CT')}
-                    {numCell(r.SU,  pip, 'SU')}
-                    {numCell(r.ENR, pip, 'ENR')}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          {/* Overall row */}
+          <Row label="Overall" values={overall} onCellClick={(s) => goToLeadCentre('', s)} bold />
+          {/* Branch rows */}
+          {visiblePipelines.map(pip => {
+            const r = byPipeline[pip] || { NL: 0, CT: 0, SU: 0, ENR: 0 };
+            if (r.NL + r.CT + r.SU + r.ENR === 0) return null;
+            return (
+              <Row
+                key={pip}
+                label={PIPELINE_TO_BRANCH[pip] || pip}
+                values={r}
+                onCellClick={(s) => goToLeadCentre(pip, s)}
+              />
+            );
+          })}
         </div>
       )}
     </div>

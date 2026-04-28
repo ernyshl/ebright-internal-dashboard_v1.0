@@ -22,17 +22,61 @@ const WEEKEND_CODES = ['0915', '1030', '1200', '1315', '1445', '1600', '1715'];
 const WEEKDAY_CODES = ['1800', '1915', '2030'];
 const ALL_SLOT_CODES = [...WEEKEND_CODES, ...WEEKDAY_CODES];
 
-const SLOT_LABEL: Record<string, string> = {
-  '0915': '0915', '1030': '1030', '1200': '1200', '1315': '1315',
-  '1445': '1445', '1600': '1600', '1715': '1715',
-  '1800': '1800', '1915': '1915', '2030': '2030',
-};
-
 function getVisibleCodes(selectedDay: string): string[] {
   if (!selectedDay) return ALL_SLOT_CODES;
   if (WEEKDAY_SET.has(selectedDay)) return WEEKDAY_CODES;
   if (WEEKEND_SET.has(selectedDay)) return WEEKEND_CODES;
   return ALL_SLOT_CODES;
+}
+
+function MetricCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{
+      background: 'var(--inputBg, #f9fafb)',
+      border: '1px solid var(--border, #e5e7eb)',
+      borderRadius: 10,
+      padding: '16px 8px',
+      textAlign: 'center',
+      minWidth: 0,
+    }}>
+      <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: value > 0 ? 'var(--text)' : 'var(--muted)' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, values, codes, bold = false }: {
+  label: string;
+  values: Record<string, number>;
+  codes: string[];
+  bold?: boolean;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 20,
+      background: 'var(--panel)',
+      border: '1px solid var(--border, #e5e7eb)',
+      borderRadius: 12,
+      padding: '16px 24px',
+      marginBottom: 12,
+    }}>
+      <div style={{
+        minWidth: 140, flexShrink: 0,
+        fontSize: bold ? 18 : 16,
+        fontWeight: bold ? 800 : 600,
+        color: 'var(--text)',
+      }}>{label}</div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${codes.length}, 1fr)`, gap: 10 }}>
+        {codes.map(c => (
+          <MetricCard key={c} label={c} value={values[c] || 0} />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function TimeSlotDistributionPage() {
@@ -81,7 +125,7 @@ export function TimeSlotDistributionPage() {
   const regionPipelines = region === 'all' ? ALL_PIPELINES : (REGION_PIPELINES[`Region ${region}`] || []);
   const visiblePipelines = branch ? [branch] : regionPipelines;
 
-  const overall = useMemo(() => {
+  const overall: Record<string, number> = useMemo(() => {
     const totals: Record<string, number> = {};
     for (const pip of visiblePipelines) {
       const sd = slotMap[pip] || {};
@@ -91,8 +135,6 @@ export function TimeSlotDistributionPage() {
     }
     return totals;
   }, [slotMap, visiblePipelines, visibleCodes]);
-
-  const overallTotal = visibleCodes.reduce((s, c) => s + (overall[c] || 0), 0);
 
   return (
     <div className="dashboardPage">
@@ -170,46 +212,18 @@ export function TimeSlotDistributionPage() {
           <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading…</p>
         </div>
       ) : (
-        <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
-          <table className="dataTable">
-            <thead>
-              <tr>
-                <th>Branch</th>
-                <th style={{ textAlign: 'right' }}>Total</th>
-                {visibleCodes.map(c => (
-                  <th key={c} style={{ textAlign: 'right' }}>{SLOT_LABEL[c]}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Overall row */}
-              <tr style={{ background: 'var(--bg2)' }}>
-                <td><strong>Overall</strong></td>
-                <td style={{ textAlign: 'right' }}><strong>{overallTotal}</strong></td>
-                {visibleCodes.map(c => (
-                  <td key={c} style={{ textAlign: 'right' }}>
-                    <strong>{overall[c] || 0}</strong>
-                  </td>
-                ))}
-              </tr>
-              {visiblePipelines.map(pip => {
-                const sd = slotMap[pip] || {};
-                const rowTotal = visibleCodes.reduce((s, c) => s + (sd[c] || 0), 0);
-                if (rowTotal === 0) return null;
-                return (
-                  <tr key={pip}>
-                    <td>{PIPELINE_TO_BRANCH[pip] || pip}</td>
-                    <td style={{ textAlign: 'right' }}>{rowTotal}</td>
-                    {visibleCodes.map(c => (
-                      <td key={c} style={{ textAlign: 'right', color: sd[c] ? 'var(--text)' : 'var(--muted)' }}>
-                        {sd[c] || 0}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          {/* Overall row */}
+          <Row label="Overall" values={overall} codes={visibleCodes} bold />
+          {/* Branch rows */}
+          {visiblePipelines.map(pip => {
+            const sd = slotMap[pip] || {};
+            const total = visibleCodes.reduce((s, c) => s + (sd[c] || 0), 0);
+            if (total === 0) return null;
+            return (
+              <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={sd} codes={visibleCodes} />
+            );
+          })}
         </div>
       )}
     </div>

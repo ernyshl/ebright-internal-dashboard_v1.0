@@ -16,6 +16,50 @@ const PRESETS = [
 
 const CAL_DAYS = ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
+function MetricCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{
+      background: 'var(--inputBg, #f9fafb)',
+      border: '1px solid var(--border, #e5e7eb)',
+      borderRadius: 10,
+      padding: '18px 12px',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 700, color: value > 0 ? 'var(--text)' : 'var(--muted)' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, values, bold = false }: { label: string; values: Record<string, number>; bold?: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 20,
+      background: 'var(--panel)',
+      border: '1px solid var(--border, #e5e7eb)',
+      borderRadius: 12,
+      padding: '16px 24px',
+      marginBottom: 12,
+    }}>
+      <div style={{
+        minWidth: 140, flexShrink: 0,
+        fontSize: bold ? 18 : 16,
+        fontWeight: bold ? 800 : 600,
+        color: 'var(--text)',
+      }}>{label}</div>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+        {CAL_DAYS.map(d => (
+          <MetricCard key={d} label={d.slice(0, 3)} value={values[d] || 0} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DayDistributionPage() {
   const [preset, setPreset]         = useState('today');
   const [customFrom, setCustomFrom] = useState('');
@@ -42,7 +86,7 @@ export function DayDistributionPage() {
     enabled: preset !== 'custom' || (!!customFrom && !!customTo),
   });
 
-  // pipeline -> preferred_day -> total count (summed across all time slots)
+  // pipeline -> preferred_day -> count
   const dayMap = useMemo(() => {
     const m: Record<string, Record<string, number>> = {};
     for (const r of (data?.rows || [])) {
@@ -56,7 +100,7 @@ export function DayDistributionPage() {
   const regionPipelines = region === 'all' ? ALL_PIPELINES : (REGION_PIPELINES[`Region ${region}`] || []);
   const visiblePipelines = branch ? [branch] : regionPipelines;
 
-  const overall = useMemo(() => {
+  const overall: Record<string, number> = useMemo(() => {
     const totals: Record<string, number> = {};
     for (const day of CAL_DAYS) totals[day] = 0;
     for (const pip of visiblePipelines) {
@@ -65,8 +109,6 @@ export function DayDistributionPage() {
     }
     return totals;
   }, [dayMap, visiblePipelines]);
-
-  const overallTotal = CAL_DAYS.reduce((s, d) => s + overall[d], 0);
 
   return (
     <div className="dashboardPage">
@@ -131,46 +173,18 @@ export function DayDistributionPage() {
           <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading…</p>
         </div>
       ) : (
-        <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
-          <table className="dataTable">
-            <thead>
-              <tr>
-                <th>Branch</th>
-                <th style={{ textAlign: 'right' }}>Total</th>
-                {CAL_DAYS.map(d => (
-                  <th key={d} style={{ textAlign: 'right' }}>{d.slice(0, 3)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Overall row */}
-              <tr style={{ background: 'var(--bg2)' }}>
-                <td><strong>Overall</strong></td>
-                <td style={{ textAlign: 'right' }}><strong>{overallTotal}</strong></td>
-                {CAL_DAYS.map(d => (
-                  <td key={d} style={{ textAlign: 'right' }}>
-                    <strong>{overall[d] || 0}</strong>
-                  </td>
-                ))}
-              </tr>
-              {visiblePipelines.map(pip => {
-                const pd = dayMap[pip] || {};
-                const rowTotal = CAL_DAYS.reduce((s, d) => s + (pd[d] || 0), 0);
-                if (rowTotal === 0) return null;
-                return (
-                  <tr key={pip}>
-                    <td>{PIPELINE_TO_BRANCH[pip] || pip}</td>
-                    <td style={{ textAlign: 'right' }}>{rowTotal}</td>
-                    {CAL_DAYS.map(d => (
-                      <td key={d} style={{ textAlign: 'right', color: pd[d] ? 'var(--text)' : 'var(--muted)' }}>
-                        {pd[d] || 0}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          {/* Overall row */}
+          <Row label="Overall" values={overall} bold />
+          {/* Branch rows */}
+          {visiblePipelines.map(pip => {
+            const pd = dayMap[pip] || {};
+            const total = CAL_DAYS.reduce((s, d) => s + (pd[d] || 0), 0);
+            if (total === 0) return null;
+            return (
+              <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={pd} />
+            );
+          })}
         </div>
       )}
     </div>
