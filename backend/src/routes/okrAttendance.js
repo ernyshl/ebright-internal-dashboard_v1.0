@@ -27,18 +27,33 @@ function toWednesday(dateStr) {
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { branch = '', week_date = '', limit = 50 } = req.query;
+
+    if (week_date) {
+      // When filtering by week, deduplicate: one record per branch (most recently updated wins).
+      // This handles old Wednesday-anchor vs new Monday-anchor duplicates.
+      const mon = toWednesday(week_date);
+      const params = [mon, mon];
+      const branchClause = branch ? `AND branch = $${params.push(branch)}` : '';
+      params.push(Number(limit));
+      const limitIdx = params.length;
+
+      const result = await pool.query(
+        `SELECT DISTINCT ON (branch) *
+         FROM branch_okr_attendance
+         WHERE week_date >= $1::date AND week_date <= $2::date + INTERVAL '6 days'
+           ${branchClause}
+         ORDER BY branch ASC, updated_at DESC
+         LIMIT $${limitIdx}`,
+        params
+      );
+      return res.json({ records: result.rows });
+    }
+
+    // No week filter — return all records (history view)
     const conditions = [];
     const params = [];
     let idx = 1;
-
     if (branch) { conditions.push(`branch = $${idx++}`); params.push(branch); }
-    if (week_date) {
-      // Match any record whose week_date falls within the same Mon–Sun week as the queried date
-      const wed = toWednesday(week_date);
-      conditions.push(`week_date >= $${idx++}::date AND week_date <= $${idx++}::date + INTERVAL '6 days'`);
-      params.push(wed, wed);
-    }
-
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await pool.query(
       `SELECT * FROM branch_okr_attendance ${where} ORDER BY week_date DESC, branch ASC LIMIT $${idx}`,
