@@ -64,6 +64,19 @@ router.post('/webhook', async (req, res) => {
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
+    // If the payload carries no custom fields and a record for this email+stage
+    // already exists, ignore it — this is the duplicate fire from the second
+    // "Opportunity Updated" workflow that arrived before the BM filled in the fields.
+    if (!preferredDay && !timeSlot) {
+      const { rows: exists } = await pool.query(
+        `SELECT 1 FROM ghl_stages WHERE email = $1 AND stage_key = $2 LIMIT 1`,
+        [email, stageKey]
+      );
+      if (exists.length > 0) {
+        return res.status(200).json({ status: 'ignored', reason: 'duplicate without custom fields' });
+      }
+    }
+
     // Fingerprint: same logic as GSheet code
     const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
@@ -141,12 +154,28 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
+    // Deduplicate: one row per email+stage_key, preferring the row that has
+    // preferred_day/time_slot, then the most recent.
+    const dedupCte = `
+      WITH deduped AS (
+        SELECT DISTINCT ON (email, stage_key)
+          id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch,
+          student_name, contact_type, lead_source, preferred_day, time_slot, received_at
+        FROM ghl_stages
+        ${where}
+        ORDER BY email, stage_key,
+          CASE WHEN preferred_day <> '' OR time_slot <> '' THEN 0 ELSE 1 END,
+          received_at DESC
+      )
+    `;
+
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM ghl_stages ${where}`, params),
+      pool.query(`${dedupCte} SELECT COUNT(*) FROM deduped`, params),
       pool.query(
-        `SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot,
+        `${dedupCte}
+         SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot,
                 (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at_local
-         FROM ghl_stages ${where}
+         FROM deduped
          ORDER BY received_at DESC
          LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
@@ -186,13 +215,20 @@ router.get('/by-pipeline', requireAuth, requireRole(ALLOWED_ROLES), async (req, 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const { rows } = await pool.query(
-      `SELECT pipeline_name,
+      `WITH deduped AS (
+         SELECT DISTINCT ON (email, stage_key) pipeline_name, stage_key
+         FROM ghl_stages
+         ${where}
+         ORDER BY email, stage_key,
+           CASE WHEN preferred_day <> '' OR time_slot <> '' THEN 0 ELSE 1 END,
+           received_at DESC
+       )
+       SELECT pipeline_name,
               COUNT(*) FILTER (WHERE stage_key = 'NL')  AS nl,
               COUNT(*) FILTER (WHERE stage_key = 'CT')  AS ct,
               COUNT(*) FILTER (WHERE stage_key = 'SU')  AS su,
               COUNT(*) FILTER (WHERE stage_key = 'ENR') AS enr
-       FROM ghl_stages
-       ${where}
+       FROM deduped
        GROUP BY pipeline_name`,
       params,
     );
