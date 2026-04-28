@@ -64,12 +64,18 @@ export function OkrAttendancePage() {
   // ── Derived ──
   const liveMetrics = useMemo(() => calcMetrics(form), [form]);
 
-  const rankedRecords = useMemo(() =>
+  // All branches ranked globally — used by the chart so global rank numbers are always 1-N
+  const allRankedRecords = useMemo(() =>
     weekRecords
-      .filter(r => !regionFilter || BRANCH_META[r.branch]?.region === regionFilter)
       .map(r => ({ ...r, _m: calcMetrics(r) }))
       .sort((a, b) => b._m.attendanceRate - a._m.attendanceRate),
-    [weekRecords, regionFilter]
+    [weekRecords]
+  );
+
+  // Region-filtered subset — used only by the top5/bottom5 ranking cards
+  const rankedRecords = useMemo(() =>
+    allRankedRecords.filter(r => !regionFilter || BRANCH_META[r.branch]?.region === regionFilter),
+    [allRankedRecords, regionFilter]
   );
   const top5    = rankedRecords.slice(0, 5);
   const bottom5 = rankedRecords.slice(-5).reverse();
@@ -327,7 +333,7 @@ export function OkrAttendancePage() {
                   )}
 
                   {!dashBranch ? (
-                    <AllBranchesGrid records={rankedRecords} onSelect={setDashBranch} />
+                    <AllBranchesGrid records={allRankedRecords} onSelect={setDashBranch} />
                   ) : !dashRecord ? (
                     <div className="okrEmptyHero okrEmptySmall">
                       <div className="okrEmptyIcon">📭</div>
