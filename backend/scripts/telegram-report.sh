@@ -47,11 +47,14 @@ GROUP BY 1
 ORDER BY count DESC;
 "
 
-# Query total spend today across Meta + Google + TikTok (each uses its own latest date)
+# Query total spend today across Meta + Google + TikTok (each uses its own latest date).
+# meta_spend has TikTok-tagged rows (legacy META_TT_ID sync target) — filter to real
+# Meta accounts only via the 'act_' prefix to avoid double-counting with tiktok_spend.
 SPEND_SQL="
 SELECT
   (SELECT COALESCE(SUM(spend), 0) FROM meta_spend
-     WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend))
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
+       AND account_id LIKE 'act\\_%' ESCAPE '\\')
   +
   (SELECT COALESCE(SUM(spend), 0) FROM google_spend
      WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend))
