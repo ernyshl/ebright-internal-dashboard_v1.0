@@ -46,7 +46,7 @@ function Row({ label, values, bold = false }: { label: string; values: Record<st
       marginBottom: 12,
     }}>
       <div style={{
-        minWidth: 140, flexShrink: 0,
+        width: 220, flexShrink: 0,
         fontSize: bold ? 18 : 16,
         fontWeight: bold ? 800 : 600,
         color: 'var(--text)',
