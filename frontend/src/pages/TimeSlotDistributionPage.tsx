@@ -215,15 +215,10 @@ export function TimeSlotDistributionPage() {
         <div>
           {/* Overall row */}
           <Row label="Overall" values={overall} codes={visibleCodes} bold />
-          {/* Branch rows */}
-          {visiblePipelines.map(pip => {
-            const sd = slotMap[pip] || {};
-            const total = visibleCodes.reduce((s, c) => s + (sd[c] || 0), 0);
-            if (total === 0) return null;
-            return (
-              <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={sd} codes={visibleCodes} />
-            );
-          })}
+          {/* Branch rows — always shown so layout is consistent regardless of data */}
+          {visiblePipelines.map(pip => (
+            <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={slotMap[pip] || {}} codes={visibleCodes} />
+          ))}
         </div>
       )}
     </div>

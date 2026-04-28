@@ -176,15 +176,10 @@ export function DayDistributionPage() {
         <div>
           {/* Overall row */}
           <Row label="Overall" values={overall} bold />
-          {/* Branch rows */}
-          {visiblePipelines.map(pip => {
-            const pd = dayMap[pip] || {};
-            const total = CAL_DAYS.reduce((s, d) => s + (pd[d] || 0), 0);
-            if (total === 0) return null;
-            return (
-              <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={pd} />
-            );
-          })}
+          {/* Branch rows — always shown so layout is consistent regardless of data */}
+          {visiblePipelines.map(pip => (
+            <Row key={pip} label={PIPELINE_TO_BRANCH[pip] || pip} values={dayMap[pip] || {}} />
+          ))}
         </div>
       )}
     </div>
