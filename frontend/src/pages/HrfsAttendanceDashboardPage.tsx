@@ -107,7 +107,7 @@ export function HrfsAttendanceDashboardPage() {
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
           <h1 className="pageHeaderTitle">Attendance Dashboard</h1>
-          <p className="headerSubtitle">Clock in after 09:00 = Late</p>
+          <p className="headerSubtitle">Clock in at 09:01 or later = Late</p>
         </div>
         <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
       </div>

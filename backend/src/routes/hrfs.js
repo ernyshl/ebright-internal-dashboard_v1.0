@@ -52,7 +52,7 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
           "empName",
           "clockInTime",
           "clockOutTime",
-          CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time > '09:00:00' THEN true ELSE false END AS is_late
+          CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time >= '09:01:00' THEN true ELSE false END AS is_late
         FROM hrfs."AttendanceLog"
         WHERE date::date = ${dateExpr}
         ORDER BY "clockInTime" ASC
