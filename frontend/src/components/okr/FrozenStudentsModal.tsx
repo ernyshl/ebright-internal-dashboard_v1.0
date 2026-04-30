@@ -84,11 +84,28 @@ export function FrozenStudentsModal({ open, onClose, status, branch, weekRangeLa
               </div>
             </div>
           ) : (
-            <ol style={{ margin: 0, paddingLeft: 20, fontSize: '0.92rem', lineHeight: 1.7 }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {list.map((name, i) => (
-                <li key={`${i}-${name}`} style={{ color: 'var(--text)' }}>{name}</li>
+                <div
+                  key={`${i}-${name}`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '7px 4px',
+                    borderBottom: i === list.length - 1 ? 'none' : '1px solid #f1f5f9',
+                    fontSize: '0.92rem',
+                  }}
+                >
+                  <span style={{
+                    minWidth: 28, textAlign: 'right',
+                    color: 'var(--textSecondary)', fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {i + 1}.
+                  </span>
+                  <span style={{ color: 'var(--text)' }}>{name}</span>
+                </div>
               ))}
-            </ol>
+            </div>
           )}
 
           {list.length > 0 && list.length !== expectedCount && (
