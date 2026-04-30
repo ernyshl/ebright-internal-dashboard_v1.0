@@ -363,12 +363,14 @@ export function GhlLeadsCentrePage() {
                 <th>Region</th>
                 <th>Student Name</th>
                 <th>Source</th>
+                <th>Pref. Day</th>
+                <th>Time Slot</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {records.length === 0 ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
+                <tr><td colSpan={13} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records found</td></tr>
               ) : records.map((r, i) => {
                 const stageStyle = STAGE_COLORS[r.stage_key] || {};
                 const rowRegion = PIPELINE_REGION[r.pipeline_name] || '—';
@@ -388,6 +390,8 @@ export function GhlLeadsCentrePage() {
                     <td>{rowRegion}</td>
                     <td>{r.student_name || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.lead_source || '—'}</td>
+                    <td style={{ fontSize: 12 }}>{r.preferred_day || '—'}</td>
+                    <td style={{ fontSize: 12 }}>{r.time_slot || '—'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button className="btn btnSmall btnSecondary" onClick={() => handleEdit(r)}>Edit</button>

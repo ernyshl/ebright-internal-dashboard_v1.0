@@ -34,10 +34,11 @@ export function HrfsLeaveTransactionPage() {
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-  const STATUS_COLORS = {
-    Approved: { bg: 'var(--successLight)', color: 'var(--success)' },
-    Pending: { bg: 'var(--warningLight)', color: 'var(--warning)' },
-    Rejected: { bg: 'var(--brandLight)', color: 'var(--brand)' },
+  const STATUS_META = {
+    A: { label: 'Approved',   bg: 'var(--successLight)', color: 'var(--success)' },
+    N: { label: 'Pending',    bg: 'var(--warningLight)', color: 'var(--warning)' },
+    R: { label: 'Rejected',   bg: 'var(--brandLight)',   color: 'var(--brand)' },
+    C: { label: 'Cancelled',  bg: 'var(--bg2)',          color: 'var(--muted)' },
   };
 
   return (
@@ -50,7 +51,7 @@ export function HrfsLeaveTransactionPage() {
 
       <div className="brRankFilters" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div className="brRankFilterGroup" style={{ flex: 1, minWidth: 180 }}><label className="brRankLabel">Search</label><input className="filterInput" placeholder="Employee Code" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%' }} /></div>
-        <div className="brRankFilterGroup"><label className="brRankLabel">Status</label><select className="filterSelect" value={status} onChange={e => setStatus(e.target.value)}><option value="">All</option><option value="Approved">Approved</option><option value="Pending">Pending</option><option value="Rejected">Rejected</option></select></div>
+        <div className="brRankFilterGroup"><label className="brRankLabel">Status</label><select className="filterSelect" value={status} onChange={e => setStatus(e.target.value)}><option value="">All</option><option value="A">Approved</option><option value="N">Pending</option><option value="R">Rejected</option><option value="C">Cancelled</option></select></div>
         <div className="brRankFilterGroup"><label className="brRankLabel">Leave Type</label><input className="filterInput" placeholder="Leave Type Code" value={leaveType} onChange={e => setLeaveType(e.target.value)} /></div>
         <div className="brRankFilterGroup"><label className="brRankLabel">From</label><input type="date" className="filterInput" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></div>
         <div className="brRankFilterGroup"><label className="brRankLabel">To</label><input type="date" className="filterInput" value={dateTo} onChange={e => setDateTo(e.target.value)} /></div>
@@ -66,7 +67,6 @@ export function HrfsLeaveTransactionPage() {
             <tbody>
               {records.length === 0 ? (<tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
               ) : records.map((r, i) => {
-                const sc = STATUS_COLORS[r.ApplyStatus] || {};
                 return (
                   <tr key={r.id}>
                     <td style={{ color: 'var(--muted)', fontSize: 11 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
@@ -77,7 +77,7 @@ export function HrfsLeaveTransactionPage() {
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.LeaveDate)}</td>
                     <td>{r.Days ?? r.DayNo ?? '—'}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ApplyReason || '—'}</td>
-                    <td>{sc.bg ? <span style={{ background: sc.bg, color: sc.color, borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{r.ApplyStatus}</span> : (r.ApplyStatus || '—')}</td>
+                    <td>{(() => { const s = STATUS_META[r.ApplyStatus]; return s ? <span style={{ background: s.bg, color: s.color, borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{s.label}</span> : (r.ApplyStatus || '—'); })()}</td>
                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ActionRemark || '—'}</td>
                   </tr>
                 );

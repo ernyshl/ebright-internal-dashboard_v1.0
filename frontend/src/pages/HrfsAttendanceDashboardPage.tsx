@@ -91,13 +91,23 @@ export function HrfsAttendanceDashboardPage() {
 
   const [view, setView] = useState('today');
 
+  // Split into two lists:
+  //   left  — staff who clocked in, sorted latest → earliest (most-late at top)
+  //   right — staff who haven't clocked in / didn't come
+  const splitRecords = (records) => {
+    const clockedIn = records.filter(r => r.clockIn);
+    const noClockIn = records.filter(r => !r.clockIn);
+    clockedIn.sort((a, b) => String(b.clockIn).localeCompare(String(a.clockIn)));
+    return { clockedIn, noClockIn };
+  };
+
   return (
     <div className="dashboardPage">
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
           <h1 className="pageHeaderTitle">Attendance Dashboard</h1>
-          <p className="headerSubtitle">Clock in after 09:00 = Late</p>
+          <p className="headerSubtitle">Clock in at 09:01 or later = Late</p>
         </div>
         <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
       </div>
@@ -106,10 +116,20 @@ export function HrfsAttendanceDashboardPage() {
         <div className="card" style={{ textAlign: 'center', padding: 40 }}><div className="loadingDots"><span /><span /><span /></div></div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="sourcesGrid" style={{ marginBottom: 16 }}>
-            <SummaryCard title="Today" icon="📅" color="#3b82f6" summary={today} active={view === 'today'} onClick={() => setView('today')} />
-            <SummaryCard title="Yesterday" icon="📆" color="#f59e0b" summary={yesterday} active={view === 'yesterday'} onClick={() => setView('yesterday')} />
+          {/* Summary Cards — centered, two-up */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 16,
+            flexWrap: 'wrap',
+            marginBottom: 16,
+          }}>
+            <div style={{ flex: '0 1 360px', minWidth: 280, maxWidth: 420 }}>
+              <SummaryCard title="Today" icon="📅" color="#3b82f6" summary={today} active={view === 'today'} onClick={() => setView('today')} />
+            </div>
+            <div style={{ flex: '0 1 360px', minWidth: 280, maxWidth: 420 }}>
+              <SummaryCard title="Yesterday" icon="📆" color="#f59e0b" summary={yesterday} active={view === 'yesterday'} onClick={() => setView('yesterday')} />
+            </div>
           </div>
 
           {/* Toggle */}
@@ -118,12 +138,17 @@ export function HrfsAttendanceDashboardPage() {
             <button className={`btn ${view === 'yesterday' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('yesterday')}>Yesterday ({yesterday.total})</button>
           </div>
 
-          {/* Staff List */}
-          <StaffTable
-            title={view === 'today' ? 'Today' : 'Yesterday'}
-            records={view === 'today' ? today.records : yesterday.records}
-            color={view === 'today' ? '#3b82f6' : '#f59e0b'}
-          />
+          {/* Staff lists — clocked-in (latest first) | no clock-in */}
+          {(() => {
+            const { clockedIn, noClockIn } = splitRecords(view === 'today' ? today.records : yesterday.records);
+            const dayColor = view === 'today' ? '#3b82f6' : '#f59e0b';
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <StaffTable title="Clocked In · latest → earliest" records={clockedIn} color={dayColor} />
+                <StaffTable title="Not Clocked In Yet" records={noClockIn} color="var(--muted)" />
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

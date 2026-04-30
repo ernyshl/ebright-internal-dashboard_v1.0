@@ -421,7 +421,11 @@ export function LeadsBreakdownPage() {
         </div>
       ) : (
         <>
-          {/* Hourly Target + Summary Stats row */}
+          {/* Summary Stats — without siblings (matches Lead Sources section) */}
+          <div className="section">
+            <h3 className="sectionTitle">📈 Summary (without siblings)</h3>
+            <p className="sectionSubtitle">Hourly target + headline lead counts</p>
+          </div>
           <div className="summaryStatsRow">
             <HourlyTargetCard currentLeads={todayTotal} />
             <div className="summaryStats">
@@ -542,8 +546,8 @@ export function LeadsBreakdownPage() {
 
           {/* Branches */}
           <div className="section">
-            <h3 className="sectionTitle">🏢 Branch Performance</h3>
-            <p className="sectionSubtitle">Lead counts by branch office (sorted by 30-day total)</p>
+            <h3 className="sectionTitle">🏢 Branch Performance (with siblings)</h3>
+            <p className="sectionSubtitle">Lead counts by branch office, sorted by 30-day total</p>
             <BranchTable branches={q.data?.branches} />
           </div>
 

@@ -10,20 +10,89 @@ const REGION_BRANCHES = {
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
 
-// `master_leads_powerbi` was simplified upstream and dropped PII columns.
-// Pull from `master_leads_base` (full row data) and alias columns to the
-// names the rest of the file already uses. Inlined as a subquery so we
-// don't need a CTE in every query.
-const LEADS_SRC = `(SELECT
-    source           AS lead_source,
-    full_name,
-    email,
-    phone            AS phone_number,
-    branch           AS clean_branch,
-    branch           AS raw_branch_text,
-    NULL::text       AS region,
-    submission_date  AS submitted_at
-  FROM master_leads_base) AS leads_view`;
+// `master_leads_base` stopped being populated in Jan 2026 and `master_leads_powerbi`
+// has no PII columns. Rebuild the leads source as a UNION of the three live raw
+// tables (meta_leads, social_posts where platform=tiktok_lead, raw_wix_leads),
+// mirroring the same branch-mapping / sibling-expansion logic used by the
+// `master_leads_powerbi` view, while pulling full_name / email / phone_number
+// from the underlying records so the table and search still work.
+//
+// `submitted_at` is emitted as `timestamp without time zone` already in KL local
+// time (matching the powerbi convention). Date filters compare against the local
+// date directly without a redundant AT TIME ZONE conversion.
+const LEADS_SRC = `(
+  SELECT
+    'Meta'::text AS lead_source,
+    (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd WHERE fd.value->>'name' = 'full_name' LIMIT 1) AS full_name,
+    (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd WHERE fd.value->>'name' = 'email' LIMIT 1)     AS email,
+    (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd WHERE fd.value->>'name' = 'phone' LIMIT 1)     AS phone_number,
+    CASE
+      WHEN ml.form_id::text = ANY (ARRAY['34852175561095929','2081747062387420']) THEN 'Online'::text
+      ELSE COALESCE(bm.official_name, bm2.official_name)
+    END AS clean_branch,
+    CASE
+      WHEN ml.form_id::text = ANY (ARRAY['34852175561095929','2081747062387420']) THEN 'Online'::text
+      ELSE COALESCE(bm.official_name, bm2.official_name)
+    END AS raw_branch_text,
+    NULL::text AS region,
+    (((ml.raw_data->>'created_time')::timestamptz) AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
+  FROM meta_leads ml
+  LEFT JOIN branch_mapping bm
+    ON lower(bm.keyword) = lower((
+      SELECT (fd.value->'values')->>0
+      FROM jsonb_array_elements(ml.raw_data->'field_data') fd
+      WHERE (fd.value->>'name') ILIKE '%branch%'
+      LIMIT 1
+    ))
+  LEFT JOIN branch_mapping bm2
+    ON lower(ml.form_name) ILIKE ('%' || lower(bm2.keyword) || '%')
+
+  UNION ALL
+
+  SELECT
+    'TikTok'::text AS lead_source,
+    sp.raw_data->>'Name'         AS full_name,
+    sp.raw_data->>'Email'        AS email,
+    sp.raw_data->>'Phone number' AS phone_number,
+    COALESCE(bm.official_name,
+      CASE
+        WHEN (sp.raw_data->>'Please Select Your Preferred Day') ILIKE 'Online%' THEN 'Online'::text
+        WHEN (sp.raw_data->>'Sila Pilih Hari Anda')             ILIKE 'Online%' THEN 'Online'::text
+        ELSE NULL::text
+      END) AS clean_branch,
+    COALESCE(
+      sp.raw_data->>'Please choose your preferred branch',
+      sp.raw_data->>'Sila pilih cawangan pilihan anda'
+    ) AS raw_branch_text,
+    NULL::text AS region,
+    CASE
+      WHEN length(sp.raw_data->>'created_time') >= 19
+      THEN ((left(sp.raw_data->>'created_time', 19))::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Kuala_Lumpur'
+      ELSE sp.created_at::timestamp
+    END AS submitted_at
+  FROM social_posts sp
+  LEFT JOIN branch_mapping bm
+    ON lower(bm.keyword) = lower(COALESCE(
+      sp.raw_data->>'Please choose your preferred branch',
+      sp.raw_data->>'Sila pilih cawangan pilihan anda'
+    ))
+  WHERE sp.platform = 'tiktok_lead'
+
+  UNION ALL
+
+  SELECT
+    rw.lead_source,
+    rw.full_name,
+    rw.email,
+    rw.phone_number,
+    bm.official_name        AS clean_branch,
+    rw.raw_branch_text      AS raw_branch_text,
+    NULL::text              AS region,
+    rw.submitted_at::timestamp AS submitted_at
+  FROM raw_wix_leads rw
+  CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(rw.children_count, 1), 1)) gs(gs)
+  LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(rw.raw_branch_text)
+) AS leads_view`;
 
 function sanitizeSearchTerm(term) {
   // Escape LIKE wildcards to prevent SQL injection via search
@@ -84,12 +153,12 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
 
     // Date range filters — compare in Asia/Kuala_Lumpur (UTC+8) to avoid timezone drift
     if (date_from) {
-      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${paramIndex}::date`);
+      conditions.push(`submitted_at::date >= $${paramIndex}::date`);
       params.push(date_from);
       paramIndex++;
     }
     if (date_to) {
-      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${paramIndex}::date`);
+      conditions.push(`submitted_at::date <= $${paramIndex}::date`);
       params.push(date_to);
       paramIndex++;
     }
@@ -152,13 +221,13 @@ router.get('/export', requireAuth, requireRole(['super_admin', 'ceo', 'marketing
     if (lead_source) { conditions.push(`lead_source = $${idx++}`); params.push(lead_source); }
     if (region && REGION_BRANCHES[region]) { conditions.push(`TRIM(clean_branch) ILIKE ANY($${idx++})`); params.push(REGION_BRANCHES[region]); }
     if (branch) { conditions.push(`clean_branch = $${idx++}`); params.push(branch); }
-    if (date_from) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`); params.push(date_from); }
-    if (date_to) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`); params.push(date_to); }
+    if (date_from) { conditions.push(`submitted_at::date >= $${idx++}::date`); params.push(date_from); }
+    if (date_to) { conditions.push(`submitted_at::date <= $${idx++}::date`); params.push(date_to); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await pool.query(
       `SELECT full_name, email, phone_number, lead_source, clean_branch,
-              (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
+              submitted_at AS submitted_at
        FROM ${LEADS_SRC} ${where}
        ORDER BY submitted_at DESC`,
       params,
@@ -211,8 +280,8 @@ router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
     ];
     const params = [];
     let idx = 1;
-    if (date_from) { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`); params.push(date_from); }
-    if (date_to)   { conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`); params.push(date_to); }
+    if (date_from) { conditions.push(`submitted_at::date >= $${idx++}::date`); params.push(date_from); }
+    if (date_to)   { conditions.push(`submitted_at::date <= $${idx++}::date`); params.push(date_to); }
     const where = `WHERE ${conditions.join(' AND ')}`;
     const { rows } = await pool.query(
       `SELECT COALESCE(NULLIF(TRIM(lead_source),''), 'Unknown') AS lead_source, COUNT(*) AS nl
@@ -255,11 +324,11 @@ router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'mar
     let idx = 1;
 
     if (date_from) {
-      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+      conditions.push(`submitted_at::date >= $${idx++}::date`);
       params.push(date_from);
     }
     if (date_to) {
-      conditions.push(`(submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+      conditions.push(`submitted_at::date <= $${idx++}::date`);
       params.push(date_to);
     }
 

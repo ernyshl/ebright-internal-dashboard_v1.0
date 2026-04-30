@@ -32,6 +32,9 @@ const WEEKEND_SLOTS = [
   { code: '1030', label: '1030 | 10:30am' },
   { code: '1200', label: '1200 | 12:00pm' },
   { code: '1315', label: '1315 | 01:15pm' },
+  { code: '1445', label: '1445 | 02:45pm' },
+  { code: '1600', label: '1600 | 04:00pm' },
+  { code: '1715', label: '1715 | 05:15pm' },
 ];
 const SLOTS_FOR_DAY = (day: string) =>
   (day === 'Saturday' || day === 'Sunday') ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
@@ -88,11 +91,14 @@ export function CtWithTimeSlotPage() {
 
   // Tile click → open GHL Lead Centre filtered to this pipeline + CT stage + same date range.
   const openInLeadCentre = (pipeline: string) => {
-    const params = new URLSearchParams({
-      preset,
-      stage: 'CT',
-      pipeline,
-    });
+    const params = new URLSearchParams({ preset, stage: 'CT', pipeline });
+    navigate(`/ghl-lead-centre?${params.toString()}`);
+  };
+
+  // Summary card click → open GHL Lead Centre filtered to CT + current region.
+  const openRegionInLeadCentre = () => {
+    const params = new URLSearchParams({ preset, stage: 'CT' });
+    if (region !== 'all') params.set('region', `Region ${region}`);
     navigate(`/ghl-lead-centre?${params.toString()}`);
   };
 
@@ -146,14 +152,25 @@ export function CtWithTimeSlotPage() {
             <div style={{ fontWeight: 600 }}>
               Total CTs <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {region === 'all' ? 'All Regions' : `Region ${region}`} · {visiblePipelines.length} branch{visiblePipelines.length === 1 ? '' : 'es'}</span>
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700 }}>{summary.grand}</div>
+            <div
+              style={{ fontSize: 32, fontWeight: 700, cursor: 'pointer' }}
+              onClick={openRegionInLeadCentre}
+              title="View all CTs in GHL Lead Centre"
+            >
+              {summary.grand}
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
             {CAL_DAYS.map(day => (
-              <div key={`sum-${day}`} style={{
-                textAlign: 'center', padding: 10, borderRadius: 6,
-                background: summary.perDay[day] > 0 ? 'var(--brandLight, #dbeafe)' : 'var(--bg2, #f8fafc)',
-              }}>
+              <div
+                key={`sum-${day}`}
+                onClick={openRegionInLeadCentre}
+                title="View all CTs in GHL Lead Centre"
+                style={{
+                  textAlign: 'center', padding: 10, borderRadius: 6, cursor: 'pointer',
+                  background: summary.perDay[day] > 0 ? 'var(--brandLight, #dbeafe)' : 'var(--bg2, #f8fafc)',
+                }}
+              >
                 <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{day.slice(0, 3)}</div>
                 <div style={{ fontSize: 22, fontWeight: 700 }}>{summary.perDay[day]}</div>
               </div>
@@ -206,8 +223,8 @@ export function CtWithTimeSlotPage() {
                       </div>
                     );
                   })}
-                  {/* Slot rows — up to 4 (weekend) */}
-                  {[0, 1, 2, 3].map(rowIdx => (
+                  {/* Slot rows — up to 7 (weekend) */}
+                  {[0, 1, 2, 3, 4, 5, 6].map(rowIdx => (
                     <Fragment key={`row-${rowIdx}`}>
                       {CAL_DAYS.map(day => {
                         const slots = SLOTS_FOR_DAY(day);

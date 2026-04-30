@@ -49,7 +49,6 @@ import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
 import { CtWithTimeSlotPage } from './pages/CtWithTimeSlotPage';
 import { BranchPerformancePage } from './pages/BranchPerformancePage';
-import FinanceRenewalByBranchPage from './pages/FinanceRenewalByBranchPage';
 
 export default function App() {
   return (
@@ -185,6 +184,15 @@ export default function App() {
           } />
           <Route path="/branch-performance" element={
             <RequirePermission dashboard="testing"><BranchPerformancePage /></RequirePermission>
+          } />
+          <Route path="/leads-dashboard-v2" element={
+            <RequirePermission dashboard="testing"><LeadsDashboardV2Page /></RequirePermission>
+          } />
+          <Route path="/day-distribution" element={
+            <RequirePermission dashboard="testing"><DayDistributionPage /></RequirePermission>
+          } />
+          <Route path="/time-slot-distribution" element={
+            <RequirePermission dashboard="testing"><TimeSlotDistributionPage /></RequirePermission>
           } />
           <Route path="/student-database" element={
             <RequirePermission dashboard="student_db"><StudentDatabasePage /></RequirePermission>
