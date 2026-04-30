@@ -43,39 +43,34 @@ async function getLeadsToday() {
 }
 
 async function getSpendBreakdown() {
-  // Each table uses its own latest data_date (syncs run independently).
-  //
-  // Race-condition guard: spend syncs append today's rows BEFORE removing the
-  // previous batch, so SUM(*) over today's date can briefly include duplicate
-  // rows and inflate the total in scheduled reports. Collapse duplicates by
-  // taking MAX(spend) per account_id per date — once the sync settles, both
-  // batches converge to the same value, so MAX is a safe canonical pick.
-  //
-  // meta_spend also contains TikTok-attributed rows (the legacy META_TT_ID
-  // sync target writes there) — exclude them by filtering to real Meta
-  // account_ids, which all carry the 'act_' prefix.
+  // Mirrors backend/src/routes/marketing.js: dashboard reads spend from
+  // meta_spend (4 ad accounts) + google_spend. The tiktok_spend table is NOT
+  // used by the marketing dashboard — TikTok numbers there come from
+  // META_TT_ID inside meta_spend, so the bot mirrors the same source.
+  // Earlier MAX(spend) GROUP BY account_id was wrong: meta_spend has multiple
+  // campaigns per account, so MAX collapsed them to one campaign's value.
+  // SUM is correct because the unique constraint (account_id, campaign_name,
+  // data_date) prevents the duplicate-row race we originally guarded against.
+  const FB_ACCOUNTS = [
+    process.env.META_MAIN_FB_ID,
+    process.env.META_SARA_ID,
+    process.env.META_ONLINE_ID,
+  ].filter(Boolean);
+  const TT_ACCOUNT = process.env.META_TT_ID || '';
   const { rows } = await pool.query(`
     SELECT
-      (SELECT COALESCE(SUM(s.spend), 0) FROM (
-         SELECT account_id, MAX(spend) AS spend
-         FROM meta_spend
+      COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
-           AND account_id LIKE 'act\\_%' ESCAPE '\\'
-         GROUP BY account_id
-       ) s) AS meta,
-      (SELECT COALESCE(SUM(s.spend), 0) FROM (
-         SELECT account_id, campaign_name, MAX(spend) AS spend
-         FROM google_spend
+           AND account_id = ANY($1::text[])
+       ), 0) AS meta,
+      COALESCE((SELECT SUM(spend) FROM meta_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
+           AND account_id = $2
+       ), 0) AS tiktok,
+      COALESCE((SELECT SUM(spend) FROM google_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
-         GROUP BY account_id, campaign_name
-       ) s) AS google,
-      (SELECT COALESCE(SUM(s.spend), 0) FROM (
-         SELECT campaign_name, MAX(spend) AS spend
-         FROM tiktok_spend
-         WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)
-         GROUP BY campaign_name
-       ) s) AS tiktok
-  `);
+       ), 0) AS google
+  `, [FB_ACCOUNTS, TT_ACCOUNT]);
   const meta = Number(rows[0]?.meta || 0);
   const google = Number(rows[0]?.google || 0);
   const tiktok = Number(rows[0]?.tiktok || 0);

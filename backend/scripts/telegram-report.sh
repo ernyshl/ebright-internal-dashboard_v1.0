@@ -47,38 +47,23 @@ GROUP BY 1
 ORDER BY count DESC;
 "
 
-# Query total spend today across Meta + Google + TikTok (each uses its own latest date).
-#
-# Race-condition guard: the spend syncs append today's rows BEFORE removing the
-# previous batch, so SUM(*) over today's date can briefly include duplicate rows
-# and inflate the total. Collapse duplicates by taking MAX(spend) per account_id
-# per date — once the sync settles, both batches converge to the same value.
-#
-# meta_spend has TikTok-tagged rows (legacy META_TT_ID sync target) — filter to real
-# Meta accounts only via the 'act_' prefix to avoid double-counting with tiktok_spend.
+# Total spend today — mirrors the marketing dashboard exactly.
+# Sums the 4 Meta ad accounts (META_MAIN_FB_ID, META_SARA_ID, META_ONLINE_ID,
+# META_TT_ID — all from meta_spend) plus google_spend. The tiktok_spend table
+# is intentionally NOT used because the dashboard's "TikTok" channel comes
+# from META_TT_ID inside meta_spend, not from tiktok_spend. Earlier attempts
+# that used MAX(spend) GROUP BY account_id under-counted because meta_spend
+# has multiple campaigns per account.
 SPEND_SQL="
 SELECT
-  (SELECT COALESCE(SUM(s.spend), 0) FROM (
-     SELECT account_id, MAX(spend) AS spend
-     FROM meta_spend
+  COALESCE((SELECT SUM(spend) FROM meta_spend
      WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
-       AND account_id LIKE 'act\\_%' ESCAPE '\\'
-     GROUP BY account_id
-   ) s)
+       AND account_id IN ('${META_MAIN_FB_ID}','${META_SARA_ID}','${META_ONLINE_ID}','${META_TT_ID}')
+   ), 0)
   +
-  (SELECT COALESCE(SUM(s.spend), 0) FROM (
-     SELECT account_id, campaign_name, MAX(spend) AS spend
-     FROM google_spend
+  COALESCE((SELECT SUM(spend) FROM google_spend
      WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
-     GROUP BY account_id, campaign_name
-   ) s)
-  +
-  (SELECT COALESCE(SUM(s.spend), 0) FROM (
-     SELECT campaign_name, MAX(spend) AS spend
-     FROM tiktok_spend
-     WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)
-     GROUP BY campaign_name
-   ) s)
+   ), 0)
   AS total_spend;
 "
 
