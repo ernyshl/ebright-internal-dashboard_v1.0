@@ -49,6 +49,10 @@ import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
 import { CtWithTimeSlotPage } from './pages/CtWithTimeSlotPage';
 import { BranchPerformancePage } from './pages/BranchPerformancePage';
+import FinanceRenewalByBranchPage from './pages/FinanceRenewalByBranchPage';
+import { LeadsDashboardV2Page } from './pages/LeadsDashboardV2Page';
+import { DayDistributionPage } from './pages/DayDistributionPage';
+import { TimeSlotDistributionPage } from './pages/TimeSlotDistributionPage';
 
 export default function App() {
   return (
