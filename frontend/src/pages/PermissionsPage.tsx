@@ -35,18 +35,27 @@ export function PermissionsPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Get dashboard icon
+  // Get dashboard icon — keyed to home-page card IDs so each card row has a glyph
   const getDashboardIcon = (id) => {
     const icons = {
-      dashboard: '📊',
-      marketing: '📈',
-      leads: '🎯',
+      operations_dept: '🎯',
+      academy: '🎓',
+      fa_testing: '🧪',
+      event_mkt: '🎪',
       finance: '💰',
-      users: '👥',
-      permissions: '🔐',
-      profile: '👤',
-      department: '🏢',
-      looker: '📉',
+      operations: '⚙️',
+      marketing: '📈',
+      department: '✅',
+      hr: '👥',
+      hr_db: '🗄️',
+      hr_crud: '📋',
+      hr_testing: '🧪',
+      student_db: '📚',
+      admin: '🔧',
+      testing: '🧪',
+      manjeet: '🎯',
+      rm_dashboard: '📊',
+      events: '🎪',
     };
     return icons[id] || '📋';
   };

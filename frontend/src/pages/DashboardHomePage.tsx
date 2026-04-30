@@ -27,9 +27,9 @@ export function DashboardHomePage() {
       icon: '🎯',
       color: '#0ea5e9',
       links: [
-        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations' },
-        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations' },
-        { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations' },
+        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations_dept' },
+        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations_dept' },
+        { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations_dept' },
       ]
     },
     {
@@ -48,7 +48,7 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#6366f1',
       links: [
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' }
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'fa_testing' }
       ]
     },
     {
@@ -57,8 +57,8 @@ export function DashboardHomePage() {
       icon: '🎪',
       color: '#f43f5e',
       links: [
-        { label: 'Event Dashboard', path: '/events', dashboard: 'events' },
-        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'events' },
+        { label: 'Event Dashboard', path: '/events', dashboard: 'event_mkt' },
+        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'event_mkt' },
       ]
     },
     {
@@ -118,10 +118,10 @@ export function DashboardHomePage() {
       icon: '🗄️',
       color: '#0891b2',
       links: [
-        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
-        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr' },
-        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr' },
-        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
+        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_db' },
+        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr_db' },
+        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr_db' },
+        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr_db' },
       ]
     },
     {
@@ -141,10 +141,10 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#14b8a6',
       links: [
-        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'testing' },
-        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'testing' },
-        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'testing' },
-        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'testing' },
+        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'hr_testing' },
+        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
+        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
+        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
       ]
     },
     {
@@ -186,9 +186,9 @@ export function DashboardHomePage() {
       icon: '🎯',
       color: '#f59e0b',
       links: [
-        { label: 'Leads Dashboard v2', path: '/leads-dashboard-v2', dashboard: 'testing' },
-        { label: 'Day Distribution',    path: '/day-distribution',    dashboard: 'testing' },
-        { label: 'Time Slot Distribution', path: '/time-slot-distribution', dashboard: 'testing' },
+        { label: 'Leads Dashboard v2', path: '/leads-dashboard-v2', dashboard: 'manjeet' },
+        { label: 'Day Distribution',    path: '/day-distribution',    dashboard: 'manjeet' },
+        { label: 'Time Slot Distribution', path: '/time-slot-distribution', dashboard: 'manjeet' },
       ]
     },
     {
