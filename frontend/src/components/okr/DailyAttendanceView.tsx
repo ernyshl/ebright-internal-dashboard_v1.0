@@ -19,7 +19,10 @@ function toWednesday(dateStr: string) {
   return localYMD(d);
 }
 function thisWeekWed() {
-  return toWednesday(localYMD(new Date()));
+  // Default to LAST week (Monday of previous calendar week)
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return toWednesday(localYMD(d));
 }
 
 /** Zero out every day except `activeDay` so existing components treat it as weekly data */

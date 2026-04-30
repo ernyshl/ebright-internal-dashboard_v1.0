@@ -59,11 +59,23 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
     }
   };
 
+  // Active students trend (this week vs last week) for this branch
+  const prevActive = n(trendWeeks?.[2]?.record?.active_students);
+  const currActive = n(rec.active_students);
+  const activeDiff = currActive - prevActive;
+  const activePct  = prevActive > 0 ? (activeDiff / prevActive) * 100 : 0;
+  const activeTrendLabel = prevActive > 0
+    ? `${activeDiff >= 0 ? '▲' : '▼'} ${activeDiff >= 0 ? '+' : ''}${activeDiff} (${activePct >= 0 ? '+' : ''}${activePct.toFixed(1)}%) vs last week`
+    : 'No prev-week data';
+  const activeTrendColor = prevActive === 0
+    ? 'var(--textSecondary)'
+    : (activeDiff >= 0 ? '#15803d' : '#b91c1c');
+
   const kpis = [
     { label: 'Total Attendance',  value: met.totalAttendance,                       color: 'var(--info)' },
     { label: 'Attendance Rate',   value: formatPct(met.attendanceRate, 2),           color: getRateColor(met.attendanceRate) },
     { label: 'Rate w/ Freeze',    value: formatPct(met.attendanceRateWithFreeze, 2), color: getRateColor(met.attendanceRateWithFreeze) },
-    { label: 'Active Students',   value: activeStudentsInput || (rec.active_students ?? '—'), color: 'var(--text)' },
+    { label: 'Active Students',   value: activeStudentsInput || (rec.active_students ?? '—'), color: 'var(--text)', unit: activeTrendLabel, unitColor: activeTrendColor },
     { label: 'Outstanding Inv.',  value: formatPct(liveOutstandingPct, 2),           color: liveOutstandingPct <= 25 ? 'var(--success)' : 'var(--brand)', unit: 'Target 20–25%' },
   ];
 
@@ -88,11 +100,15 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
       </div>
 
       <div className="okrKpiRow">
-        {kpis.map(k => (
+        {kpis.map((k: any) => (
           <div className="okrKpi" key={k.label}>
             <span className="okrKpiLabel">{k.label}</span>
             <span className="okrKpiValue" style={{ color: k.color }}>{k.value}</span>
-            {k.unit && <span className="okrKpiUnit">{k.unit}</span>}
+            {k.unit && (
+              <span className="okrKpiUnit" style={k.unitColor ? { color: k.unitColor, fontWeight: 600 } : undefined}>
+                {k.unit}
+              </span>
+            )}
           </div>
         ))}
       </div>

@@ -15,6 +15,7 @@ import { DailyBulkEntry } from '../components/okr/DailyBulkEntry';
 import { DailyAttendanceView } from '../components/okr/DailyAttendanceView';
 import { YearlyDashboardView } from '../components/okr/YearlyDashboardView';
 import { YearlyBulkEntry } from '../components/okr/YearlyBulkEntry';
+import { WeeklyKpiCards } from '../components/okr/WeeklyKpiCards';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
 const TABS = [
@@ -35,7 +36,8 @@ export function OkrAttendancePage() {
   const [dashWeek, setDashWeek]         = useState(() => {
     if (USE_MOCK) return MOCK_WEEK;
     const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    // Default to LAST week (Monday of previous calendar week)
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7);
     return d.toISOString().slice(0, 10);
   });
   const [filterBranch, setFilterBranch] = useState('');
@@ -49,7 +51,7 @@ export function OkrAttendancePage() {
 
   // ── All data fetching in one hook ──
   const {
-    branches, weekRecords, listRecords, listLoading,
+    branches, weekRecords, week1Records, listRecords, listLoading,
     dashRecord, dashMetrics, trendWeeks,
     saveMutation, deleteMutation,
   } = useOkrData({ dashBranch, dashWeek });
@@ -271,6 +273,13 @@ export function OkrAttendancePage() {
                 </div>
               ) : (
                 <>
+                  {weekRecords.length > 0 && (
+                    <WeeklyKpiCards
+                      weekRecords={weekRecords}
+                      prevWeekRecords={week1Records ?? []}
+                    />
+                  )}
+
                   {rankedRecords.length > 0 && (
                     <div className="okrRankCard">
                       <div className="okrRankCardHeader">
