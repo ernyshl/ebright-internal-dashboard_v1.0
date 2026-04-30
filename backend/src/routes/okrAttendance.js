@@ -23,6 +23,18 @@ function toWednesday(dateStr) {
   return d.toISOString().slice(0, 10);
 }
 
+// pg returns DATE columns as JS Date objects (local midnight). When serialized to
+// JSON they become UTC ISO strings, which shifts the date back by the timezone
+// offset (e.g. Malaysia UTC+8 turns 2026-04-20 into 2026-04-19T16:00Z). We format
+// using local date components so the wire format matches what was stored.
+function formatRowDates(row) {
+  if (row && row.week_date instanceof Date) {
+    const d = row.week_date;
+    row.week_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return row;
+}
+
 // GET /api/okr-attendance — list with optional filters
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
@@ -46,7 +58,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
          LIMIT $${limitIdx}`,
         params
       );
-      return res.json({ records: result.rows });
+      return res.json({ records: result.rows.map(formatRowDates) });
     }
 
     // No week filter — return all records (history view)
@@ -59,7 +71,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
       `SELECT * FROM branch_okr_attendance ${where} ORDER BY week_date DESC, branch ASC LIMIT $${idx}`,
       [...params, Number(limit)]
     );
-    return res.json({ records: result.rows });
+    return res.json({ records: result.rows.map(formatRowDates) });
   } catch (err) { return next(err); }
 });
 
@@ -140,7 +152,7 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
       ]
     );
 
-    return res.json({ ok: true, record: result.rows[0] });
+    return res.json({ ok: true, record: formatRowDates(result.rows[0]) });
   } catch (err) { return next(err); }
 });
 
