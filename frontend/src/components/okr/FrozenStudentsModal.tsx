@@ -1,23 +1,31 @@
+type Status = 'frozen' | 'replaced' | 'absent' | 'attended';
+
 interface Props {
   open: boolean;
   onClose: () => void;
+  status: Status;
   branch: string;
   weekRangeLabel: string;
   names: string;
-  frozenCount: number;
+  expectedCount: number;
 }
+
+const STATUS_META: Record<Status, { icon: string; label: string; titleColor: string }> = {
+  frozen:   { icon: '❄️', label: 'Frozen Students',   titleColor: '#1e40af' },
+  replaced: { icon: '🔁', label: 'Replaced Students', titleColor: '#92400e' },
+  absent:   { icon: '⛔', label: 'Absent Students',   titleColor: '#991b1b' },
+  attended: { icon: '✅', label: 'Attended Students', titleColor: '#15803d' },
+};
 
 function parseNames(raw: string): string[] {
   if (!raw) return [];
-  return raw
-    .split(/\r?\n/)
-    .map(s => s.trim())
-    .filter(Boolean);
+  return raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 }
 
-export function FrozenStudentsModal({ open, onClose, branch, weekRangeLabel, names, frozenCount }: Props) {
+export function FrozenStudentsModal({ open, onClose, status, branch, weekRangeLabel, names, expectedCount }: Props) {
   if (!open) return null;
   const list = parseNames(names);
+  const meta = STATUS_META[status];
 
   return (
     <div
@@ -42,11 +50,11 @@ export function FrozenStudentsModal({ open, onClose, branch, weekRangeLabel, nam
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)' }}>
-              ❄️ Frozen Students — {branch}
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: meta.titleColor }}>
+              {meta.icon} {meta.label} — {branch}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--textSecondary)', marginTop: 2 }}>
-              Week of {weekRangeLabel} · {frozenCount} frozen ({list.length} named)
+              Week of {weekRangeLabel} · {expectedCount} {status} ({list.length} named)
             </div>
           </div>
           <button
@@ -70,9 +78,9 @@ export function FrozenStudentsModal({ open, onClose, branch, weekRangeLabel, nam
               color: 'var(--textSecondary)', fontSize: '0.88rem',
             }}>
               <div style={{ fontSize: '1.6rem', marginBottom: 6 }}>📭</div>
-              <div style={{ fontWeight: 600 }}>No student names entered</div>
+              <div style={{ fontWeight: 600 }}>No student names recorded</div>
               <div style={{ fontSize: '0.78rem', marginTop: 4 }}>
-                Edit this record from History → add names in the "Frozen Students" textarea, one per line.
+                Edit the record from History → paste your roster (Name TAB status) into the "Student Roster" box. Names get auto-categorised on save.
               </div>
             </div>
           ) : (
@@ -83,13 +91,13 @@ export function FrozenStudentsModal({ open, onClose, branch, weekRangeLabel, nam
             </ol>
           )}
 
-          {list.length > 0 && list.length !== frozenCount && (
+          {list.length > 0 && list.length !== expectedCount && (
             <div style={{
               marginTop: 12, padding: '8px 12px', borderRadius: 8,
               background: '#fffbeb', border: '1px solid #fcd34d',
               fontSize: '0.78rem', color: '#92400e',
             }}>
-              ⚠ Daily counts show {frozenCount} frozen but {list.length} {list.length === 1 ? 'name was' : 'names were'} entered.
+              ⚠ Daily counts show {expectedCount} {status} but {list.length} {list.length === 1 ? 'name was' : 'names were'} entered.
             </div>
           )}
         </div>

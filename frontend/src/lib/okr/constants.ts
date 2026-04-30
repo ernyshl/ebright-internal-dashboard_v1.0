@@ -56,6 +56,10 @@ export const EMPTY_FORM = {
   partially_paid_unpaid: '', active_students: '',
   total_onl_attendance: '',
   frozen_student_names: '',
+  attended_student_names: '',
+  absent_student_names: '',
+  replaced_student_names: '',
+  student_roster_raw: '',
 };
 
 export const CHART_COLORS = {

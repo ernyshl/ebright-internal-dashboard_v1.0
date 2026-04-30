@@ -5,7 +5,7 @@ import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
 import { REGIONS, DAYS, EMPTY_FORM } from '../lib/okr/constants';
-import { weekRange, calcMetrics, getRateColor, parseExcelPaste, toWednesday } from '../lib/okr/utils';
+import { weekRange, calcMetrics, getRateColor, parseExcelPaste, parseStudentRoster, toWednesday } from '../lib/okr/utils';
 import { useOkrData } from '../lib/okr/useOkrData';
 
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
@@ -164,6 +164,17 @@ export function OkrAttendancePage() {
       partially_paid_unpaid:    rec.partially_paid_unpaid    ?? '',
       active_students:          rec.active_students          ?? '',
       frozen_student_names:     rec.frozen_student_names     ?? '',
+      attended_student_names:   rec.attended_student_names   ?? '',
+      absent_student_names:     rec.absent_student_names     ?? '',
+      replaced_student_names:   rec.replaced_student_names   ?? '',
+      // Reconstruct the paste textarea from the four stored lists so the user
+      // sees their previous roster and can edit it without retyping.
+      student_roster_raw: [
+        ...(rec.attended_student_names ?? '').split(/\r?\n/).filter(Boolean).map((n: string) => `${n}\tattended`),
+        ...(rec.absent_student_names   ?? '').split(/\r?\n/).filter(Boolean).map((n: string) => `${n}\tabsent`),
+        ...(rec.frozen_student_names   ?? '').split(/\r?\n/).filter(Boolean).map((n: string) => `${n}\tfrozen`),
+        ...(rec.replaced_student_names ?? '').split(/\r?\n/).filter(Boolean).map((n: string) => `${n}\treplaced`),
+      ].join('\n'),
     });
     setEditingId(rec.id);
     setEntryMode('weekly');
@@ -184,8 +195,18 @@ export function OkrAttendancePage() {
       editingOriginalKey.week_date !== form.week_date
     );
 
+    // Parse the roster paste into per-status name lists. If the user typed/pasted
+    // anything, derived lists override whatever was loaded for editing.
+    const roster = form.student_roster_raw ? parseStudentRoster(form.student_roster_raw) : null;
+    const rosterFields = roster ? {
+      attended_student_names: roster.attended,
+      absent_student_names:   roster.absent,
+      frozen_student_names:   roster.frozen,
+      replaced_student_names: roster.replaced,
+    } : {};
+
     saveMutation.mutate(
-      { ...form, outstanding_invoice_pct: metrics.outstandingInvoicePct },
+      { ...form, ...rosterFields, outstanding_invoice_pct: metrics.outstandingInvoicePct },
       {
         onSuccess: () => {
           // If branch/week changed during an edit, delete the original record now
@@ -528,26 +549,48 @@ export function OkrAttendancePage() {
             </div>
           </div>
 
-          {/* Frozen Students */}
+          {/* Student Roster — paste from Excel, auto-categorise */}
           <div className="okrEntrySection">
             <div className="okrEntrySectionTitle">
-              ❄️ Frozen Students
-              <span className="okrEntrySectionHint">One name per line · used for the "Frozen Students" popup on the dashboard</span>
+              👥 Student Roster
+              <span className="okrEntrySectionHint">Paste from Excel: one row per student, name TAB status (attended / absent / frozen / replaced). Names get auto-categorised on save.</span>
             </div>
             <textarea
-              name="frozen_student_names"
-              value={form.frozen_student_names}
+              name="student_roster_raw"
+              value={form.student_roster_raw}
               onChange={handleChange}
-              rows={5}
-              placeholder={"Type the frozen students' names, one per line. e.g.\nAhmad Bin Ali\nNur Aisyah\n..."}
+              rows={8}
+              placeholder={'Paste your Excel roster here. Each line: "Student Name<TAB>status"\n\nGavinder Singh A/L Premjit Singh\tattended\nMUHAMMAD AMMAR ZAFRAN\tattended\nPUTERI AMMARA BALQIS\tabsent\nNur Aufa Afrina\treplaced\nYang Tianchen\tfrozen\n...'}
               style={{
                 width: '100%', boxSizing: 'border-box',
                 border: '1.5px solid #94a3b8', borderRadius: 7,
-                padding: '10px 12px', fontSize: '0.95rem',
-                fontFamily: 'inherit', background: '#fff',
+                padding: '10px 12px', fontSize: '0.92rem',
+                fontFamily: 'monospace', background: '#fff',
                 color: 'var(--text)', resize: 'vertical',
               }}
             />
+            {form.student_roster_raw && (() => {
+              const parsed = parseStudentRoster(form.student_roster_raw);
+              const counts = {
+                attended: parsed.attended ? parsed.attended.split('\n').length : 0,
+                absent:   parsed.absent   ? parsed.absent.split('\n').length   : 0,
+                frozen:   parsed.frozen   ? parsed.frozen.split('\n').length   : 0,
+                replaced: parsed.replaced ? parsed.replaced.split('\n').length : 0,
+              };
+              return (
+                <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: '0.78rem' }}>
+                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: 6, fontWeight: 700 }}>✅ Attended: {counts.attended}</span>
+                  <span style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: 6, fontWeight: 700 }}>⛔ Absent: {counts.absent}</span>
+                  <span style={{ background: '#dbeafe', color: '#1e40af', padding: '4px 10px', borderRadius: 6, fontWeight: 700 }}>❄️ Frozen: {counts.frozen}</span>
+                  <span style={{ background: '#fef3c7', color: '#92400e', padding: '4px 10px', borderRadius: 6, fontWeight: 700 }}>🔁 Replaced: {counts.replaced}</span>
+                  {parsed.unrecognised.length > 0 && (
+                    <span style={{ background: '#fef2f2', color: '#7f1d1d', padding: '4px 10px', borderRadius: 6, fontWeight: 700, border: '1px dashed #fca5a5' }}>
+                      ⚠ {parsed.unrecognised.length} unrecognised
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Outstanding Invoices */}

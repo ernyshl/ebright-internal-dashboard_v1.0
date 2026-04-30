@@ -95,11 +95,11 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
         not_enrolled, outstanding_invoice_disc, expired_package, newly_enrolled,
         pc_meetup_invited, pc_meetup_showup,
         outstanding_invoice_pct, partially_paid_unpaid, active_students,
-        frozen_student_names,
+        frozen_student_names, attended_student_names, absent_student_names, replaced_student_names,
         updated_at
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,NOW()
+        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,NOW()
       )
       ON CONFLICT (branch, week_date) DO UPDATE SET
         total_online_attendance  = EXCLUDED.total_online_attendance,
@@ -126,6 +126,9 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
         partially_paid_unpaid    = EXCLUDED.partially_paid_unpaid,
         active_students          = EXCLUDED.active_students,
         frozen_student_names     = EXCLUDED.frozen_student_names,
+        attended_student_names   = EXCLUDED.attended_student_names,
+        absent_student_names     = EXCLUDED.absent_student_names,
+        replaced_student_names   = EXCLUDED.replaced_student_names,
         updated_at               = NOW()
       RETURNING *`,
       [
@@ -155,6 +158,9 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
         n(b.partially_paid_unpaid),                         // $34
         n(b.active_students),                               // $35
         b.frozen_student_names ?? '',                       // $36
+        b.attended_student_names ?? '',                     // $37
+        b.absent_student_names ?? '',                       // $38
+        b.replaced_student_names ?? '',                     // $39
       ]
     );
 

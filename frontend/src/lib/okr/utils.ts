@@ -73,6 +73,54 @@ export function calcMetrics(r) {
   };
 }
 
+// Parse a pasted Excel roster (each line: "Name <tab/spaces> status") into
+// per-status newline-separated name lists. Recognises attended / absent /
+// frozen / replaced (case-insensitive). Lines without a recognisable status
+// are ignored.
+export function parseStudentRoster(raw: string): {
+  attended: string;
+  absent: string;
+  frozen: string;
+  replaced: string;
+  unrecognised: string[];
+} {
+  const lines = (raw || '').split(/\r?\n/);
+  const buckets: Record<string, string[]> = { attended: [], absent: [], frozen: [], replaced: [] };
+  const unrecognised: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Split into columns on tabs first, then fall back to 2+ spaces. The
+    // last non-empty column is treated as the status, everything before
+    // it is the name.
+    const cols = trimmed.includes('\t')
+      ? trimmed.split('\t').map(s => s.trim()).filter(Boolean)
+      : trimmed.split(/ {2,}/).map(s => s.trim()).filter(Boolean);
+
+    if (cols.length < 2) { unrecognised.push(trimmed); continue; }
+
+    const status = cols[cols.length - 1].toLowerCase();
+    const name = cols.slice(0, -1).join(' ').trim();
+    if (!name) { unrecognised.push(trimmed); continue; }
+
+    if (status.startsWith('atten'))      buckets.attended.push(name);
+    else if (status.startsWith('abs'))   buckets.absent.push(name);
+    else if (status.startsWith('fr'))    buckets.frozen.push(name);
+    else if (status.startsWith('rep'))   buckets.replaced.push(name);
+    else                                  unrecognised.push(trimmed);
+  }
+
+  return {
+    attended: buckets.attended.join('\n'),
+    absent:   buckets.absent.join('\n'),
+    frozen:   buckets.frozen.join('\n'),
+    replaced: buckets.replaced.join('\n'),
+    unrecognised,
+  };
+}
+
 export function getRateColor(rate) {
   if (rate >= 85) return 'var(--success)';
   if (rate >= 75) return 'var(--warning)';

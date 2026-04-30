@@ -16,7 +16,7 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
   const [activeStudentsInput, setActiveStudentsInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'ok' | 'error' | null>(null);
-  const [frozenModalOpen, setFrozenModalOpen] = useState(false);
+  const [openStatus, setOpenStatus] = useState<null | 'frozen' | 'replaced' | 'absent' | 'attended'>(null);
 
   // Reset the trend-toggle to "This Week" whenever the parent's branch or week changes
   // so we never accidentally display a stale toggle position from a previous branch
@@ -163,28 +163,35 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
                 <span>{met.totalFrozen}</span>
                 <span>{met.totalReplaced}</span>
               </div>
-              {/* Frozen Students button — opens modal with names list */}
-              <button
-                type="button"
-                onClick={() => setFrozenModalOpen(true)}
-                style={{
-                  marginTop: 10, padding: '9px 14px', borderRadius: 8,
-                  border: '1.5px solid #93c5fd', background: '#eff6ff',
-                  color: '#1e40af', fontWeight: 700, fontSize: '0.85rem',
-                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                  gap: 8, transition: 'all 0.12s',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = '#dbeafe';
-                  e.currentTarget.style.borderColor = '#60a5fa';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = '#eff6ff';
-                  e.currentTarget.style.borderColor = '#93c5fd';
-                }}
-              >
-                ❄️ Frozen Students {met.totalFrozen > 0 && <span style={{ background: '#1e40af', color: '#fff', padding: '1px 8px', borderRadius: 12, fontSize: '0.72rem' }}>{met.totalFrozen}</span>}
-              </button>
+              {/* Status buttons — open modal with names list per status */}
+              <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {([
+                  { status: 'frozen' as const,   icon: '❄️', label: 'Frozen',   count: met.totalFrozen,   bg: '#eff6ff', border: '#93c5fd', color: '#1e40af', badge: '#1e40af' },
+                  { status: 'replaced' as const, icon: '🔁', label: 'Replaced', count: met.totalReplaced, bg: '#fffbeb', border: '#fcd34d', color: '#92400e', badge: '#92400e' },
+                  { status: 'absent' as const,   icon: '⛔', label: 'Absent',   count: met.totalAbsent,   bg: '#fef2f2', border: '#fca5a5', color: '#991b1b', badge: '#991b1b' },
+                  { status: 'attended' as const, icon: '✅', label: 'Attended', count: met.totalAttended, bg: '#f0fdf4', border: '#86efac', color: '#15803d', badge: '#15803d' },
+                ]).map(b => (
+                  <button
+                    key={b.status}
+                    type="button"
+                    onClick={() => setOpenStatus(b.status)}
+                    style={{
+                      padding: '9px 14px', borderRadius: 8,
+                      border: `1.5px solid ${b.border}`, background: b.bg,
+                      color: b.color, fontWeight: 700, fontSize: '0.85rem',
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                      gap: 8, transition: 'all 0.12s',
+                    }}
+                  >
+                    {b.icon} {b.label} Students
+                    {b.count > 0 && (
+                      <span style={{ background: b.badge, color: '#fff', padding: '1px 8px', borderRadius: 12, fontSize: '0.72rem' }}>
+                        {b.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
             <DailyAttendanceChart record={rec} />
           </div>
@@ -306,12 +313,23 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
       </div>
 
       <FrozenStudentsModal
-        open={frozenModalOpen}
-        onClose={() => setFrozenModalOpen(false)}
+        open={openStatus !== null}
+        onClose={() => setOpenStatus(null)}
+        status={openStatus ?? 'frozen'}
         branch={rec.branch}
         weekRangeLabel={weekRange(toWednesday(rec.week_date?.slice(0, 10) ?? ''))}
-        names={rec.frozen_student_names ?? ''}
-        frozenCount={met.totalFrozen}
+        names={
+          openStatus === 'replaced' ? (rec.replaced_student_names ?? '') :
+          openStatus === 'absent'   ? (rec.absent_student_names   ?? '') :
+          openStatus === 'attended' ? (rec.attended_student_names ?? '') :
+                                      (rec.frozen_student_names   ?? '')
+        }
+        expectedCount={
+          openStatus === 'replaced' ? met.totalReplaced :
+          openStatus === 'absent'   ? met.totalAbsent :
+          openStatus === 'attended' ? met.totalAttended :
+                                      met.totalFrozen
+        }
       />
     </div>
   );
