@@ -8,16 +8,25 @@ const REGIONS = ['All', 'A', 'B', 'C'] as const;
 function ChartTooltip({ active, payload, label, chartData }: any) {
   if (!active || !payload?.length) return null;
   const entry = chartData.find((d: any) => d.branch === label);
+  // Skip the duplicate "Attended trend" line entry (it has the same value as the Attended bar)
+  const visiblePayload = payload.filter((p: any) => p.name !== 'Attended trend');
   return (
     <div className="okrChartTooltip">
       <div className="okrChartTooltipTitle">{entry?.fullName || label}</div>
-      {payload.map(p => (
+      {visiblePayload.map((p: any) => (
         <div key={p.name} className="okrChartTooltipRow">
           <span className="okrChartTooltipDot" style={{ background: p.fill || p.stroke }} />
           <span>{p.name}</span>
-          <strong>{p.value}{p.name === 'Rate' ? '%' : ''}</strong>
+          <strong>{p.value}</strong>
         </div>
       ))}
+      {entry?.Rate != null && (
+        <div className="okrChartTooltipRow">
+          <span className="okrChartTooltipDot" style={{ background: '#8b5cf6' }} />
+          <span>Attend. Rate</span>
+          <strong>{entry.Rate}%</strong>
+        </div>
+      )}
     </div>
   );
 }
@@ -136,14 +145,13 @@ export function AllBranchesGrid({ records, onSelect }) {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="branch" tick={{ fontSize: 11, fontWeight: 700, fill: 'var(--textSecondary)' }} axisLine={false} tickLine={false} angle={-40} textAnchor="end" interval={0} />
               <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
               <Tooltip content={(props) => <ChartTooltip {...props} chartData={chartData} />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.78rem', paddingTop: 6 }} />
               <Bar yAxisId="left" dataKey="Attended" fill={CHART_COLORS.Attended} radius={[3,3,0,0]} maxBarSize={16} />
               <Bar yAxisId="left" dataKey="Absent"   fill={CHART_COLORS.Absent}   radius={[3,3,0,0]} maxBarSize={16} />
               <Bar yAxisId="left" dataKey="Frozen"   fill={CHART_COLORS.Frozen}   radius={[3,3,0,0]} maxBarSize={16} />
               <Bar yAxisId="left" dataKey="Replaced" fill={CHART_COLORS.Replaced} radius={[3,3,0,0]} maxBarSize={16} />
-              <Line yAxisId="right" dataKey="Rate" name="Attend. Rate %" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3.5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} type="monotone" />
+              <Line yAxisId="left" dataKey="Attended" name="Attended trend" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3.5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 5 }} type="monotone" legendType="none" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
