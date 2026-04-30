@@ -44,18 +44,37 @@ async function getLeadsToday() {
 
 async function getSpendBreakdown() {
   // Each table uses its own latest data_date (syncs run independently).
+  //
+  // Race-condition guard: spend syncs append today's rows BEFORE removing the
+  // previous batch, so SUM(*) over today's date can briefly include duplicate
+  // rows and inflate the total in scheduled reports. Collapse duplicates by
+  // taking MAX(spend) per account_id per date — once the sync settles, both
+  // batches converge to the same value, so MAX is a safe canonical pick.
+  //
   // meta_spend also contains TikTok-attributed rows (the legacy META_TT_ID
   // sync target writes there) — exclude them by filtering to real Meta
   // account_ids, which all carry the 'act_' prefix.
   const { rows } = await pool.query(`
     SELECT
-      (SELECT COALESCE(SUM(spend), 0) FROM meta_spend
+      (SELECT COALESCE(SUM(s.spend), 0) FROM (
+         SELECT account_id, MAX(spend) AS spend
+         FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
-           AND account_id LIKE 'act\\_%' ESCAPE '\\') AS meta,
-      (SELECT COALESCE(SUM(spend), 0) FROM google_spend
-         WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)) AS google,
-      (SELECT COALESCE(SUM(spend), 0) FROM tiktok_spend
-         WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)) AS tiktok
+           AND account_id LIKE 'act\\_%' ESCAPE '\\'
+         GROUP BY account_id
+       ) s) AS meta,
+      (SELECT COALESCE(SUM(s.spend), 0) FROM (
+         SELECT account_id, MAX(spend) AS spend
+         FROM google_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
+         GROUP BY account_id
+       ) s) AS google,
+      (SELECT COALESCE(SUM(s.spend), 0) FROM (
+         SELECT account_id, MAX(spend) AS spend
+         FROM tiktok_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)
+         GROUP BY account_id
+       ) s) AS tiktok
   `);
   const meta = Number(rows[0]?.meta || 0);
   const google = Number(rows[0]?.google || 0);

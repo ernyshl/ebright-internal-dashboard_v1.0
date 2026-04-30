@@ -1,5 +1,5 @@
 #!/bin/bash
-# Telegram alert if meta sync log hasn't updated in 15 minutes
+# Telegram alert if meta sync log hasn't updated in 30 minutes
 # Run via cron every 5 minutes
 
 set -euo pipefail
@@ -25,11 +25,23 @@ ALERT_CHATS="${TELEGRAM_ALERT_CHATS:-${TELEGRAM_ALLOWED_CHATS%%,*}}"
 LOG_FILE="${META_SYNC_LOG:-/home/staff1/ebright-live-dashboard/meta_sync.log}"
 ALERT_FLAG="/tmp/meta_alert_sent"
 
+# Bash JSON-string escape (handles \\ \" \n \r \t) — replaces python3 json.dumps
+# so the cron environment doesn't need python3 in PATH. Returns a quoted string.
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '"%s"' "$s"
+}
+
 # Broadcast a Markdown-formatted alert to every chat in ALERT_CHATS
 send_alert() {
   local text="$1"
   local payload
-  payload=$(python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))' <<< "$text")
+  payload=$(json_escape "$text")
   IFS=',' read -ra CHATS <<< "$ALERT_CHATS"
   for chat in "${CHATS[@]}"; do
     chat_clean=$(echo "$chat" | tr -d ' ')
