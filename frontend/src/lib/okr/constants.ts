@@ -29,7 +29,7 @@ export const REGIONS = {
 };
 
 export const BRANCH_META = Object.entries(REGIONS).reduce((acc, [region, branches]) => {
-  branches.forEach(b => { acc[b.name] = { code: b.code, region }; });
+  branches.forEach(b => { acc[b.name] = { code: b.code, region, num: b.num }; });
   return acc;
 }, {});
 
