@@ -28,22 +28,23 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
   const activeDiff  = totalActive - prevActive;
   const activePct   = prevActive > 0 ? (activeDiff / prevActive) * 100 : 0;
 
-  // Daily attended (just attended counts)
-  const dailyAttended = DAYS.reduce<Record<string, number>>((acc, d) => {
-    acc[d.key] = sumField(weekRecords, `${d.key}_attended`);
+  // Per-day total = attended + absent (matches Excel "Wednesday Total Attendance" etc.)
+  const dailyTotal = DAYS.reduce<Record<string, number>>((acc, d) => {
+    acc[d.key] = sumField(weekRecords, `${d.key}_attended`) + sumField(weekRecords, `${d.key}_absent`);
     return acc;
   }, {});
-  const totalAttended = Object.values(dailyAttended).reduce((s, v) => s + v, 0);
 
-  // Frozen + Replaced totals across all days
-  const totalFrozen   = DAYS.reduce((s, d) => s + sumField(weekRecords, `${d.key}_frozen`), 0);
+  // Component sums across all days
+  const totalAttended = DAYS.reduce((s, d) => s + sumField(weekRecords, `${d.key}_attended`), 0);
+  const totalAbsent   = DAYS.reduce((s, d) => s + sumField(weekRecords, `${d.key}_absent`),   0);
+  const totalFrozen   = DAYS.reduce((s, d) => s + sumField(weekRecords, `${d.key}_frozen`),   0);
   const totalReplaced = DAYS.reduce((s, d) => s + sumField(weekRecords, `${d.key}_replaced`), 0);
-  const totalAbsent   = DAYS.reduce((s, d) => s + sumField(weekRecords, `${d.key}_absent`), 0);
 
-  // Total Weekly Attendance: attended + frozen + replaced (matches mastercopy "Total Weekly Attendance")
-  const totalAttendance = totalAttended + totalFrozen + totalReplaced;
+  // Total Weekly Attendance = attended + absent + frozen + replaced (matches Excel)
+  const totalAttendance = totalAttended + totalAbsent + totalFrozen + totalReplaced;
   const prevAttendance =
     DAYS.reduce((s, d) => s + sumField(prevWeekRecords, `${d.key}_attended`), 0) +
+    DAYS.reduce((s, d) => s + sumField(prevWeekRecords, `${d.key}_absent`),   0) +
     DAYS.reduce((s, d) => s + sumField(prevWeekRecords, `${d.key}_frozen`),   0) +
     DAYS.reduce((s, d) => s + sumField(prevWeekRecords, `${d.key}_replaced`), 0);
   const attDiff = totalAttendance - prevAttendance;
@@ -130,7 +131,7 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
           >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
               {DAYS.map(d => {
-                const dayTotal = sumDayCategory(weekRecords, d.key, ['attended']);
+                const dayTotal = dailyTotal[d.key];
                 return (
                   <div key={d.key} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
                     <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
