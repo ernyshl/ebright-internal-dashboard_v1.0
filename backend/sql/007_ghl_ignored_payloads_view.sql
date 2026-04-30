@@ -31,11 +31,21 @@ CREATE TABLE IF NOT EXISTS ghl_webhook_log (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Older deployments created the table without created_at — add it idempotently.
+ALTER TABLE ghl_webhook_log
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_ghl_webhook_log_action_created
   ON ghl_webhook_log (action, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_ghl_webhook_log_email_stage
   ON ghl_webhook_log (email, stage_key);
+
+-- Enforce the dedup rule at the DB level: one row per (email, last_name,
+-- stage_key). The webhook route already filters in code, but this catches
+-- regressions and makes the constraint explicit.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ghl_stages_email_lastname_stage
+  ON ghl_stages (email, last_name, stage_key);
 
 CREATE OR REPLACE VIEW ghl_ignored_payloads AS
 SELECT
