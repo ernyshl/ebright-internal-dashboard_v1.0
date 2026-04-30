@@ -84,6 +84,16 @@ router.post('/webhook', async (req, res) => {
     const leadSource   = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
     const preferredDay = (cd.preferred_day || data.preferred_day || '').trim();
     const timeSlot     = (cd.time_slot     || data.time_slot     || '').trim();
+    // Opportunity name — try the keys GHL workflows actually populate, in priority order.
+    const opportunityName = (
+      data.opportunity_name
+      || data.name
+      || data.full_name
+      || data.contact_name
+      || data.student_name
+      || [data.first_name, data.last_name].filter(Boolean).join(' ')
+      || ''
+    ).trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) {
@@ -91,22 +101,22 @@ router.post('/webhook', async (req, res) => {
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
-    // Ignore duplicate fires for the same person at the same stage:
-    // same email + same last_name + same stage_key → already captured.
-    // Different last_name (e.g. siblings sharing a parent's email) is allowed
-    // through as a distinct lead. The full payload is preserved in
-    // ghl_webhook_log (action='ignored') and surfaced via the
-    // ghl_ignored_payloads view so it can be replayed later if needed.
+    // Ignore duplicate fires for the same opportunity at the same stage:
+    // same email + same opportunity_name + same stage_key → already captured.
+    // Different opportunity_name (e.g. siblings under a parent's email
+    // creating distinct opportunities) is allowed through as a new lead.
+    // The full payload is preserved in ghl_webhook_log (action='ignored')
+    // and surfaced via the ghl_ignored_payloads view for later replay.
     {
       const { rows: exists } = await pool.query(
         `SELECT 1 FROM ghl_stages
-         WHERE email = $1 AND last_name = $2 AND stage_key = $3
+         WHERE email = $1 AND opportunity_name = $2 AND stage_key = $3
          LIMIT 1`,
-        [email, lastName, stageKey]
+        [email, opportunityName, stageKey]
       );
       if (exists.length > 0) {
-        await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+last_name+stage already exists' });
-        return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+last_name+stage)' });
+        await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+opportunity_name+stage already exists' });
+        return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+opportunity_name+stage)' });
       }
     }
 
@@ -114,10 +124,9 @@ router.post('/webhook', async (req, res) => {
 
     const { rowCount } = await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-       ON CONFLICT (fingerprint) DO UPDATE SET
-         email         = COALESCE(NULLIF(EXCLUDED.email, ''),         ghl_stages.email),
+         (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       ON CONFLICT (email, opportunity_name, stage_key) DO UPDATE SET
          last_name     = COALESCE(NULLIF(EXCLUDED.last_name, ''),     ghl_stages.last_name),
          phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
          pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
@@ -127,7 +136,7 @@ router.post('/webhook', async (req, res) => {
          lead_source   = COALESCE(NULLIF(EXCLUDED.lead_source, ''),   ghl_stages.lead_source),
          preferred_day = COALESCE(NULLIF(EXCLUDED.preferred_day, ''), ghl_stages.preferred_day),
          time_slot     = COALESCE(NULLIF(EXCLUDED.time_slot, ''),     ghl_stages.time_slot)`,
-      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
+      [email, lastName, opportunityName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
     // rowCount > 0 = inserted, 0 = updated (ON CONFLICT fired)
@@ -176,7 +185,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
       }
     }
     if (search) {
-      conditions.push(`(email ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx})`);
+      conditions.push(`(email ILIKE $${idx} OR opportunity_name ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx})`);
       params.push(`%${search}%`);
       idx++;
     }
@@ -184,16 +193,16 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
-    // Deduplicate: one row per email+stage_key, preferring the row that has
-    // preferred_day/time_slot, then the most recent.
+    // Deduplicate: one row per (email, opportunity_name, stage_key), preferring
+    // the row that has preferred_day/time_slot, then the most recent.
     const dedupCte = `
       WITH deduped AS (
-        SELECT DISTINCT ON (email, stage_key)
-          id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch,
+        SELECT DISTINCT ON (email, opportunity_name, stage_key)
+          id, email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch,
           student_name, contact_type, lead_source, preferred_day, time_slot, received_at
         FROM ghl_stages
         ${where}
-        ORDER BY email, stage_key,
+        ORDER BY email, opportunity_name, stage_key,
           CASE WHEN preferred_day <> '' OR time_slot <> '' THEN 0 ELSE 1 END,
           received_at DESC
       )
@@ -203,7 +212,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
       pool.query(`${dedupCte} SELECT COUNT(*) FROM deduped`, params),
       pool.query(
         `${dedupCte}
-         SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot,
+         SELECT id, email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot,
                 (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at_local
          FROM deduped
          ORDER BY received_at DESC
@@ -246,10 +255,10 @@ router.get('/by-pipeline', requireAuth, requireRole(ALLOWED_ROLES), async (req, 
 
     const { rows } = await pool.query(
       `WITH deduped AS (
-         SELECT DISTINCT ON (email, stage_key) pipeline_name, stage_key
+         SELECT DISTINCT ON (email, opportunity_name, stage_key) pipeline_name, stage_key
          FROM ghl_stages
          ${where}
-         ORDER BY email, stage_key,
+         ORDER BY email, opportunity_name, stage_key,
            CASE WHEN preferred_day <> '' OR time_slot <> '' THEN 0 ELSE 1 END,
            received_at DESC
        )
@@ -313,22 +322,23 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 // ──────────────────────────────────────────────────────────────
 router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
-    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '', preferred_day = '', time_slot = '' } = req.body;
+    const { email = '', last_name = '', opportunity_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '', preferred_day = '', time_slot = '' } = req.body;
 
     const stageKey = getStageKey(stage_raw);
     if (!stageKey) return res.status(400).json({ error: 'Invalid stage. Use: New Lead (NL), Confirmed (CT), Show-Up (SU), or Enrolled (ENR)' });
 
+    const oppName = (opportunity_name || last_name || student_name || '').trim();
     const fingerprint = `${email.trim().toLowerCase()}|${last_name.trim()}|${student_name.trim()}|${stage_raw.trim()}`.replace(/\s+/g, '');
 
     const { rows } = await pool.query(
-      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-       ON CONFLICT (fingerprint) DO NOTHING
+      `INSERT INTO ghl_stages (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       ON CONFLICT (email, opportunity_name, stage_key) DO NOTHING
        RETURNING id`,
-      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim(), preferred_day.trim(), time_slot.trim()]
+      [email.trim().toLowerCase(), last_name.trim(), oppName, phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim(), preferred_day.trim(), time_slot.trim()]
     );
 
-    if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same fingerprint already exists)' });
+    if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same email+opportunity_name+stage already exists)' });
     return res.status(201).json({ id: rows[0].id });
   } catch (err) {
     return next(err);
@@ -341,7 +351,7 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
 router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot } = req.body;
+    const { email, last_name, opportunity_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot } = req.body;
 
     // Recalculate stage_key if stage_raw changed
     let stageKey;
@@ -356,6 +366,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
 
     if (email !== undefined)        { sets.push(`email = $${idx++}`);         params.push(email.trim().toLowerCase()); }
     if (last_name !== undefined)    { sets.push(`last_name = $${idx++}`);     params.push(last_name.trim()); }
+    if (opportunity_name !== undefined) { sets.push(`opportunity_name = $${idx++}`); params.push(opportunity_name.trim()); }
     if (phone !== undefined)        { sets.push(`phone = $${idx++}`);         params.push(phone.trim()); }
     if (stage_raw !== undefined)    { sets.push(`stage_raw = $${idx++}`);     params.push(stage_raw.trim()); sets.push(`stage_key = $${idx++}`); params.push(stageKey); }
     if (pipeline_name !== undefined){ sets.push(`pipeline_name = $${idx++}`); params.push(pipeline_name.trim()); }
@@ -636,19 +647,30 @@ router.post('/ignored/:id/replay', requireAuth, requireRole(['super_admin']), as
     const leadSource   = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
     const preferredDay = (cd.preferred_day || data.preferred_day || '').trim();
     const timeSlot     = (cd.time_slot     || data.time_slot     || '').trim();
+    // Opportunity name — try the keys GHL workflows actually populate, in priority order.
+    const opportunityName = (
+      data.opportunity_name
+      || data.name
+      || data.full_name
+      || data.contact_name
+      || data.student_name
+      || [data.first_name, data.last_name].filter(Boolean).join(' ')
+      || ''
+    ).trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) return res.status(400).json({ error: 'Unrecognised stage in payload' });
 
     const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
-    // Upsert against the (email, last_name, stage_key) unique index — non-empty
-    // values from the payload overwrite the existing row, empty values preserve it.
+    // Upsert against the (email, opportunity_name, stage_key) unique index —
+    // non-empty values overwrite the existing row, empty values preserve it.
     await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-       ON CONFLICT (email, last_name, stage_key) DO UPDATE SET
+         (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       ON CONFLICT (email, opportunity_name, stage_key) DO UPDATE SET
+         last_name     = COALESCE(NULLIF(EXCLUDED.last_name, ''),     ghl_stages.last_name),
          phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
          pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
          branch        = COALESCE(NULLIF(EXCLUDED.branch, ''),        ghl_stages.branch),
@@ -657,7 +679,7 @@ router.post('/ignored/:id/replay', requireAuth, requireRole(['super_admin']), as
          lead_source   = COALESCE(NULLIF(EXCLUDED.lead_source, ''),   ghl_stages.lead_source),
          preferred_day = COALESCE(NULLIF(EXCLUDED.preferred_day, ''), ghl_stages.preferred_day),
          time_slot     = COALESCE(NULLIF(EXCLUDED.time_slot, ''),     ghl_stages.time_slot)`,
-      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
+      [email, lastName, opportunityName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
     await pool.query(

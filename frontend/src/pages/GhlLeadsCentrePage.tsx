@@ -41,7 +41,7 @@ const STAGE_COLORS = {
 const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
 const PAGE_SIZE = 50;
 
-const EMPTY_FORM = { email: '', last_name: '', phone: '', stage_raw: 'New Lead (NL)', pipeline_name: '', student_name: '', lead_source: '' };
+const EMPTY_FORM = { email: '', opportunity_name: '', last_name: '', phone: '', stage_raw: 'New Lead (NL)', pipeline_name: '', student_name: '', lead_source: '' };
 
 function fmtD(d) {
   const y = d.getFullYear();
@@ -179,6 +179,7 @@ export function GhlLeadsCentrePage() {
     setEditingId(r.id);
     setForm({
       email: r.email || '',
+      opportunity_name: r.opportunity_name || '',
       last_name: r.last_name || '',
       phone: r.phone || '',
       stage_raw: r.stage_raw || 'New Lead (NL)',
@@ -226,8 +227,8 @@ export function GhlLeadsCentrePage() {
           </div>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <label className="field">
-              <div className="label">Last Name</div>
-              <input className="input" value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} required />
+              <div className="label">Opportunity Name</div>
+              <input className="input" value={form.opportunity_name} onChange={e => setForm({ ...form, opportunity_name: e.target.value })} required />
             </label>
             <label className="field">
               <div className="label">Email</div>
@@ -327,7 +328,7 @@ export function GhlLeadsCentrePage() {
           <label className="brRankLabel">Search</label>
           <input
             className="filterInput"
-            placeholder="Name / Email / Phone"
+            placeholder="Opportunity / Email / Phone"
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{ width: '100%' }}
@@ -355,7 +356,7 @@ export function GhlLeadsCentrePage() {
               <tr>
                 <th>#</th>
                 <th>Date / Time</th>
-                <th>Last Name</th>
+                <th>Opportunity</th>
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Stage</th>
@@ -378,7 +379,7 @@ export function GhlLeadsCentrePage() {
                   <tr key={r.id}>
                     <td style={{ color: 'var(--muted)', fontSize: 12 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDate(r.received_at_local)}</td>
-                    <td>{r.last_name || '—'}</td>
+                    <td>{r.opportunity_name || r.last_name || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.email || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.phone || '—'}</td>
                     <td>
