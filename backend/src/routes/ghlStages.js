@@ -34,6 +34,33 @@ function getStageKey(raw) {
 // POST /api/ghl-stages/webhook — public, receives GHL webhooks
 // ──────────────────────────────────────────────────────────────
 router.post('/webhook', async (req, res) => {
+  const startedAt = Date.now();
+  const rawBody   = req.body;
+
+  // helper — fire-and-forget log insert, never throws
+  async function writeLog({ action, email, stageRaw, stageKey, fingerprint, ignoreReason, errorMessage }) {
+    try {
+      await pool.query(
+        `INSERT INTO ghl_webhook_log
+           (raw_body, email, stage_raw, stage_key, fingerprint, action, ignore_reason, error_message, duration_ms)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [
+          JSON.stringify(rawBody),
+          email        || null,
+          stageRaw     || null,
+          stageKey     || null,
+          fingerprint  || null,
+          action,
+          ignoreReason || null,
+          errorMessage || null,
+          Date.now() - startedAt,
+        ]
+      );
+    } catch (logErr) {
+      console.error('[GHL webhook] log write failed:', logErr.message);
+    }
+  }
+
   try {
     // Optional secret check
     if (env.GHL_WEBHOOK_SECRET) {
@@ -43,50 +70,49 @@ router.post('/webhook', async (req, res) => {
       }
     }
 
-    const data = req.body;
+    const data = rawBody;
     const cd   = data.customData || {};
 
-    const email       = (data.email        || '').trim().toLowerCase();
-    const lastName    = (data.last_name    || '').trim();
-    const rawStage    = (data.pipleline_stage || data.pipeline_stage || data.Stage || data.stage || '').trim();
-    const studentName = (data.student_name || '').trim();
-    const phone       = (data.phone        || '').trim();
-    const branch      = (data.Branch       || data['Branch Name'] || '').trim();
+    const email        = (data.email        || '').trim().toLowerCase();
+    const lastName     = (data.last_name    || '').trim();
+    const rawStage     = (data.pipleline_stage || data.pipeline_stage || data.Stage || data.stage || '').trim();
+    const studentName  = (data.student_name || '').trim();
+    const phone        = (data.phone        || '').trim();
+    const branch       = (data.Branch       || data['Branch Name'] || '').trim();
     const pipelineName = (data.pipeline_name || '').trim();
-    const contactType = (data.contact_type || 'lead').trim();
-    const leadSource  = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
-    // GHL nests custom fields under customData; keep the root fallback for safety
+    const contactType  = (data.contact_type || 'lead').trim();
+    const leadSource   = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
     const preferredDay = (cd.preferred_day || data.preferred_day || '').trim();
-    const timeSlot    = (cd.time_slot     || data.time_slot     || '').trim();
+    const timeSlot     = (cd.time_slot     || data.time_slot     || '').trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) {
+      await writeLog({ action: 'ignored', email, stageRaw: rawStage, ignoreReason: 'unrecognised stage' });
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
-    // If the payload carries no custom fields and a record for this email+stage
-    // already exists, ignore it — this is the duplicate fire from the second
-    // "Opportunity Updated" workflow that arrived before the BM filled in the fields.
-    if (!preferredDay && !timeSlot) {
+    // Ignore duplicate fires for the same person at the same stage:
+    // same email + same last_name + same stage_key → already captured.
+    // Different last_name (e.g. siblings sharing a parent's email) is allowed
+    // through as a distinct lead. The full payload is preserved in
+    // ghl_webhook_log (action='ignored') and surfaced via the
+    // ghl_ignored_payloads view so it can be replayed later if needed.
+    {
       const { rows: exists } = await pool.query(
-        `SELECT 1 FROM ghl_stages WHERE email = $1 AND stage_key = $2 LIMIT 1`,
-        [email, stageKey]
+        `SELECT 1 FROM ghl_stages
+         WHERE email = $1 AND last_name = $2 AND stage_key = $3
+         LIMIT 1`,
+        [email, lastName, stageKey]
       );
       if (exists.length > 0) {
-        return res.status(200).json({ status: 'ignored', reason: 'duplicate without custom fields' });
+        await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+last_name+stage already exists' });
+        return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+last_name+stage)' });
       }
     }
 
-    // Fingerprint: same logic as GSheet code
     const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
-    // Upsert with merge: when the same fingerprint fires again (e.g. the BM
-    // updated preferred_day / time_slot in GHL after the first stage-change
-    // webhook), prefer the NEW payload's value when it's non-empty, otherwise
-    // keep what's already stored. Empty incoming fields never overwrite real
-    // values. stage_raw / stage_key never need updating because the fingerprint
-    // includes stage_raw, so a conflict guarantees they're identical.
-    await pool.query(
+    const { rowCount } = await pool.query(
       `INSERT INTO ghl_stages
          (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
@@ -104,10 +130,14 @@ router.post('/webhook', async (req, res) => {
       [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
+    // rowCount > 0 = inserted, 0 = updated (ON CONFLICT fired)
+    const action = rowCount > 0 ? 'inserted' : 'updated';
+    await writeLog({ action, email, stageRaw: rawStage, stageKey, fingerprint });
+
     return res.status(200).json({ status: 'ok' });
   } catch (err) {
-    // Always return 200 to GHL so it stops retrying
     console.error('[GHL webhook]', err.message);
+    await writeLog({ action: 'error', errorMessage: err.message });
     return res.status(200).json({ status: 'error', message: err.message });
   }
 });
