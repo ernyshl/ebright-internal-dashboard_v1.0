@@ -274,7 +274,7 @@ export function BranchRankingPage() {
                         <td
                           rowSpan={tierBranches.length}
                           className="brRankTierBadgeCell"
-                          style={{ '--tier-color': tier.color }}
+                          style={{ '--tier-color': tier.color } as React.CSSProperties}
                         >
                           <div className="brRankTierBadgeInner">
                             <div className="brRankTierBadgeEmoji">{tier.emoji}</div>

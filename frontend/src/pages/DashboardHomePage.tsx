@@ -20,7 +20,7 @@ export function DashboardHomePage() {
     }
   ];
 
-  const departmentData = [
+  const departmentData: any[] = [
     {
       id: 'operations_dept',
       name: 'Operations',
@@ -68,7 +68,9 @@ export function DashboardHomePage() {
       color: '#10b981',
       links: [
         { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
-        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
+        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' },
+        // ADD THIS LINE BELOW:
+        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' }
       ]
     },
     {
@@ -227,7 +229,7 @@ export function DashboardHomePage() {
           <div
             key={dept.id}
             className="dashboardHomeCard"
-            style={{ '--card-color': dept.color }}
+            style={{ '--card-color': dept.color } as React.CSSProperties}
           >
             <div className="dashboardHomeCardHeader">
               <span className="dashboardHomeCardIcon">{dept.icon}</span>
