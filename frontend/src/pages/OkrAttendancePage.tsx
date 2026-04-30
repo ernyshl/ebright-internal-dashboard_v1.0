@@ -4,11 +4,10 @@ import { useSearchParams } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
-import { REGIONS, BRANCH_META, DAYS, EMPTY_FORM } from '../lib/okr/constants';
+import { REGIONS, DAYS, EMPTY_FORM } from '../lib/okr/constants';
 import { weekRange, calcMetrics, getRateColor, parseExcelPaste, toWednesday } from '../lib/okr/utils';
 import { useOkrData } from '../lib/okr/useOkrData';
 
-import { RateBar } from '../components/okr/RateBar';
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
 import { AllBranchesGrid } from '../components/okr/AllBranchesGrid';
 import { DailyBulkEntry } from '../components/okr/DailyBulkEntry';
@@ -16,6 +15,7 @@ import { DailyAttendanceView } from '../components/okr/DailyAttendanceView';
 import { YearlyDashboardView } from '../components/okr/YearlyDashboardView';
 import { YearlyBulkEntry } from '../components/okr/YearlyBulkEntry';
 import { WeeklyKpiCards } from '../components/okr/WeeklyKpiCards';
+import { WeeklyRankingTable } from '../components/okr/WeeklyRankingTable';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
 const TABS = [
@@ -41,7 +41,7 @@ export function OkrAttendancePage() {
     return d.toISOString().slice(0, 10);
   });
   const [filterBranch, setFilterBranch] = useState('');
-  const [regionFilter, setRegionFilter] = useState('');
+  const [rankBranchFilter, setRankBranchFilter] = useState('');
   const [saveStatus, setSaveStatus]     = useState(null);
   const [entryMode, setEntryMode]       = useState(initMode);
   const [showPcMeetup, setShowPcMeetup] = useState(false);
@@ -73,14 +73,6 @@ export function OkrAttendancePage() {
       .sort((a, b) => b._m.attendanceRate - a._m.attendanceRate),
     [weekRecords]
   );
-
-  // Region-filtered subset — used only by the top5/bottom5 ranking cards
-  const rankedRecords = useMemo(() =>
-    allRankedRecords.filter(r => !regionFilter || BRANCH_META[r.branch]?.region === regionFilter),
-    [allRankedRecords, regionFilter]
-  );
-  const top5    = rankedRecords.slice(0, 5);
-  const bottom5 = rankedRecords.slice(-5).reverse();
 
   const filteredList = useMemo(() =>
     filterBranch ? listRecords.filter(r => r.branch === filterBranch) : listRecords,
@@ -256,15 +248,6 @@ export function OkrAttendancePage() {
           {/* ── Weekly View ── */}
           {dashView === 'weekly' && (
             <>
-              {/* Week selector */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div className="okrHeroSelect">
-                  <span className="okrSelectIcon">📅</span>
-                  <input type="date" value={dashWeek} onChange={e => { setDashWeek(toWednesday(e.target.value)); setDashBranch(''); }} />
-                </div>
-                {dashWeek && <span className="okrWeekRangePill">{weekRange(dashWeek)}</span>}
-              </div>
-
               {!dashWeek ? (
                 <div className="okrEmptyHero">
                   <div className="okrEmptyIcon">📅</div>
@@ -280,66 +263,15 @@ export function OkrAttendancePage() {
                     />
                   )}
 
-                  {rankedRecords.length > 0 && (
-                    <div className="okrRankCard">
-                      <div className="okrRankCardHeader">
-                        <div>
-                          <span className="okrRankCardTitle">Branch Rankings — Week of {dashWeek}</span>
-                          <span className="okrRankBadge" style={{ marginLeft: 10 }}>{rankedRecords.length} branches</span>
-                        </div>
-                        <div className="okrRegionTabs">
-                          {['', 'A', 'B', 'C'].map(r => (
-                            <button key={r} className={`okrRegionTab${regionFilter === r ? ' okrRegionTabActive' : ''}`} onClick={() => setRegionFilter(r)}>
-                              {r === '' ? 'All' : `Region ${r}`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="okrRankGrid">
-                        <div className="okrRankHalf">
-                          <div className="okrRankHalfTitle okrRankTop"><span>🏆</span> Top 5 — Attendance Rate</div>
-                          {top5.map((r, i) => {
-                            const meta = BRANCH_META[r.branch];
-                            return (
-                              <div key={r.id} className={`okrRankRow${dashBranch === r.branch ? ' okrRankRowActive' : ''}`} onClick={() => setDashBranch(r.branch)}>
-                                <span className="okrRankPos okrRankPosTop">{i + 1}</span>
-                                <div className="okrRankInfo">
-                                  <div className="okrRankBranchRow">
-                                    <span className="okrRankBranch">{r.branch}</span>
-                                    <span className="okrRankCode">{meta?.code}</span>
-                                    <span className={`okrRegionPill okrRegion${meta?.region}`}>R{meta?.region}</span>
-                                  </div>
-                                  <RateBar value={r._m.attendanceRate} />
-                                </div>
-                                <span className="okrRankPct" style={{ color: getRateColor(r._m.attendanceRate) }}>{r._m.attendanceRate.toFixed(1)}%</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="okrRankDivider" />
-                        <div className="okrRankHalf">
-                          <div className="okrRankHalfTitle okrRankBot"><span>📉</span> Bottom 5 — Needs Attention</div>
-                          {bottom5.map((r, i) => {
-                            const meta = BRANCH_META[r.branch];
-                            return (
-                              <div key={r.id} className={`okrRankRow${dashBranch === r.branch ? ' okrRankRowActive' : ''}`} onClick={() => setDashBranch(r.branch)}>
-                                <span className="okrRankPos okrRankPosBot">{rankedRecords.length - bottom5.length + i + 1}</span>
-                                <div className="okrRankInfo">
-                                  <div className="okrRankBranchRow">
-                                    <span className="okrRankBranch">{r.branch}</span>
-                                    <span className="okrRankCode">{meta?.code}</span>
-                                    <span className={`okrRegionPill okrRegion${meta?.region}`}>R{meta?.region}</span>
-                                  </div>
-                                  <RateBar value={r._m.attendanceRate} />
-                                </div>
-                                <span className="okrRankPct" style={{ color: getRateColor(r._m.attendanceRate) }}>{r._m.attendanceRate.toFixed(1)}%</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <WeeklyRankingTable
+                    weekRecords={weekRecords}
+                    dashWeek={dashWeek}
+                    setDashWeek={(d) => { setDashWeek(d); setDashBranch(''); }}
+                    branchFilter={rankBranchFilter}
+                    setBranchFilter={setRankBranchFilter}
+                    branches={branches}
+                    onSelectBranch={setDashBranch}
+                  />
 
                   {!dashBranch ? (
                     <AllBranchesGrid records={allRankedRecords} onSelect={setDashBranch} />
