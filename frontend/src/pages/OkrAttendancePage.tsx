@@ -83,6 +83,7 @@ export function OkrAttendancePage() {
   const resetForm = () => {
     setForm(EMPTY_FORM);
     setEditingId(null);
+    setEditingOriginalKey(null);
     setPasteStatus(null);
     setPastePreview(null);
   };
@@ -134,7 +135,13 @@ export function OkrAttendancePage() {
     }
   };
 
+  // Tracks the original (branch, week_date) when editing, so we can delete the old
+  // record if the user changes either field — otherwise the upsert would just create
+  // a new record at the new key while leaving the original orphaned in the wrong week.
+  const [editingOriginalKey, setEditingOriginalKey] = useState<{ branch: string; week_date: string } | null>(null);
+
   const handleEdit = (rec) => {
+    setEditingOriginalKey({ branch: rec.branch, week_date: rec.week_date?.slice(0, 10) ?? '' });
     setForm({
       branch: rec.branch, week_date: rec.week_date?.slice(0, 10),
       total_onl_attendance:     rec.total_onl_attendance     ?? '',
@@ -167,10 +174,23 @@ export function OkrAttendancePage() {
     e.preventDefault();
     if (!form.branch || !form.week_date) return;
     const metrics = calcMetrics(form);
+
+    // Detect whether we're editing AND the user changed (branch, week_date).
+    // If yes, delete the original record after the upsert — otherwise the original
+    // sits orphaned at the old key while the upsert creates a new record at the new key.
+    const movedKey = editingId && editingOriginalKey && (
+      editingOriginalKey.branch !== form.branch ||
+      editingOriginalKey.week_date !== form.week_date
+    );
+
     saveMutation.mutate(
       { ...form, outstanding_invoice_pct: metrics.outstandingInvoicePct },
       {
         onSuccess: () => {
+          // If branch/week changed during an edit, delete the original record now
+          if (movedKey && editingId) {
+            deleteMutation.mutate(editingId);
+          }
           setSaveStatus('ok');
           setTimeout(() => setSaveStatus(null), 4000);
           if (!editingId) resetForm();
