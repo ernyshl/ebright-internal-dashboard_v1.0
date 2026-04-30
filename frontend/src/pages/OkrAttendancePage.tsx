@@ -284,7 +284,12 @@ export function OkrAttendancePage() {
                   ) : (
                     <>
                       <button className="okrBackToAll" onClick={() => setDashBranch('')}>← All Branches</button>
-                      <BranchDetailCard record={dashRecord} metrics={dashMetrics} trendWeeks={trendWeeks} />
+                      <BranchDetailCard
+                        key={`${dashBranch}-${dashWeek}`}
+                        record={dashRecord}
+                        metrics={dashMetrics}
+                        trendWeeks={trendWeeks}
+                      />
                     </>
                   )}
                 </>
