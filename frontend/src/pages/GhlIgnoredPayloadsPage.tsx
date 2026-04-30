@@ -73,7 +73,7 @@ export function GhlIgnoredPayloadsPage() {
       <div className="brRankFilters" style={{ marginBottom: 16, gap: 12 }}>
         <div className="brRankFilterGroup" style={{ flex: 1, minWidth: 220 }}>
           <label className="brRankLabel">Search</label>
-          <input className="filterInput" placeholder="Email / stage / reason" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%' }} />
+          <input className="filterInput" placeholder="Opportunity name / email / stage / reason" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%' }} />
         </div>
         {(search) && (
           <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end' }}>
@@ -98,6 +98,7 @@ export function GhlIgnoredPayloadsPage() {
               <tr>
                 <th>#</th>
                 <th>Received</th>
+                <th>Opportunity</th>
                 <th>Email</th>
                 <th>Stage</th>
                 <th>Reason</th>
@@ -107,7 +108,7 @@ export function GhlIgnoredPayloadsPage() {
             </thead>
             <tbody>
               {records.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
               ) : records.map((r: any, i: number) => {
                 const isOpen = expanded === r.id;
                 return (
@@ -115,6 +116,7 @@ export function GhlIgnoredPayloadsPage() {
                     <tr key={r.id} style={r.replayed_at ? { background: 'var(--bg2)', color: 'var(--muted)' } : {}}>
                       <td style={{ color: 'var(--muted)', fontSize: 11 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
                       <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{fmt(r.created_at)}</td>
+                      <td style={{ fontSize: 12, fontWeight: 600 }}>{r.opportunity_name || '—'}</td>
                       <td style={{ fontSize: 12 }}>{r.email || '—'}</td>
                       <td style={{ fontSize: 12 }}>
                         <span style={{ background: 'var(--inputBg)', borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>{r.stage_key || '—'}</span>{' '}
@@ -140,7 +142,7 @@ export function GhlIgnoredPayloadsPage() {
                     </tr>
                     {isOpen && (
                       <tr key={`${r.id}-payload`}>
-                        <td colSpan={7} style={{ background: 'var(--bg2)', padding: 16 }}>
+                        <td colSpan={8} style={{ background: 'var(--bg2)', padding: 16 }}>
                           <pre style={{ margin: 0, fontSize: 11, lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                             {JSON.stringify(r.payload, null, 2)}
                           </pre>

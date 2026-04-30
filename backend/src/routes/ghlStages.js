@@ -548,12 +548,28 @@ router.get('/ignored', requireAuth, requireRole(['super_admin', 'ceo', 'od']), a
     const params = [];
     let idx = 1;
 
+    // The opportunity name lives on different keys depending on the GHL workflow
+    // template — try the common ones in priority order, fall back to first+last.
+    const oppNameSql = `COALESCE(
+      NULLIF(TRIM(raw_body->>'opportunity_name'), ''),
+      NULLIF(TRIM(raw_body->>'name'), ''),
+      NULLIF(TRIM(raw_body->>'full_name'), ''),
+      NULLIF(TRIM(raw_body->>'contact_name'), ''),
+      NULLIF(TRIM(raw_body->>'student_name'), ''),
+      NULLIF(TRIM(CONCAT_WS(' ', raw_body->>'first_name', raw_body->>'last_name')), '')
+    )`;
+
     if (show === 'pending')       conditions.push('replayed_at IS NULL');
     else if (show === 'replayed') conditions.push('replayed_at IS NOT NULL');
     // 'all' applies no replayed_at filter
 
     if (search) {
-      conditions.push(`(email ILIKE $${idx} OR stage_raw ILIKE $${idx} OR ignore_reason ILIKE $${idx})`);
+      conditions.push(`(
+        email ILIKE $${idx}
+        OR stage_raw ILIKE $${idx}
+        OR ignore_reason ILIKE $${idx}
+        OR ${oppNameSql} ILIKE $${idx}
+      )`);
       params.push(`%${search}%`);
       idx++;
     }
@@ -566,6 +582,7 @@ router.get('/ignored', requireAuth, requireRole(['super_admin', 'ceo', 'od']), a
       pool.query(
         `SELECT id, email, stage_raw, stage_key, fingerprint,
                 ignore_reason AS reason, raw_body AS payload,
+                ${oppNameSql} AS opportunity_name,
                 duration_ms, created_at, replayed_at
          FROM ghl_webhook_log
          ${where}
