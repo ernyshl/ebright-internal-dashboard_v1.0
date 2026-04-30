@@ -169,6 +169,7 @@ export function DashboardHomePage() {
         { label: 'Permissions', path: '/permissions', dashboard: 'admin' },
         { label: '📺 TV Devices', path: '/admin/devices', dashboard: 'admin' },
         { label: '📋 Audit Log', path: '/admin/audit-log', dashboard: 'admin' },
+        { label: '🚫 GHL Ignored Payloads', path: '/admin/ghl-ignored', dashboard: 'admin' },
       ]
     },
     {

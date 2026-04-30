@@ -538,4 +538,121 @@ router.get('/ct-calendar', requireAuth, requireRole(ALLOWED_ROLES), async (req, 
   }
 });
 
+// ──────────────────────────────────────────────────────────────
+// GET /api/ghl-stages/ignored — paginated list of ignored webhook payloads
+// ──────────────────────────────────────────────────────────────
+router.get('/ignored', requireAuth, requireRole(['super_admin', 'ceo', 'od']), async (req, res, next) => {
+  try {
+    const { search = '', show = 'pending', page = 1, limit = 50 } = req.query;
+    const conditions = [`action = 'ignored'`];
+    const params = [];
+    let idx = 1;
+
+    if (show === 'pending')       conditions.push('replayed_at IS NULL');
+    else if (show === 'replayed') conditions.push('replayed_at IS NOT NULL');
+    // 'all' applies no replayed_at filter
+
+    if (search) {
+      conditions.push(`(email ILIKE $${idx} OR stage_raw ILIKE $${idx} OR ignore_reason ILIKE $${idx})`);
+      params.push(`%${search}%`);
+      idx++;
+    }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM ghl_webhook_log ${where}`, params),
+      pool.query(
+        `SELECT id, email, stage_raw, stage_key, fingerprint,
+                ignore_reason AS reason, raw_body AS payload,
+                duration_ms, created_at, replayed_at
+         FROM ghl_webhook_log
+         ${where}
+         ORDER BY created_at DESC
+         LIMIT $${idx} OFFSET $${idx + 1}`,
+        [...params, Number(limit), offset]
+      ),
+    ]);
+
+    return res.json({
+      records: dataResult.rows,
+      total: parseInt(countResult.rows[0].count, 10),
+      page: Number(page),
+      totalPages: Math.ceil(parseInt(countResult.rows[0].count, 10) / Number(limit)),
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// POST /api/ghl-stages/ignored/:id/replay — re-process an ignored payload
+// Re-parses the original raw_body and upserts into ghl_stages, merging
+// non-empty fields into the existing row (matched on email+last_name+
+// stage_key thanks to uq_ghl_stages_email_lastname_stage). Stamps
+// replayed_at on the log row so the UI removes it from the pending list.
+// ──────────────────────────────────────────────────────────────
+router.post('/ignored/:id/replay', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { rows: logs } = await pool.query(
+      `SELECT raw_body, action, replayed_at FROM ghl_webhook_log WHERE id = $1`,
+      [id]
+    );
+    if (logs.length === 0) return res.status(404).json({ error: 'Payload not found' });
+    if (logs[0].action !== 'ignored') return res.status(400).json({ error: 'Only ignored payloads can be replayed' });
+    if (logs[0].replayed_at) return res.status(400).json({ error: 'Payload already replayed' });
+
+    const data = logs[0].raw_body || {};
+    const cd   = data.customData || {};
+
+    const email        = (data.email        || '').trim().toLowerCase();
+    const lastName     = (data.last_name    || '').trim();
+    const rawStage     = (data.pipleline_stage || data.pipeline_stage || data.Stage || data.stage || '').trim();
+    const studentName  = (data.student_name || '').trim();
+    const phone        = (data.phone        || '').trim();
+    const branch       = (data.Branch       || data['Branch Name'] || '').trim();
+    const pipelineName = (data.pipeline_name || '').trim();
+    const contactType  = (data.contact_type || 'lead').trim();
+    const leadSource   = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
+    const preferredDay = (cd.preferred_day || data.preferred_day || '').trim();
+    const timeSlot     = (cd.time_slot     || data.time_slot     || '').trim();
+
+    const stageKey = getStageKey(rawStage);
+    if (!stageKey) return res.status(400).json({ error: 'Unrecognised stage in payload' });
+
+    const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
+
+    // Upsert against the (email, last_name, stage_key) unique index — non-empty
+    // values from the payload overwrite the existing row, empty values preserve it.
+    await pool.query(
+      `INSERT INTO ghl_stages
+         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       ON CONFLICT (email, last_name, stage_key) DO UPDATE SET
+         phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
+         pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
+         branch        = COALESCE(NULLIF(EXCLUDED.branch, ''),        ghl_stages.branch),
+         student_name  = COALESCE(NULLIF(EXCLUDED.student_name, ''),  ghl_stages.student_name),
+         contact_type  = COALESCE(NULLIF(EXCLUDED.contact_type, ''),  ghl_stages.contact_type),
+         lead_source   = COALESCE(NULLIF(EXCLUDED.lead_source, ''),   ghl_stages.lead_source),
+         preferred_day = COALESCE(NULLIF(EXCLUDED.preferred_day, ''), ghl_stages.preferred_day),
+         time_slot     = COALESCE(NULLIF(EXCLUDED.time_slot, ''),     ghl_stages.time_slot)`,
+      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
+    );
+
+    await pool.query(
+      `UPDATE ghl_webhook_log SET replayed_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    return res.json({ status: 'ok', message: 'Payload replayed and merged into ghl_stages' });
+  } catch (err) {
+    console.error('[GHL replay]', err.message);
+    return next(err);
+  }
+});
+
 module.exports = { ghlStagesRouter: router };

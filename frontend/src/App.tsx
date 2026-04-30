@@ -53,6 +53,7 @@ import FinanceRenewalByBranchPage from './pages/FinanceRenewalByBranchPage';
 import { LeadsDashboardV2Page } from './pages/LeadsDashboardV2Page';
 import { DayDistributionPage } from './pages/DayDistributionPage';
 import { TimeSlotDistributionPage } from './pages/TimeSlotDistributionPage';
+import { GhlIgnoredPayloadsPage } from './pages/GhlIgnoredPayloadsPage';
 
 export default function App() {
   return (
@@ -146,6 +147,9 @@ export default function App() {
           } />
           <Route path="/admin/audit-log" element={
             <RequirePermission dashboard="admin"><AuditLogPage /></RequirePermission>
+          } />
+          <Route path="/admin/ghl-ignored" element={
+            <RequirePermission dashboard="admin"><GhlIgnoredPayloadsPage /></RequirePermission>
           } />
           {/* Regional Manager */}
           <Route path="/leads-dashboard" element={
