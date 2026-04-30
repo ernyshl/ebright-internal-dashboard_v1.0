@@ -126,6 +126,16 @@ export function WeeklyRankingTable({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pick Date</label>
+          <input
+            type="date"
+            value={dashWeek}
+            onChange={e => setDashWeek(toWednesday(e.target.value))}
+            style={{ padding: '5px 10px', borderRadius: 6, border: '1.5px solid var(--border)', fontSize: '0.85rem', fontWeight: 600, background: '#fff', cursor: 'pointer', minWidth: 140 }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Branch</label>
           <select
             value={branchFilter}

@@ -16,6 +16,12 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'ok' | 'error' | null>(null);
 
+  // Reset the trend-toggle to "This Week" whenever the parent's branch or week changes
+  // so we never accidentally display a stale toggle position from a previous branch
+  useEffect(() => {
+    setSelectedWeekIdx(3);
+  }, [r?.branch, r?.week_date]);
+
   // Resolve the record/metrics to display based on selected week toggle
   const displayRecord  = trendWeeks?.[selectedWeekIdx]?.record  || r;
   const displayMetrics = trendWeeks?.[selectedWeekIdx]?.metrics || m;
