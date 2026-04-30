@@ -15,12 +15,15 @@ router.get('/branches', requireAuth, requireRole(ALLOWED_ROLES), async (_req, re
   } catch (err) { return next(err); }
 });
 
-// Snap any date string to the Monday of its Mon–Sun week
+// Snap any date string to the Monday of its Mon–Sun week.
+// Returns YYYY-MM-DD using LOCAL date components — toISOString() would shift
+// the date back by the server's UTC offset (e.g. KL UTC+8 turning Mon 20/4
+// into Sun 19/4), which would store every record one day too early.
 function toWednesday(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   if (isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // pg returns DATE columns as JS Date objects (local midnight). When serialized to
