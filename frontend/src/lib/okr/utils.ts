@@ -73,10 +73,14 @@ export function calcMetrics(r) {
   };
 }
 
-// Parse a pasted Excel roster (each line: "Name <tab/spaces> status") into
-// per-status newline-separated name lists. Recognises attended / absent /
-// frozen / replaced (case-insensitive). Lines without a recognisable status
-// are ignored.
+// Parse a pasted Excel roster into per-status newline-separated name lists.
+// Tolerates a leading row-number column (e.g. "1\tEnzo Leong\tattended"),
+// skips header rows, and recognises status by prefix:
+//   attended / Attended / ATTEND → attended
+//   absent / abs                 → absent
+//   frozen / fr                  → frozen
+//   replaced / rep               → replaced
+// Lines without a recognisable status fall into `unrecognised`.
 export function parseStudentRoster(raw: string): {
   attended: string;
   absent: string;
@@ -88,16 +92,25 @@ export function parseStudentRoster(raw: string): {
   const buckets: Record<string, string[]> = { attended: [], absent: [], frozen: [], replaced: [] };
   const unrecognised: string[] = [];
 
+  // Header keywords we'll silently skip (case-insensitive)
+  const HEADER_TOKENS = /^(no\.?|#|student\s*name|attendance\s*status|status|name)$/i;
+
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Split into columns on tabs first, then fall back to 2+ spaces. The
-    // last non-empty column is treated as the status, everything before
-    // it is the name.
-    const cols = trimmed.includes('\t')
+    // Split on tabs first (Excel's native copy separator), then 2+ spaces
+    let cols = trimmed.includes('\t')
       ? trimmed.split('\t').map(s => s.trim()).filter(Boolean)
       : trimmed.split(/ {2,}/).map(s => s.trim()).filter(Boolean);
+
+    if (cols.length < 2) { unrecognised.push(trimmed); continue; }
+
+    // Skip the header row ("No. | Student Name | Attendance Status")
+    if (cols.every(c => HEADER_TOKENS.test(c))) continue;
+
+    // Drop a leading row-number column (e.g. Excel's "1", "2", "10")
+    if (cols.length >= 3 && /^\d+\.?$/.test(cols[0])) cols = cols.slice(1);
 
     if (cols.length < 2) { unrecognised.push(trimmed); continue; }
 
