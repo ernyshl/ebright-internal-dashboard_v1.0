@@ -64,16 +64,16 @@ async function getSpendBreakdown() {
          GROUP BY account_id
        ) s) AS meta,
       (SELECT COALESCE(SUM(s.spend), 0) FROM (
-         SELECT account_id, MAX(spend) AS spend
+         SELECT account_id, campaign_name, MAX(spend) AS spend
          FROM google_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
-         GROUP BY account_id
+         GROUP BY account_id, campaign_name
        ) s) AS google,
       (SELECT COALESCE(SUM(s.spend), 0) FROM (
-         SELECT account_id, MAX(spend) AS spend
+         SELECT campaign_name, MAX(spend) AS spend
          FROM tiktok_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)
-         GROUP BY account_id
+         GROUP BY campaign_name
        ) s) AS tiktok
   `);
   const meta = Number(rows[0]?.meta || 0);
