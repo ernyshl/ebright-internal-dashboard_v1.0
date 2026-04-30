@@ -46,18 +46,23 @@ export function AllBranchesGrid({ records, onSelect }) {
     Rate:     parseFloat(r._m.attendanceRate.toFixed(1)),
   }));
 
-  const filteredChartData = (regionFilter === 'All'
+  const regionFiltered = regionFilter === 'All'
     ? allChartData
-    : allChartData.filter(d => d.region === regionFilter)
-  ).sort((a, b) => a.num - b.num); // always ascending by fixed branch number
+    : allChartData.filter(d => d.region === regionFilter);
 
-  const handleChartClick = (data) => {
+  // Badges: ascending by fixed branch number (01, 02, 03 ...)
+  const badgeData = [...regionFiltered].sort((a, b) => a.num - b.num);
+
+  // Chart: descending by attendance rate so the rate line reads smoothly best→worst
+  const chartData = [...regionFiltered].sort((a, b) => b.Rate - a.Rate);
+
+  const handleChartClick = (data: any) => {
     if (!data?.activeLabel) return;
-    const entry = filteredChartData.find(d => d.branch === data.activeLabel);
+    const entry = chartData.find(d => d.branch === data.activeLabel);
     if (entry) onSelect(entry.fullName);
   };
 
-  const chartWidth = Math.max(960, filteredChartData.length * 56);
+  const chartWidth = Math.max(960, chartData.length * 56);
 
   return (
     <div className="okrAllBranchWrap">
@@ -89,7 +94,7 @@ export function AllBranchesGrid({ records, onSelect }) {
 
       {/* Branch badges with global rank */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        {filteredChartData.map(d => (
+        {badgeData.map(d => (
           <button
             key={d.fullName}
             type="button"
@@ -122,7 +127,7 @@ export function AllBranchesGrid({ records, onSelect }) {
         <div style={{ width: chartWidth, minWidth: '100%' }}>
           <ResponsiveContainer width="100%" height={320}>
             <ComposedChart
-              data={filteredChartData}
+              data={chartData}
               margin={{ top: 10, right: 20, left: -10, bottom: 48 }}
               barCategoryGap="22%"
               onClick={handleChartClick}
@@ -132,7 +137,7 @@ export function AllBranchesGrid({ records, onSelect }) {
               <XAxis dataKey="branch" tick={{ fontSize: 11, fontWeight: 700, fill: 'var(--textSecondary)' }} axisLine={false} tickLine={false} angle={-40} textAnchor="end" interval={0} />
               <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
               <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-              <Tooltip content={(props) => <ChartTooltip {...props} chartData={filteredChartData} />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+              <Tooltip content={(props) => <ChartTooltip {...props} chartData={chartData} />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '0.78rem', paddingTop: 6 }} />
               <Bar yAxisId="left" dataKey="Attended" fill={CHART_COLORS.Attended} radius={[3,3,0,0]} maxBarSize={16} />
               <Bar yAxisId="left" dataKey="Absent"   fill={CHART_COLORS.Absent}   radius={[3,3,0,0]} maxBarSize={16} />
