@@ -5,6 +5,7 @@ import { n, weekRange, getRateColor, formatPct, toWednesday } from '../../lib/ok
 import { RateBar } from './RateBar';
 import { DailyAttendanceChart } from './DailyAttendanceChart';
 import { FourWeekChart } from './FourWeekChart';
+import { FrozenStudentsModal } from './FrozenStudentsModal';
 import { apiFetch } from '../../lib/api';
 
 const WEEK_LABELS = ['3 Weeks', '2 Weeks', 'Last Week', 'This Week'];
@@ -15,6 +16,7 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
   const [activeStudentsInput, setActiveStudentsInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'ok' | 'error' | null>(null);
+  const [frozenModalOpen, setFrozenModalOpen] = useState(false);
 
   // Reset the trend-toggle to "This Week" whenever the parent's branch or week changes
   // so we never accidentally display a stale toggle position from a previous branch
@@ -161,6 +163,28 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
                 <span>{met.totalFrozen}</span>
                 <span>{met.totalReplaced}</span>
               </div>
+              {/* Frozen Students button — opens modal with names list */}
+              <button
+                type="button"
+                onClick={() => setFrozenModalOpen(true)}
+                style={{
+                  marginTop: 10, padding: '9px 14px', borderRadius: 8,
+                  border: '1.5px solid #93c5fd', background: '#eff6ff',
+                  color: '#1e40af', fontWeight: 700, fontSize: '0.85rem',
+                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                  gap: 8, transition: 'all 0.12s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#dbeafe';
+                  e.currentTarget.style.borderColor = '#60a5fa';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#eff6ff';
+                  e.currentTarget.style.borderColor = '#93c5fd';
+                }}
+              >
+                ❄️ Frozen Students {met.totalFrozen > 0 && <span style={{ background: '#1e40af', color: '#fff', padding: '1px 8px', borderRadius: 12, fontSize: '0.72rem' }}>{met.totalFrozen}</span>}
+              </button>
             </div>
             <DailyAttendanceChart record={rec} />
           </div>
@@ -280,6 +304,15 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
           </div>
         </div>
       </div>
+
+      <FrozenStudentsModal
+        open={frozenModalOpen}
+        onClose={() => setFrozenModalOpen(false)}
+        branch={rec.branch}
+        weekRangeLabel={weekRange(toWednesday(rec.week_date?.slice(0, 10) ?? ''))}
+        names={rec.frozen_student_names ?? ''}
+        frozenCount={met.totalFrozen}
+      />
     </div>
   );
 }

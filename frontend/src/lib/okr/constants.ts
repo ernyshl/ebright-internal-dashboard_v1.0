@@ -55,6 +55,7 @@ export const EMPTY_FORM = {
   pc_meetup_invited: '', pc_meetup_showup: '',
   partially_paid_unpaid: '', active_students: '',
   total_onl_attendance: '',
+  frozen_student_names: '',
 };
 
 export const CHART_COLORS = {

@@ -163,6 +163,7 @@ export function OkrAttendancePage() {
       pc_meetup_showup:         rec.pc_meetup_showup         ?? '',
       partially_paid_unpaid:    rec.partially_paid_unpaid    ?? '',
       active_students:          rec.active_students          ?? '',
+      frozen_student_names:     rec.frozen_student_names     ?? '',
     });
     setEditingId(rec.id);
     setEntryMode('weekly');
@@ -525,6 +526,28 @@ export function OkrAttendancePage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Frozen Students */}
+          <div className="okrEntrySection">
+            <div className="okrEntrySectionTitle">
+              ❄️ Frozen Students
+              <span className="okrEntrySectionHint">One name per line · used for the "Frozen Students" popup on the dashboard</span>
+            </div>
+            <textarea
+              name="frozen_student_names"
+              value={form.frozen_student_names}
+              onChange={handleChange}
+              rows={5}
+              placeholder={"Type the frozen students' names, one per line. e.g.\nAhmad Bin Ali\nNur Aisyah\n..."}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                border: '1.5px solid #94a3b8', borderRadius: 7,
+                padding: '10px 12px', fontSize: '0.95rem',
+                fontFamily: 'inherit', background: '#fff',
+                color: 'var(--text)', resize: 'vertical',
+              }}
+            />
           </div>
 
           {/* Outstanding Invoices */}
