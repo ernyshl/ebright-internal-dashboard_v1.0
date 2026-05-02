@@ -27,7 +27,8 @@ DB_CONTAINER="${DB_CONTAINER:-ebright-dashboard-backend}"
 REPORT_TIME=$(TZ="Asia/Kuala_Lumpur" date '+%I:%M %p')
 REPORT_DATE=$(TZ="Asia/Kuala_Lumpur" date '+%d %b %Y')
 
-# Query leads by source (today)
+# Query leads by source (today) — without siblings, matches Branch Distribution
+# top Summary + Lead Sources sections (which both filter sibling_index = 1).
 LEADS_SQL="
 SELECT
   CASE
@@ -43,6 +44,7 @@ SELECT
   COUNT(*) as count
 FROM master_leads_powerbi
 WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+  AND sibling_index = 1
 GROUP BY 1
 ORDER BY count DESC;
 "

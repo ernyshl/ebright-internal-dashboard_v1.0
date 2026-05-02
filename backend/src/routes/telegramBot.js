@@ -21,6 +21,7 @@ function fmtRM(n) {
 }
 
 async function getLeadsToday() {
+  // Without siblings — mirrors Branch Distribution Summary + Lead Sources.
   const { rows } = await pool.query(`
     SELECT
       CASE
@@ -36,6 +37,7 @@ async function getLeadsToday() {
       COUNT(*) as count
     FROM master_leads_powerbi
     WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY count DESC;
   `);
