@@ -21,6 +21,7 @@
 CREATE OR REPLACE FUNCTION try_parse_messy_date(s text) RETURNS date AS $$
 DECLARE
   cleaned text;
+  result  date;
 BEGIN
   IF s IS NULL OR TRIM(s) = '' THEN
     RETURN NULL;
@@ -29,7 +30,10 @@ BEGIN
   -- ISO YYYY-MM-DD prefix (fast path, most common)
   IF s ~ '^\d{4}-\d{2}-\d{2}' THEN
     BEGIN
-      RETURN substring(s, 1, 10)::date;
+      result := substring(s, 1, 10)::date;
+      IF EXTRACT(YEAR FROM result) BETWEEN 1900 AND 2100 THEN
+        RETURN result;
+      END IF;
     EXCEPTION WHEN OTHERS THEN
       -- malformed ISO, fall through
     END;
@@ -46,24 +50,40 @@ BEGIN
   -- Assume 20xx — anyone in BranchStaff hired in the 1900s is implausible.
   cleaned := regexp_replace(cleaned, '^(\d{1,2})-([A-Za-z]+)-(\d{2})$', '\1-\2-20\3');
 
+  -- Year guard: without a 4-digit year token in the string, to_date will
+  -- silently fill in year 0001 BC. Reject those upfront so undated entries
+  -- like '1st January' or '3rd of April' return NULL cleanly.
+  IF NOT (cleaned ~ '\d{4}') THEN
+    RETURN NULL;
+  END IF;
+
   -- Try DD Month YYYY (full month name; Postgres' to_date is lenient and
   -- accepts both full and abbreviated names with this format).
   BEGIN
-    RETURN to_date(cleaned, 'DD Month YYYY');
+    result := to_date(cleaned, 'DD Month YYYY');
+    IF EXTRACT(YEAR FROM result) BETWEEN 1900 AND 2100 THEN
+      RETURN result;
+    END IF;
   EXCEPTION WHEN OTHERS THEN
     -- continue
   END;
 
   -- Try DD Mon YYYY (3-letter month, redundant but cheap)
   BEGIN
-    RETURN to_date(cleaned, 'DD Mon YYYY');
+    result := to_date(cleaned, 'DD Mon YYYY');
+    IF EXTRACT(YEAR FROM result) BETWEEN 1900 AND 2100 THEN
+      RETURN result;
+    END IF;
   EXCEPTION WHEN OTHERS THEN
     -- continue
   END;
 
   -- Try DD-Mon-YYYY (after the 2-digit-year expansion above)
   BEGIN
-    RETURN to_date(cleaned, 'DD-Mon-YYYY');
+    result := to_date(cleaned, 'DD-Mon-YYYY');
+    IF EXTRACT(YEAR FROM result) BETWEEN 1900 AND 2100 THEN
+      RETURN result;
+    END IF;
   EXCEPTION WHEN OTHERS THEN
     -- continue
   END;
