@@ -156,10 +156,15 @@ export function ArchivedStudentsPage() {
   }
 
   async function handleRestore(student: any) {
+    if (student?.no === undefined || student?.no === null) {
+      flash('❌ Restore failed: missing archive id (please reload the page).');
+      setConfirm(null);
+      return;
+    }
     try {
-      await apiFetch(`/api/archived-students/${encodeURIComponent(student.studentId)}`, { method: 'DELETE' });
-      setStudents(prev => prev.filter(s => s.studentId !== student.studentId));
-      flash('✅ Student restored (removed from archive).');
+      await apiFetch(`/api/archived-students/${student.no}/restore`, { method: 'POST' });
+      setStudents(prev => prev.filter(s => s.no !== student.no));
+      flash('✅ Student restored to Student Database.');
     } catch (err: any) {
       flash('❌ Restore failed: ' + (err?.data?.error || err?.message || 'server error'));
     }

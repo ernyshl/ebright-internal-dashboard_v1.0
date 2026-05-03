@@ -323,10 +323,10 @@ export function FaDashboardTestingPage() {
                 background: 'linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.4))',
                 border: '1.5px solid rgba(255,255,255,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
-              }}>🧪</div>
+              }}>🎓</div>
               <div>
                 <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>
-                  FA Dashboard Testing
+                  FA Dashboard
                 </h1>
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>
                   Live backlog data from Student Records · {dbStudents.length} students loaded
@@ -378,9 +378,27 @@ export function FaDashboardTestingPage() {
                 borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 padding: '24px 24px 16px', overflow: 'hidden',
               }}>
-                <h3 style={{ margin: '0 0 18px', fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
-                  Backlog FA to Invite by Branch
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
+                    Backlog FA to Invite by Branch
+                  </h3>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--textSecondary)' }}>
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#94a3b8' }} />
+                      Cleared / improved
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--textSecondary)' }}>
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#f9a8d4' }} />
+                      Added / regressed
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
+                      ↓ Improvement
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#dc2626', fontWeight: 700 }}>
+                      ↑ Regression
+                    </span>
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={560}>
                   <BarChart data={chartData} layout="vertical"
                     margin={{ top: 0, right: 60, left: 8, bottom: 0 }} barCategoryGap="25%">
@@ -482,6 +500,43 @@ export function FaDashboardTestingPage() {
                 {cardBranches.map(b => (
                   <BranchCard key={b.code} branch={b} filtered={filteredCodes ? filteredCodes.has(b.code) : false} prevData={baselineData} />
                 ))}
+              </div>
+            </div>
+
+            {/* Backlog % Legend */}
+            <div style={{
+              background: 'var(--panel)', border: '1px solid var(--border)',
+              borderRadius: 14, padding: '16px 24px',
+              display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap',
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                Backlog % Legend
+              </span>
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
+                  <span style={{ color: '#22c55e', fontSize: 16 }}>●</span>
+                  <span style={{ color: 'var(--text)' }}>Below 20%</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>(On track)</span>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
+                  <span style={{ color: '#f59e0b', fontSize: 16 }}>●</span>
+                  <span style={{ color: 'var(--text)' }}>20% – 50%</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>(Monitor)</span>
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600 }}>
+                  <span style={{ color: '#ef4444', fontSize: 16 }}>●</span>
+                  <span style={{ color: 'var(--text)' }}>Above 50%</span>
+                  <span style={{ color: 'var(--muted)', fontSize: 11 }}>(Critical)</span>
+                </span>
+              </div>
+              <div style={{ height: 28, width: 1, background: 'var(--border)' }} />
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
+                  ↓ Delta = improvement
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#dc2626' }}>
+                  ↑ Delta = regression
+                </span>
               </div>
             </div>
           </>

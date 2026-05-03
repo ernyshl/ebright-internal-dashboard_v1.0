@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../db');
+const { getTableNames } = require('../utils/tableNames');
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ function safeDate(val) {
 
 function rowToStudent(r) {
   return {
+    no:             r.no,
     studentId:      r.student_id    || '',
     name:           r.name          || '',
     gender:         r.gender        || '',
@@ -40,10 +42,11 @@ function rowToStudent(r) {
 
 router.get('/', async (req, res, next) => {
   try {
+    const { archived: tbl } = getTableNames();
     const { branch } = req.query;
     const result = branch
-      ? await pool.query(`SELECT * FROM archived_students WHERE branch = $1 ORDER BY name ASC`, [branch])
-      : await pool.query(`SELECT * FROM archived_students ORDER BY name ASC`);
+      ? await pool.query(`SELECT * FROM ${tbl} WHERE branch = $1 ORDER BY name ASC`, [branch])
+      : await pool.query(`SELECT * FROM ${tbl} ORDER BY name ASC`);
     return res.json({ data: result.rows.map(rowToStudent) });
   } catch (err) {
     return next(err);
@@ -54,13 +57,14 @@ router.get('/', async (req, res, next) => {
 
 router.get('/stats', async (req, res, next) => {
   try {
+    const { archived: tbl } = getTableNames();
     const result = await pool.query(`
       SELECT
         COUNT(*)                                   AS total,
         COUNT(*) FILTER (WHERE gender = 'Male')    AS male,
         COUNT(*) FILTER (WHERE gender = 'Female')  AS female,
         COUNT(DISTINCT branch)                     AS branches
-      FROM archived_students
+      FROM ${tbl}
     `);
     const row = result.rows[0];
     return res.json({
@@ -80,17 +84,18 @@ router.post('/', async (req, res, next) => {
   const s = req.body;
   if (!s?.name) return res.status(400).json({ error: 'name is required' });
   try {
+    const { archived: tbl } = getTableNames();
     const result = await pool.query(
-      `INSERT INTO archived_students
+      `INSERT INTO ${tbl}
          (student_id, name, gender, branch, enrollment_date, date_of_birth,
           created_on, archived_on, guardian_name, guardian_mobile, guardian_email)
        VALUES ($1,$2,$3,$4,$5::date,$6::date,$7::date,$8::date,$9,$10,$11)
        ON CONFLICT (student_id) DO UPDATE SET
          name=$2, gender=$3, branch=$4,
-         enrollment_date=COALESCE($5::date, archived_students.enrollment_date),
-         date_of_birth=COALESCE($6::date, archived_students.date_of_birth),
-         created_on=COALESCE($7::date, archived_students.created_on),
-         archived_on=COALESCE($8::date, archived_students.archived_on),
+         enrollment_date=COALESCE($5::date, ${tbl}.enrollment_date),
+         date_of_birth=COALESCE($6::date, ${tbl}.date_of_birth),
+         created_on=COALESCE($7::date, ${tbl}.created_on),
+         archived_on=COALESCE($8::date, ${tbl}.archived_on),
          guardian_name=$9, guardian_mobile=$10, guardian_email=$11
        RETURNING *`,
       [
@@ -121,9 +126,10 @@ router.post('/import', async (req, res, next) => {
     return res.status(400).json({ error: 'students array required' });
 
   try {
+    const { archived: tbl } = getTableNames();
     for (const s of students) {
       await pool.query(
-        `INSERT INTO archived_students
+        `INSERT INTO ${tbl}
            (student_id, name, gender, branch, enrollment_date, date_of_birth,
             created_on, archived_on, guardian_name, guardian_mobile, guardian_email)
          VALUES ($1,$2,$3,$4,$5::date,$6::date,$7::date,$8::date,$9,$10,$11)
@@ -143,7 +149,7 @@ router.post('/import', async (req, res, next) => {
         ]
       );
     }
-    const result = await pool.query(`SELECT * FROM archived_students ORDER BY name ASC`);
+    const result = await pool.query(`SELECT * FROM ${tbl} ORDER BY name ASC`);
     return res.json({ ok: true, data: result.rows.map(rowToStudent) });
   } catch (err) {
     return next(err);
@@ -156,8 +162,9 @@ router.put('/:student_id', async (req, res, next) => {
   const { student_id } = req.params;
   const s = req.body;
   try {
+    const { archived: tbl } = getTableNames();
     await pool.query(
-      `UPDATE archived_students SET
+      `UPDATE ${tbl} SET
          name=$1, gender=$2, branch=$3,
          enrollment_date = COALESCE($4::date, enrollment_date),
          date_of_birth   = COALESCE($5::date, date_of_birth),
@@ -179,7 +186,7 @@ router.put('/:student_id', async (req, res, next) => {
         student_id,
       ]
     );
-    const result = await pool.query(`SELECT * FROM archived_students WHERE student_id=$1`, [student_id]);
+    const result = await pool.query(`SELECT * FROM ${tbl} WHERE student_id=$1`, [student_id]);
     return res.json({ ok: true, data: rowToStudent(result.rows[0]) });
   } catch (err) {
     return next(err);
@@ -191,14 +198,71 @@ router.put('/:student_id', async (req, res, next) => {
 router.delete('/', async (req, res, next) => {
   const { branch } = req.query;
   try {
+    const { archived: tbl } = getTableNames();
     if (branch && branch !== 'All') {
-      await pool.query(`DELETE FROM archived_students WHERE branch=$1`, [branch]);
+      await pool.query(`DELETE FROM ${tbl} WHERE branch=$1`, [branch]);
     } else {
-      await pool.query(`DELETE FROM archived_students`);
+      await pool.query(`DELETE FROM ${tbl}`);
     }
     return res.json({ ok: true });
   } catch (err) {
     return next(err);
+  }
+});
+
+// ── POST /api/archived-students/:no/restore ─────────────────────────────────
+
+router.post('/:no/restore', async (req, res, next) => {
+  const no = parseInt(req.params.no, 10);
+  if (!Number.isInteger(no) || no <= 0) {
+    return res.status(400).json({ error: 'Invalid archive id' });
+  }
+
+  const { students: studentsTbl, archived: archivedTbl } = getTableNames();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const sel = await client.query(
+      `SELECT name, gender, branch, enrollment_date, grade_chapter,
+              fa_progress_json, total_fa, pcm_progress_json, total_pcm
+         FROM ${archivedTbl} WHERE no = $1`,
+      [no]
+    );
+    if (sel.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Archived student not found' });
+    }
+    const a = sel.rows[0];
+
+    await client.query(
+      `INSERT INTO ${studentsTbl}
+         (name, status, gender, branch, enrollment_date, grade_chapter,
+          fa_progress_json, total_fa, pcm_progress_json, total_pcm)
+       VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10)`,
+      [
+        a.name,
+        'Active',
+        a.gender || 'Male',
+        a.branch || '',
+        a.enrollment_date,
+        a.grade_chapter || 'G1 — C1',
+        JSON.stringify(Array.isArray(a.fa_progress_json) ? a.fa_progress_json : []),
+        a.total_fa || '0/0',
+        JSON.stringify(Array.isArray(a.pcm_progress_json) ? a.pcm_progress_json : []),
+        a.total_pcm || '0/0',
+      ]
+    );
+
+    await client.query(`DELETE FROM ${archivedTbl} WHERE no = $1`, [no]);
+
+    await client.query('COMMIT');
+    return res.json({ success: true, restored: a.name });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    return next(err);
+  } finally {
+    client.release();
   }
 });
 
@@ -207,7 +271,8 @@ router.delete('/', async (req, res, next) => {
 router.delete('/:student_id', async (req, res, next) => {
   const { student_id } = req.params;
   try {
-    await pool.query(`DELETE FROM archived_students WHERE student_id=$1`, [student_id]);
+    const { archived: tbl } = getTableNames();
+    await pool.query(`DELETE FROM ${tbl} WHERE student_id=$1`, [student_id]);
     return res.json({ ok: true });
   } catch (err) {
     return next(err);
