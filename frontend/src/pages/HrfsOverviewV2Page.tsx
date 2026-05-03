@@ -128,7 +128,8 @@ function DashCard({ title, subtitle, color, lightColor, records, rowKey, onViewA
 
 function Row({ rowKey, record: r, accentColor }: { rowKey: 'staff' | 'leave'; record: any; accentColor: string }) {
   if (rowKey === 'staff') {
-    const dateField = r.createdAt || r.updatedAt;
+    // Prefer the parsed start/end date from the backend; fall back to row timestamps.
+    const dateField = r.parsed_start_date || r.parsed_end_date || r.start_date || r.endDate || r.createdAt || r.updatedAt;
     const days = daysFromNow(dateField);
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 20px', borderLeft: '3px solid transparent' }}>
@@ -288,18 +289,18 @@ export function HrfsOverviewV2Page() {
           <div className="loadingDots"><span /><span /><span /></div>
         </div>
       ) : detail === 'new_hires' ? (
-        <StaffDetail title="New Hires" color="var(--success)" lightColor="var(--successLight)" records={newHires} dateField="createdAt" dateLabel="Hired On" onBack={() => setDetail(null)} />
+        <StaffDetail title="New Hires" color="var(--success)" lightColor="var(--successLight)" records={newHires} dateField="parsed_start_date" dateLabel="Start Date" onBack={() => setDetail(null)} />
       ) : detail === 'offboarded' ? (
-        <StaffDetail title="Offboarded" color="var(--brand)"   lightColor="var(--brandLight)"   records={offboarded} dateField="updatedAt" dateLabel="Last Update" onBack={() => setDetail(null)} />
+        <StaffDetail title="Offboarding" color="var(--brand)" lightColor="var(--brandLight)" records={offboarded} dateField="parsed_end_date" dateLabel="End Date" onBack={() => setDetail(null)} />
       ) : detail === 'mc' ? (
         <LeaveDetail title="Sick Leave (MC)" color="var(--warning)" records={mc} onBack={() => setDetail(null)} />
       ) : detail === 'annual_leave' ? (
         <LeaveDetail title="Annual Leave" color="#7c3aed" records={annualLeave} onBack={() => setDetail(null)} />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
           <DashCard
             title="NEW HIRES"
-            subtitle="Active · added in last 30 days"
+            subtitle="-1 week → +6 months"
             color="var(--success)"
             lightColor="var(--successLight)"
             records={newHires}
@@ -307,8 +308,8 @@ export function HrfsOverviewV2Page() {
             onViewAll={() => setDetail('new_hires')}
           />
           <DashCard
-            title="OFFBOARDED"
-            subtitle="Inactive · updated in last 30 days"
+            title="OFFBOARDING"
+            subtitle="-1 week → +2 months"
             color="var(--brand)"
             lightColor="var(--brandLight)"
             records={offboarded}

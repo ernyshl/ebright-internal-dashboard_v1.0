@@ -308,20 +308,34 @@ router.get('/overview-v2', requireAuth, requireRole(ALLOWED_ROLES), async (_req,
       )
     `;
 
+    // BranchStaff.start_date / endDate are TEXT and inconsistent (mixes
+    // ISO 'YYYY-MM-DD' with phrases like '5th March 2026'). Parse only
+    // ISO-format rows; non-parseable dates are skipped — the HR team can
+    // normalise them upstream over time.
+    const ISO_RE = `'^\\d{4}-\\d{2}-\\d{2}'`;
+
     const [newHires, offboarded, mcRecords, alRecords] = await Promise.all([
       pool.query(`
-        SELECT id, name, position, branch, "employeeId", "createdAt", "updatedAt"
+        SELECT id, name, position, branch, "employeeId", start_date, "endDate",
+               "createdAt", "updatedAt",
+               substring(start_date, 1, 10)::date AS parsed_start_date
         FROM hrfs."BranchStaff"
         WHERE status = 'Active'
-          AND "createdAt" >= NOW() - INTERVAL '30 days'
-        ORDER BY "createdAt" DESC
+          AND start_date ~ ${ISO_RE}
+          AND substring(start_date, 1, 10)::date >= CURRENT_DATE - INTERVAL '1 week'
+          AND substring(start_date, 1, 10)::date <= CURRENT_DATE + INTERVAL '6 months'
+        ORDER BY substring(start_date, 1, 10)::date ASC
       `),
       pool.query(`
-        SELECT id, name, position, branch, "employeeId", "createdAt", "updatedAt"
+        SELECT id, name, position, branch, "employeeId", start_date, "endDate",
+               "createdAt", "updatedAt",
+               substring("endDate", 1, 10)::date AS parsed_end_date
         FROM hrfs."BranchStaff"
         WHERE status = 'Inactive'
-          AND "updatedAt" >= NOW() - INTERVAL '30 days'
-        ORDER BY "updatedAt" DESC
+          AND "endDate" ~ ${ISO_RE}
+          AND substring("endDate", 1, 10)::date >= CURRENT_DATE - INTERVAL '1 week'
+          AND substring("endDate", 1, 10)::date <= CURRENT_DATE + INTERVAL '2 months'
+        ORDER BY substring("endDate", 1, 10)::date ASC
       `),
       pool.query(`
         ${nameLookupCte}
