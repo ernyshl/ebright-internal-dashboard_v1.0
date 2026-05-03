@@ -19,7 +19,7 @@ const CAL_DAYS = ['Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const WEEKDAY_SET = new Set(['Wednesday', 'Thursday', 'Friday']);
 const WEEKEND_SET = new Set(['Saturday', 'Sunday']);
 
-const WEEKEND_CODES = ['0915', '1030', '1200', '1315', '1445', '1600', '1715'];
+const WEEKEND_CODES = ['0915', '1030', '1200', '1315', '1445', '1600', '1730'];
 const WEEKDAY_CODES = ['1800', '1915', '2030'];
 const ALL_SLOT_CODES = [...WEEKEND_CODES, ...WEEKDAY_CODES];
 

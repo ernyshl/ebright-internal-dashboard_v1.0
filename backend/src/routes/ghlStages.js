@@ -158,7 +158,8 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
   try {
     const {
       date_from = '', date_to = '',
-      stage = '', pipeline = '', pipelines = '', search = '',
+      stage = '', pipeline = '', pipelines = '',
+      time_slot = '', search = '',
       page = 1, limit = 50,
     } = req.query;
 
@@ -183,6 +184,11 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
         conditions.push(`pipeline_name IN (${placeholders})`);
         params.push(...list);
       }
+    }
+    if (time_slot) {
+      // Stored values look like '1730 | 05:30pm' — match by leading 4-digit code.
+      conditions.push(`time_slot LIKE $${idx++}`);
+      params.push(`${time_slot}%`);
     }
     if (search) {
       conditions.push(`(email ILIKE $${idx} OR opportunity_name ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx})`);

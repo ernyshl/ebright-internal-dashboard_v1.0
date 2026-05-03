@@ -34,7 +34,7 @@ const WEEKEND_SLOTS = [
   { code: '1315', label: '1315 | 01:15pm' },
   { code: '1445', label: '1445 | 02:45pm' },
   { code: '1600', label: '1600 | 04:00pm' },
-  { code: '1715', label: '1715 | 05:15pm' },
+  { code: '1730', label: '1730 | 05:30pm' },
 ];
 const SLOTS_FOR_DAY = (day: string) =>
   (day === 'Saturday' || day === 'Sunday') ? WEEKEND_SLOTS : WEEKDAY_SLOTS;
