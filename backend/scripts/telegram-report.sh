@@ -49,18 +49,16 @@ GROUP BY 1
 ORDER BY count DESC;
 "
 
-# Total spend today — mirrors the marketing dashboard exactly.
-# Sums the 4 Meta ad accounts (META_MAIN_FB_ID, META_SARA_ID, META_ONLINE_ID,
-# META_TT_ID — all from meta_spend) plus google_spend. The tiktok_spend table
-# is intentionally NOT used because the dashboard's "TikTok" channel comes
-# from META_TT_ID inside meta_spend, not from tiktok_spend. Earlier attempts
-# that used MAX(spend) GROUP BY account_id under-counted because meta_spend
-# has multiple campaigns per account.
+# Total spend today — mirrors Marketing Performance "Main Marketing" total.
+# Main Marketing = FB (Group) + FB (Mokhir/Online) + TikTok + Google.
+# Sara is intentionally excluded (matches backend/src/routes/marketing.js
+# sumPeriods which omits sara from main_marketing). All three Meta channels
+# live in meta_spend; Google lives in google_spend.
 SPEND_SQL="
 SELECT
   COALESCE((SELECT SUM(spend) FROM meta_spend
      WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
-       AND account_id IN ('${META_MAIN_FB_ID}','${META_SARA_ID}','${META_ONLINE_ID}','${META_TT_ID}')
+       AND account_id IN ('${META_MAIN_FB_ID}','${META_ONLINE_ID}','${META_TT_ID}')
    ), 0)
   +
   COALESCE((SELECT SUM(spend) FROM google_spend
