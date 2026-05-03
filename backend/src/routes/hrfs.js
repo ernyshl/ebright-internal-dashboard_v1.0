@@ -42,21 +42,101 @@ router.get('/attendance', requireAuth, requireRole(ALLOWED_ROLES), async (req, r
   } catch (err) { return next(err); }
 });
 
-// GET /api/hrfs/attendance-dashboard — summary for dashboard cards
-router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
+// HQ-type branch codes — staff under any of these are treated as HQ for
+// scheduling (Tue–Sat) and are merged behind the "HQ" filter button.
+const HQ_BRANCHES = ['HQ', 'HR', 'OD', 'MKT', 'FINANCE', 'ACADEMY', 'OPERATION'];
+
+// GET /api/hrfs/attendance-dashboard — summary cards + expected-today list
+//
+// Schedule rules (used to derive who is expected to clock in on a given day):
+//   position ILIKE '%coach%'   → Wed/Thu/Fri/Sat/Sun
+//   position ILIKE '%intern%'  → Tue/Wed/Thu/Fri/Sat
+//   HQ branch (everyone else)  → Tue/Wed/Thu/Fri/Sat
+//   Operational branch (else)  → Wed/Thu/Fri/Sat/Sun
+//
+// Query params:
+//   branch=all     → no branch filter (default)
+//   branch=HQ      → matches any HQ_BRANCHES code
+//   branch=<CODE>  → matches that exact branch code
+router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
+    const branchParam = (req.query.branch || 'all').toString();
+
+    // Build branch filter SQL fragment + params used by both queries below.
+    let branchSql = '';
+    const branchParams = [];
+    if (branchParam === 'HQ') {
+      branchSql = `AND UPPER(COALESCE(bs.branch, '')) = ANY($1::text[])`;
+      branchParams.push(HQ_BRANCHES);
+    } else if (branchParam && branchParam !== 'all') {
+      branchSql = `AND UPPER(COALESCE(bs.branch, '')) = $1`;
+      branchParams.push(branchParam.toUpperCase());
+    }
+
+    // List of branch codes for the frontend to render filter buttons.
+    const { rows: branchRows } = await pool.query(`
+      SELECT DISTINCT branch FROM hrfs."BranchStaff"
+      WHERE status = 'Active' AND branch IS NOT NULL AND TRIM(branch) <> ''
+      ORDER BY branch
+    `);
+    const branches = branchRows.map(r => r.branch);
+
     const fetchDay = async (dateExpr) => {
-      const { rows } = await pool.query(`
+      // 1) AttendanceLog rows for this day, joined to BranchStaff so we can
+      //    apply the branch filter. branch=all keeps the original simple query.
+      const attendanceSql = branchParam === 'all' ? `
         SELECT
-          "empNo",
-          "empName",
-          "clockInTime",
-          "clockOutTime",
+          "empNo", "empName", "clockInTime", "clockOutTime",
           CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time >= '09:01:00' THEN true ELSE false END AS is_late
         FROM hrfs."AttendanceLog"
         WHERE date::date = ${dateExpr}
         ORDER BY "clockInTime" ASC
-      `);
+      ` : `
+        SELECT
+          al."empNo", al."empName", al."clockInTime", al."clockOutTime",
+          CASE WHEN al."clockInTime" IS NOT NULL AND al."clockInTime"::time >= '09:01:00' THEN true ELSE false END AS is_late
+        FROM hrfs."AttendanceLog" al
+        JOIN hrfs."BranchStaff" bs
+          ON (al."empNo" = bs."employeeId" OR LOWER(TRIM(al."empName")) = LOWER(TRIM(bs.name)))
+        WHERE al.date::date = ${dateExpr}
+          AND bs.status = 'Active'
+          ${branchSql}
+        ORDER BY al."clockInTime" ASC
+      `;
+      const { rows } = await pool.query(attendanceSql, branchParam === 'all' ? [] : branchParams);
+
+      // 2) Active BranchStaff who are expected today by schedule rule AND
+      //    have NOT clocked in yet today.
+      const dow = `EXTRACT(DOW FROM ${dateExpr})::int`;
+      const expectedSql = `
+        SELECT bs.name, bs.position, bs.branch, bs."employeeId" AS "empNo"
+        FROM hrfs."BranchStaff" bs
+        WHERE bs.status = 'Active'
+          AND (
+            (bs.position ILIKE '%coach%' AND ${dow} IN (3,4,5,6,0))
+            OR (bs.position ILIKE '%intern%' AND ${dow} IN (2,3,4,5,6))
+            OR (
+              (bs.position IS NULL OR (bs.position NOT ILIKE '%coach%' AND bs.position NOT ILIKE '%intern%'))
+              AND UPPER(COALESCE(bs.branch, '')) = ANY('{HQ,HR,OD,MKT,FINANCE,ACADEMY,OPERATION}'::text[])
+              AND ${dow} IN (2,3,4,5,6)
+            )
+            OR (
+              (bs.position IS NULL OR (bs.position NOT ILIKE '%coach%' AND bs.position NOT ILIKE '%intern%'))
+              AND UPPER(COALESCE(bs.branch, '')) <> ALL('{HQ,HR,OD,MKT,FINANCE,ACADEMY,OPERATION}'::text[])
+              AND ${dow} IN (3,4,5,6,0)
+            )
+          )
+          ${branchSql}
+          AND NOT EXISTS (
+            SELECT 1 FROM hrfs."AttendanceLog" al
+            WHERE al.date::date = ${dateExpr}
+              AND (al."empNo" = bs."employeeId" OR LOWER(TRIM(al."empName")) = LOWER(TRIM(bs.name)))
+              AND al."clockInTime" IS NOT NULL
+          )
+        ORDER BY bs.branch, bs.name
+      `;
+      const { rows: expected } = await pool.query(expectedSql, branchParams);
+
       return {
         total: rows.length,
         on_time: rows.filter(r => !r.is_late && r.clockInTime).length,
@@ -70,15 +150,21 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
           clockOut: r.clockOutTime ? String(r.clockOutTime).slice(0, 5) : null,
           isLate: r.is_late,
         })),
+        not_clocked_in_yet: expected.map(r => ({
+          empNo: r.empNo,
+          name: r.name,
+          position: r.position,
+          branch: r.branch,
+        })),
       };
     };
 
     const [today, yesterday] = await Promise.all([
-      fetchDay('CURRENT_DATE'),
-      fetchDay('CURRENT_DATE - 1'),
+      fetchDay(`(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date`),
+      fetchDay(`(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1`),
     ]);
 
-    return res.json({ today, yesterday });
+    return res.json({ today, yesterday, branches });
   } catch (err) { return next(err); }
 });
 

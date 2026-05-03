@@ -79,26 +79,70 @@ function StaffTable({ title, records, color }) {
   );
 }
 
+function ExpectedTable({ title, records, color }) {
+  return (
+    <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, color, fontSize: 14 }}>
+        {title} ({records.length})
+      </div>
+      <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+        <table className="dataTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Position</th>
+              <th>Branch</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.length === 0 ? (
+              <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24 }}>Everyone expected today has clocked in</td></tr>
+            ) : records.map((r, i) => (
+              <tr key={i}>
+                <td style={{ color: 'var(--muted)', fontSize: 11 }}>{i + 1}</td>
+                <td><strong>{r.name}</strong></td>
+                <td style={{ fontSize: 12, color: 'var(--muted)' }}>{r.position || '—'}</td>
+                <td style={{ fontSize: 12 }}>{r.branch || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Branch codes that are merged behind a single "HQ" filter button. Mirrors the
+// list in backend/src/routes/hrfs.js HQ_BRANCHES.
+const HQ_BRANCH_CODES = ['HQ', 'HR', 'OD', 'MKT', 'FINANCE', 'ACADEMY', 'OPERATION'];
+
 export function HrfsAttendanceDashboardPage() {
+  const [branch, setBranch] = useState<string>('all');
+  const [view, setView]     = useState<'today' | 'yesterday'>('today');
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['hrfsAttendanceDashboard'],
-    queryFn: () => apiFetch('/api/hrfs/attendance-dashboard'),
+    queryKey: ['hrfsAttendanceDashboard', branch],
+    queryFn: () => apiFetch(`/api/hrfs/attendance-dashboard?branch=${encodeURIComponent(branch)}`),
     staleTime: 2 * 60 * 1000,
   });
 
-  const today = data?.today || { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [] };
-  const yesterday = data?.yesterday || { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [] };
+  const today = data?.today || { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [], not_clocked_in_yet: [] };
+  const yesterday = data?.yesterday || { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [], not_clocked_in_yet: [] };
 
-  const [view, setView] = useState('today');
+  // Split known branches: HQ-types collapse into one "HQ" button; everything
+  // else gets its own button, alphabetised.
+  const allBranches: string[] = data?.branches || [];
+  const operationalBranches = allBranches
+    .filter(b => !HQ_BRANCH_CODES.includes(b.toUpperCase()))
+    .sort();
+  const hasHqBranches = allBranches.some(b => HQ_BRANCH_CODES.includes(b.toUpperCase()));
 
-  // Split into two lists:
-  //   left  — staff who clocked in, sorted latest → earliest (most-late at top)
-  //   right — staff who haven't clocked in / didn't come
-  const splitRecords = (records) => {
-    const clockedIn = records.filter(r => r.clockIn);
-    const noClockIn = records.filter(r => !r.clockIn);
-    clockedIn.sort((a, b) => String(b.clockIn).localeCompare(String(a.clockIn)));
-    return { clockedIn, noClockIn };
+  // Clocked-in list is just the records from AttendanceLog with a clockIn time.
+  const clockedIn = (records: any[]) => {
+    const list = records.filter(r => r.clockIn);
+    list.sort((a, b) => String(b.clockIn).localeCompare(String(a.clockIn)));
+    return list;
   };
 
   return (
@@ -110,6 +154,17 @@ export function HrfsAttendanceDashboardPage() {
           <p className="headerSubtitle">Clock in at 09:01 or later = Late</p>
         </div>
         <button className="btn btnGhost btnSmall" onClick={() => refetch()} style={{ marginLeft: 'auto' }}>↺ Refresh</button>
+      </div>
+
+      {/* Branch filter row */}
+      <div className="ldFilterBar" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+        <button className={`btn ${branch === 'all' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setBranch('all')}>All</button>
+        {hasHqBranches && (
+          <button className={`btn ${branch === 'HQ' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setBranch('HQ')}>HQ</button>
+        )}
+        {operationalBranches.map(b => (
+          <button key={b} className={`btn ${branch === b ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setBranch(b)}>{b}</button>
+        ))}
       </div>
 
       {isLoading ? (
@@ -132,20 +187,20 @@ export function HrfsAttendanceDashboardPage() {
             </div>
           </div>
 
-          {/* Toggle */}
+          {/* Today/Yesterday toggle */}
           <div className="ldFilterBar" style={{ marginBottom: 16 }}>
             <button className={`btn ${view === 'today' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('today')}>Today ({today.total})</button>
             <button className={`btn ${view === 'yesterday' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('yesterday')}>Yesterday ({yesterday.total})</button>
           </div>
 
-          {/* Staff lists — clocked-in (latest first) | no clock-in */}
+          {/* Staff lists — clocked-in (latest first) | expected today, no clock-in */}
           {(() => {
-            const { clockedIn, noClockIn } = splitRecords(view === 'today' ? today.records : yesterday.records);
+            const day = view === 'today' ? today : yesterday;
             const dayColor = view === 'today' ? '#3b82f6' : '#f59e0b';
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <StaffTable title="Clocked In · latest → earliest" records={clockedIn} color={dayColor} />
-                <StaffTable title="Not Clocked In Yet" records={noClockIn} color="var(--muted)" />
+                <StaffTable title="Clocked In · latest → earliest" records={clockedIn(day.records)} color={dayColor} />
+                <ExpectedTable title="Not Clocked In Yet" records={day.not_clocked_in_yet || []} color="var(--muted)" />
               </div>
             );
           })()}
