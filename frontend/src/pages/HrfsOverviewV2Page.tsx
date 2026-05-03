@@ -134,8 +134,11 @@ function Row({ rowKey, record: r, accentColor }: { rowKey: 'staff' | 'leave'; re
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 20px', borderLeft: '3px solid transparent' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
             {r.name || '—'}
+            {r.status === 'Active' && r.parsed_end_date && (
+              <span style={{ background: 'var(--warningLight)', color: 'var(--warning)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 999, letterSpacing: '0.3px' }}>STILL ACTIVE</span>
+            )}
           </div>
           <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>
             {r.position || 'No position'} {r.branch ? `· ${r.branch}` : ''} {r.employeeId ? `· ${r.employeeId}` : ''}
@@ -189,11 +192,11 @@ function StaffDetail({ title, color, lightColor, records, dateField, dateLabel, 
       <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
         <table className="dataTable">
           <thead>
-            <tr><th>#</th><th>Name</th><th>Position</th><th>Branch</th><th>Employee ID</th><th>{dateLabel}</th></tr>
+            <tr><th>#</th><th>Name</th><th>Position</th><th>Branch</th><th>Employee ID</th><th>{dateLabel}</th><th>Status</th></tr>
           </thead>
           <tbody>
             {records.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
             ) : records.map((r: any, i: number) => (
               <tr key={r.id || i}>
                 <td style={{ color: 'var(--muted)', fontSize: 11 }}>{i + 1}</td>
@@ -202,6 +205,15 @@ function StaffDetail({ title, color, lightColor, records, dateField, dateLabel, 
                 <td style={{ fontSize: 12 }}>{r.branch || '—'}</td>
                 <td style={{ fontSize: 12, fontFamily: 'monospace' }}>{r.employeeId || '—'}</td>
                 <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDate(r[dateField])}</td>
+                <td style={{ fontSize: 12 }}>
+                  {r.status ? (
+                    <span style={{
+                      background: r.status === 'Active' ? 'var(--warningLight)' : 'var(--bg2)',
+                      color: r.status === 'Active' ? 'var(--warning)' : 'var(--muted)',
+                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                    }}>{r.status}</span>
+                  ) : '—'}
+                </td>
               </tr>
             ))}
           </tbody>
