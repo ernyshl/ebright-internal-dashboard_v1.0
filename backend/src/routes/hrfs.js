@@ -76,24 +76,25 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
     }
 
     // List of branch codes for the frontend to render filter buttons.
+    // Limit to branches that have at least one Active staff with an
+    // employeeId — the rest don't have thumbprint scanners installed yet
+    // (only ST and HQ do today) so they'd render empty.
     const { rows: branchRows } = await pool.query(`
       SELECT DISTINCT branch FROM hrfs."BranchStaff"
-      WHERE status = 'Active' AND branch IS NOT NULL AND TRIM(branch) <> ''
+      WHERE status = 'Active'
+        AND branch IS NOT NULL AND TRIM(branch) <> ''
+        AND "employeeId" IS NOT NULL AND TRIM("employeeId") <> ''
       ORDER BY branch
     `);
     const branches = branchRows.map(r => r.branch);
 
     const fetchDay = async (dateExpr) => {
-      // 1) AttendanceLog rows for this day, joined to BranchStaff so we can
-      //    apply the branch filter. branch=all keeps the original simple query.
-      const attendanceSql = branchParam === 'all' ? `
-        SELECT
-          "empNo", "empName", "clockInTime", "clockOutTime",
-          CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time >= '09:01:00' THEN true ELSE false END AS is_late
-        FROM hrfs."AttendanceLog"
-        WHERE date::date = ${dateExpr}
-        ORDER BY "clockInTime" ASC
-      ` : `
+      // 1) AttendanceLog rows for this day, JOINED to BranchStaff so:
+      //    - Orphan rows (empNo with no matching active staff) are dropped
+      //    - We can require employeeId is set (i.e. only branches with the
+      //      thumbprint scanner installed)
+      //    - The branch filter actually filters
+      const attendanceSql = `
         SELECT
           al."empNo", al."empName", al."clockInTime", al."clockOutTime",
           CASE WHEN al."clockInTime" IS NOT NULL AND al."clockInTime"::time >= '09:01:00' THEN true ELSE false END AS is_late
@@ -102,10 +103,11 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
           ON (al."empNo" = bs."employeeId" OR LOWER(TRIM(al."empName")) = LOWER(TRIM(bs.name)))
         WHERE al.date::date = ${dateExpr}
           AND bs.status = 'Active'
+          AND bs."employeeId" IS NOT NULL AND TRIM(bs."employeeId") <> ''
           ${branchSql}
         ORDER BY al."clockInTime" ASC
       `;
-      const { rows } = await pool.query(attendanceSql, branchParam === 'all' ? [] : branchParams);
+      const { rows } = await pool.query(attendanceSql, branchParams);
 
       // 2) Active BranchStaff who are expected today by schedule rule AND
       //    have NOT clocked in yet today.
@@ -114,6 +116,7 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
         SELECT bs.name, bs.position, bs.branch, bs."employeeId" AS "empNo"
         FROM hrfs."BranchStaff" bs
         WHERE bs.status = 'Active'
+          AND bs."employeeId" IS NOT NULL AND TRIM(bs."employeeId") <> ''
           AND (
             (bs.position ILIKE '%coach%' AND ${dow} IN (3,4,5,6,0))
             OR (bs.position ILIKE '%intern%' AND ${dow} IN (2,3,4,5,6))
