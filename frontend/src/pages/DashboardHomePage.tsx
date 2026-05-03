@@ -143,6 +143,7 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#14b8a6',
       links: [
+        { label: 'Overview v2', path: '/hrfs-overview-v2', dashboard: 'hr_testing' },
         { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'hr_testing' },
         { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
         { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },

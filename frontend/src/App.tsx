@@ -54,6 +54,7 @@ import { LeadsDashboardV2Page } from './pages/LeadsDashboardV2Page';
 import { DayDistributionPage } from './pages/DayDistributionPage';
 import { TimeSlotDistributionPage } from './pages/TimeSlotDistributionPage';
 import { GhlIgnoredPayloadsPage } from './pages/GhlIgnoredPayloadsPage';
+import { HrfsOverviewV2Page } from './pages/HrfsOverviewV2Page';
 
 export default function App() {
   return (
@@ -186,6 +187,9 @@ export default function App() {
           } />
           <Route path="/hrfs-attendance-dashboard" element={
             <RequirePermission dashboard="hr_testing"><HrfsAttendanceDashboardPage /></RequirePermission>
+          } />
+          <Route path="/hrfs-overview-v2" element={
+            <RequirePermission dashboard="hr_testing"><HrfsOverviewV2Page /></RequirePermission>
           } />
           <Route path="/ui-ux-testing" element={
             <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>

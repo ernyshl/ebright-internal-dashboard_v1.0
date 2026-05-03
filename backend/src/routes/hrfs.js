@@ -282,4 +282,84 @@ router.get('/leave-transactions', requireAuth, requireRole(ALLOWED_ROLES), async
   } catch (err) { return next(err); }
 });
 
+// ──────────────────────────────────────────────────────────────
+// GET /api/hrfs/overview-v2 — dashboard reading directly from the live
+// HRFS foreign tables (BranchStaff + LeaveTransaction). This is distinct
+// from /api/hr-staff-movements/dashboard which reads from the manually-
+// curated hr_staff_movements / hr_mc / hr_annual_leave tables.
+//
+// Returns four lists:
+//   new_hires      Active BranchStaff with createdAt in the last 30 days
+//   offboarded     Inactive BranchStaff with updatedAt in the last 30 days
+//   mc             SL leave with LeaveDate within the last 7 days
+//   annual_leave   AL leave with LeaveDate from today through +14 days
+// ──────────────────────────────────────────────────────────────
+router.get('/overview-v2', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
+  try {
+    // Falls back to the most recent non-empty EmployeeName per code, same
+    // pattern used by /api/hrfs/leave-transactions (rows often arrive with
+    // the name blanked out, but earlier rows for the same code have it).
+    const nameLookupCte = `
+      WITH name_lookup AS (
+        SELECT DISTINCT ON ("EmployeeCode") "EmployeeCode", "EmployeeName"
+        FROM hrfs."LeaveTransaction"
+        WHERE "EmployeeName" IS NOT NULL AND TRIM("EmployeeName") <> ''
+        ORDER BY "EmployeeCode", created_at DESC
+      )
+    `;
+
+    const [newHires, offboarded, mcRecords, alRecords] = await Promise.all([
+      pool.query(`
+        SELECT id, name, position, branch, "employeeId", "createdAt", "updatedAt"
+        FROM hrfs."BranchStaff"
+        WHERE status = 'Active'
+          AND "createdAt" >= NOW() - INTERVAL '30 days'
+        ORDER BY "createdAt" DESC
+      `),
+      pool.query(`
+        SELECT id, name, position, branch, "employeeId", "createdAt", "updatedAt"
+        FROM hrfs."BranchStaff"
+        WHERE status = 'Inactive'
+          AND "updatedAt" >= NOW() - INTERVAL '30 days'
+        ORDER BY "updatedAt" DESC
+      `),
+      pool.query(`
+        ${nameLookupCte}
+        SELECT lt.id, lt."EmployeeCode",
+               COALESCE(NULLIF(TRIM(lt."EmployeeName"), ''), nl."EmployeeName") AS employee_name,
+               lt."LeaveTypeCode", lt."ApplyDate", lt."LeaveDate",
+               lt."Days", lt."DayNo", lt."ApplyStatus", lt."ApplyReason"
+        FROM hrfs."LeaveTransaction" lt
+        LEFT JOIN name_lookup nl ON nl."EmployeeCode" = lt."EmployeeCode"
+        WHERE lt."LeaveTypeCode" = 'SL'
+          AND lt."LeaveDate" >= CURRENT_DATE - INTERVAL '7 days'
+          AND lt."LeaveDate" <= CURRENT_DATE
+        ORDER BY lt."LeaveDate" DESC
+      `),
+      pool.query(`
+        ${nameLookupCte}
+        SELECT lt.id, lt."EmployeeCode",
+               COALESCE(NULLIF(TRIM(lt."EmployeeName"), ''), nl."EmployeeName") AS employee_name,
+               lt."LeaveTypeCode", lt."ApplyDate", lt."LeaveDate",
+               lt."Days", lt."DayNo", lt."ApplyStatus", lt."ApplyReason"
+        FROM hrfs."LeaveTransaction" lt
+        LEFT JOIN name_lookup nl ON nl."EmployeeCode" = lt."EmployeeCode"
+        WHERE lt."LeaveTypeCode" = 'AL'
+          AND lt."LeaveDate" >= CURRENT_DATE
+          AND lt."LeaveDate" <= CURRENT_DATE + INTERVAL '14 days'
+        ORDER BY lt."LeaveDate" ASC
+      `),
+    ]);
+
+    return res.json({
+      new_hires: newHires.rows,
+      offboarded: offboarded.rows,
+      mc: mcRecords.rows,
+      annual_leave: alRecords.rows,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = { hrfsRouter: router };
