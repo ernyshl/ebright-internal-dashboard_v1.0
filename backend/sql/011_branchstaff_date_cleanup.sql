@@ -35,28 +35,35 @@ BEGIN
     END;
   END IF;
 
-  -- Strip ordinal suffix after any digit, case-insensitive. Tolerates
-  -- '22th' / '3TH' typos by removing any st|nd|rd|th regardless of
-  -- whether it's the "correct" suffix for the number.
-  cleaned := regexp_replace(TRIM(s), '(\d+)\s*(?:st|nd|rd|th)\b', '\1', 'gi');
+  -- Strip ordinal suffix after a digit, case-insensitive. Postgres POSIX
+  -- regex does NOT support \b (which gets parsed as literal backspace) —
+  -- the simple '(\d+)(st|nd|rd|th)' pattern is sufficient for our data
+  -- since ordinals only follow digits, never inside words. Tolerates
+  -- typos like '22th' / '3TH' by stripping any of the four suffixes.
+  cleaned := regexp_replace(TRIM(s), '(\d+)(st|nd|rd|th)', '\1', 'gi');
 
-  -- Try DD Month YYYY (full month name)
+  -- Expand 2-digit years in dash format (e.g. '9-Nov-24' → '9-Nov-2024').
+  -- Assume 20xx — anyone in BranchStaff hired in the 1900s is implausible.
+  cleaned := regexp_replace(cleaned, '^(\d{1,2})-([A-Za-z]+)-(\d{2})$', '\1-\2-20\3');
+
+  -- Try DD Month YYYY (full month name; Postgres' to_date is lenient and
+  -- accepts both full and abbreviated names with this format).
   BEGIN
     RETURN to_date(cleaned, 'DD Month YYYY');
   EXCEPTION WHEN OTHERS THEN
     -- continue
   END;
 
-  -- Try DD Mon YYYY (3-letter month)
+  -- Try DD Mon YYYY (3-letter month, redundant but cheap)
   BEGIN
     RETURN to_date(cleaned, 'DD Mon YYYY');
   EXCEPTION WHEN OTHERS THEN
     -- continue
   END;
 
-  -- Try DD-Mon-YY (rare, e.g. '9-Nov-24')
+  -- Try DD-Mon-YYYY (after the 2-digit-year expansion above)
   BEGIN
-    RETURN to_date(cleaned, 'DD-Mon-YY');
+    RETURN to_date(cleaned, 'DD-Mon-YYYY');
   EXCEPTION WHEN OTHERS THEN
     -- continue
   END;
