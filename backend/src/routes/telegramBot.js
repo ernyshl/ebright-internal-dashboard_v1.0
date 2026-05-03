@@ -3,8 +3,18 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ';
-const ALLOWED_CHAT_IDS = (process.env.TELEGRAM_ALLOWED_CHATS || '178748547').split(',').map(s => s.trim());
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const ALLOWED_CHAT_IDS = (process.env.TELEGRAM_ALLOWED_CHATS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+if (!BOT_TOKEN) {
+  console.warn('[telegramBot] TELEGRAM_BOT_TOKEN not set — webhook will reject calls');
+}
+if (ALLOWED_CHAT_IDS.length === 0) {
+  console.warn('[telegramBot] TELEGRAM_ALLOWED_CHATS not set — webhook will ignore all messages');
+}
 
 function fmtRM(n) {
   return `RM ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -32,14 +42,49 @@ async function getLeadsToday() {
   return rows;
 }
 
-async function getSpendToday() {
+async function getSpendBreakdown() {
+  // Each table uses its own latest data_date (syncs run independently).
+  //
+  // Race-condition guard: spend syncs append today's rows BEFORE removing the
+  // previous batch, so SUM(*) over today's date can briefly include duplicate
+  // rows and inflate the total in scheduled reports. Collapse duplicates by
+  // taking MAX(spend) per account_id per date — once the sync settles, both
+  // batches converge to the same value, so MAX is a safe canonical pick.
+  //
+  // meta_spend also contains TikTok-attributed rows (the legacy META_TT_ID
+  // sync target writes there) — exclude them by filtering to real Meta
+  // account_ids, which all carry the 'act_' prefix.
   const { rows } = await pool.query(`
-    WITH latest AS (SELECT MAX(data_date::date) as today FROM meta_spend)
-    SELECT COALESCE(SUM(spend), 0) as total_spend
-    FROM meta_spend
-    WHERE data_date::date = (SELECT today FROM latest);
+    SELECT
+      (SELECT COALESCE(SUM(s.spend), 0) FROM (
+         SELECT account_id, MAX(spend) AS spend
+         FROM meta_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
+           AND account_id LIKE 'act\\_%' ESCAPE '\\'
+         GROUP BY account_id
+       ) s) AS meta,
+      (SELECT COALESCE(SUM(s.spend), 0) FROM (
+         SELECT account_id, MAX(spend) AS spend
+         FROM google_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
+         GROUP BY account_id
+       ) s) AS google,
+      (SELECT COALESCE(SUM(s.spend), 0) FROM (
+         SELECT account_id, MAX(spend) AS spend
+         FROM tiktok_spend
+         WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)
+         GROUP BY account_id
+       ) s) AS tiktok
   `);
-  return Number(rows[0]?.total_spend || 0);
+  const meta = Number(rows[0]?.meta || 0);
+  const google = Number(rows[0]?.google || 0);
+  const tiktok = Number(rows[0]?.tiktok || 0);
+  return { meta, google, tiktok, total: meta + google + tiktok };
+}
+
+async function getSpendToday() {
+  const { total } = await getSpendBreakdown();
+  return total;
 }
 
 async function getLeadsByBranch() {
@@ -99,6 +144,7 @@ function buildReportMessage(leads, spend) {
 }
 
 async function sendTelegramMessage(chatId, text) {
+  if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
   await fetch(url, {
     method: 'POST',
@@ -145,8 +191,13 @@ router.post('/webhook', async (req, res) => {
     }
 
     else if (text === '/spend') {
-      const spend = await getSpendToday();
-      await sendTelegramMessage(chatId, `💰 *Total Spend Today:* ${fmtRM(spend)}`);
+      const b = await getSpendBreakdown();
+      const msg = `💰 *Today's Ad Spend*\n━━━━━━━━━━━━━━━━━━\n` +
+        `Meta: *${fmtRM(b.meta)}*\n` +
+        `Google: *${fmtRM(b.google)}*\n` +
+        `TikTok: *${fmtRM(b.tiktok)}*\n` +
+        `━━━━━━━━━━━━━━━━━━\nTOTAL: *${fmtRM(b.total)}*`;
+      await sendTelegramMessage(chatId, msg);
     }
 
     else if (text === '/help') {

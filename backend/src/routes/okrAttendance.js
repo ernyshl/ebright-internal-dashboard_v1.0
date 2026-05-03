@@ -15,17 +15,45 @@ router.get('/branches', requireAuth, requireRole(ALLOWED_ROLES), async (_req, re
   } catch (err) { return next(err); }
 });
 
+// Snap any date string to the Monday of its Mon–Sun week
+function toWednesday(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
 // GET /api/okr-attendance — list with optional filters
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { branch = '', week_date = '', limit = 50 } = req.query;
+
+    if (week_date) {
+      // When filtering by week, deduplicate: one record per branch (most recently updated wins).
+      // This handles old Wednesday-anchor vs new Monday-anchor duplicates.
+      const mon = toWednesday(week_date);
+      const params = [mon, mon];
+      const branchClause = branch ? `AND branch = $${params.push(branch)}` : '';
+      params.push(Number(limit));
+      const limitIdx = params.length;
+
+      const result = await pool.query(
+        `SELECT DISTINCT ON (branch) *
+         FROM branch_okr_attendance
+         WHERE week_date >= $1::date AND week_date <= $2::date + INTERVAL '6 days'
+           ${branchClause}
+         ORDER BY branch ASC, updated_at DESC
+         LIMIT $${limitIdx}`,
+        params
+      );
+      return res.json({ records: result.rows });
+    }
+
+    // No week filter — return all records (history view)
     const conditions = [];
     const params = [];
     let idx = 1;
-
-    if (branch)    { conditions.push(`branch = $${idx++}`);          params.push(branch); }
-    if (week_date) { conditions.push(`week_date = $${idx++}::date`); params.push(week_date); }
-
+    if (branch) { conditions.push(`branch = $${idx++}`); params.push(branch); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await pool.query(
       `SELECT * FROM branch_okr_attendance ${where} ORDER BY week_date DESC, branch ASC LIMIT $${idx}`,
@@ -38,7 +66,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
 // POST /api/okr-attendance — upsert (insert or update by branch + week_date)
 router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
-    const b = req.body;
+    const b = { ...req.body, week_date: toWednesday(req.body.week_date) };
 
     const result = await pool.query(
       `INSERT INTO branch_okr_attendance (

@@ -1,6 +1,7 @@
 const { env } = require('./env');
 const { createApp } = require('./app');
 const { pool } = require('./db');
+const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
 
 async function runMigrations() {
   await pool.query(`
@@ -46,6 +47,24 @@ async function runMigrations() {
       UNIQUE(branch, week_date)
     )
   `);
+  // Drop ALL CHECK constraints on studentrecords so all branches (incl. KTG) are accepted
+  await pool.query(`
+    DO $$
+    DECLARE
+      con_name TEXT;
+    BEGIN
+      FOR con_name IN
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = 'studentrecords'::regclass
+          AND contype = 'c'
+      LOOP
+        EXECUTE 'ALTER TABLE studentrecords DROP CONSTRAINT IF EXISTS ' || quote_ident(con_name);
+        RAISE NOTICE 'Dropped CHECK constraint: %', con_name;
+      END LOOP;
+    END
+    $$;
+  `);
   // eslint-disable-next-line no-console
   console.log('✅ DB migrations complete');
 }
@@ -57,6 +76,7 @@ async function start() {
     // eslint-disable-next-line no-console
     console.log(`API listening on http://0.0.0.0:${env.PORT}`);
   });
+  startFinanceRefreshJob();
 }
 
 start().catch(err => {

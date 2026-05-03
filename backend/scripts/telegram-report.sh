@@ -2,9 +2,26 @@
 # Telegram Daily Report Bot
 # Runs via cron at 9am, 12pm, 3pm, 6pm, 9pm MYT
 
-BOT_TOKEN="8783294413:AAHpYwH-3rn7opYoi6CFDC3GkXdY7LPZJvQ"
-CHAT_ID="178748547"
-DB_CONTAINER="ebright-dashboard-backend"
+set -euo pipefail
+
+# Load env from backend/.env (this script lives in backend/scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/../.env}"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
+
+: "${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is not set (check $ENV_FILE)}"
+: "${TELEGRAM_ALLOWED_CHATS:?TELEGRAM_ALLOWED_CHATS is not set (check $ENV_FILE)}"
+
+BOT_TOKEN="$TELEGRAM_BOT_TOKEN"
+# Recipients for scheduled reports — comma-separated, broadcast to all.
+# Falls back to TELEGRAM_ALLOWED_CHATS if TELEGRAM_REPORT_CHATS is not set.
+REPORT_CHATS="${TELEGRAM_REPORT_CHATS:-$TELEGRAM_ALLOWED_CHATS}"
+DB_CONTAINER="${DB_CONTAINER:-ebright-dashboard-backend}"
 
 # Get current time in MYT
 REPORT_TIME=$(TZ="Asia/Kuala_Lumpur" date '+%I:%M %p')
@@ -30,17 +47,85 @@ GROUP BY 1
 ORDER BY count DESC;
 "
 
-# Query total spend today from meta_spend
+# Query total spend today across Meta + Google + TikTok (each uses its own latest date).
+#
+# Race-condition guard: the spend syncs append today's rows BEFORE removing the
+# previous batch, so SUM(*) over today's date can briefly include duplicate rows
+# and inflate the total. Collapse duplicates by taking MAX(spend) per account_id
+# per date — once the sync settles, both batches converge to the same value.
+#
+# meta_spend has TikTok-tagged rows (legacy META_TT_ID sync target) — filter to real
+# Meta accounts only via the 'act_' prefix to avoid double-counting with tiktok_spend.
 SPEND_SQL="
-WITH latest AS (SELECT MAX(data_date::date) as today FROM meta_spend)
-SELECT COALESCE(SUM(spend), 0) as total_spend
-FROM meta_spend
-WHERE data_date::date = (SELECT today FROM latest);
+SELECT
+  (SELECT COALESCE(SUM(s.spend), 0) FROM (
+     SELECT account_id, MAX(spend) AS spend
+     FROM meta_spend
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
+       AND account_id LIKE 'act\\_%' ESCAPE '\\'
+     GROUP BY account_id
+   ) s)
+  +
+  (SELECT COALESCE(SUM(s.spend), 0) FROM (
+     SELECT account_id, MAX(spend) AS spend
+     FROM google_spend
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
+     GROUP BY account_id
+   ) s)
+  +
+  (SELECT COALESCE(SUM(s.spend), 0) FROM (
+     SELECT account_id, MAX(spend) AS spend
+     FROM tiktok_spend
+     WHERE data_date::date = (SELECT MAX(data_date::date) FROM tiktok_spend)
+     GROUP BY account_id
+   ) s)
+  AS total_spend;
 "
 
-# Execute queries
-LEADS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -F'|' -c \"$LEADS_SQL\"" 2>/dev/null)
-SPEND_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$SPEND_SQL\"" 2>/dev/null)
+# Bash JSON-string escape (handles \\ \" \n \r \t) — replaces python3 json.dumps
+# so the cron environment doesn't need python3 in PATH. Returns a quoted string.
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '"%s"' "$s"
+}
+
+# Broadcast a Markdown message to every chat in REPORT_CHATS.
+broadcast() {
+  local text="$1"
+  local payload
+  payload=$(json_escape "$text")
+  IFS=',' read -ra CHATS <<< "$REPORT_CHATS"
+  local sent=0
+  for chat in "${CHATS[@]}"; do
+    chat_clean=$(echo "$chat" | tr -d ' ')
+    [ -z "$chat_clean" ] && continue
+    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+      -H "Content-Type: application/json" \
+      -d "{\"chat_id\":${chat_clean},\"text\":${payload},\"parse_mode\":\"Markdown\"}" > /dev/null
+    sent=$((sent + 1))
+  done
+  echo "Report sent to ${sent} chat(s) at $(date)"
+}
+
+# Execute queries — capture exit code without aborting on `set -e` so we can
+# fall through to a 'Data unavailable' broadcast if the DB call fails.
+DB_FAILED=0
+LEADS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -F'|' -c \"$LEADS_SQL\"" 2>/dev/null) || DB_FAILED=1
+SPEND_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$SPEND_SQL\"" 2>/dev/null) || DB_FAILED=1
+
+if [ "$DB_FAILED" -eq 1 ]; then
+  broadcast "⚠️ *Ebright Report — Data unavailable*
+
+DB could not be reached. Please check manually.
+
+📅 ${REPORT_DATE} | ⏰ ${REPORT_TIME}"
+  exit 0
+fi
 
 # Parse leads into variables
 META=0; TIKTOK=0; WEBSITE_CONV=0; ROADSHOW=0; SGL=0; WALKIN=0; WEBSITE_ORG=0; OTHERS=0; TOTAL=0
@@ -99,9 +184,4 @@ Total Leads Today: *${TOTAL}*
 Total Spend Today: *${FMT_SPEND}*
 Cost Per Lead: *${FMT_CPL}*"
 
-# Send to Telegram
-curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-  -H "Content-Type: application/json" \
-  -d "{\"chat_id\":${CHAT_ID},\"text\":$(echo "$MESSAGE" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))'),\"parse_mode\":\"Markdown\"}" > /dev/null
-
-echo "Report sent at $(date)"
+broadcast "$MESSAGE"

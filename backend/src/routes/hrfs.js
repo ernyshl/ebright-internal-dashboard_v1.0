@@ -52,7 +52,7 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
           "empName",
           "clockInTime",
           "clockOutTime",
-          CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time > '09:00:00' THEN true ELSE false END AS is_late
+          CASE WHEN "clockInTime" IS NOT NULL AND "clockInTime"::time >= '09:01:00' THEN true ELSE false END AS is_late
         FROM hrfs."AttendanceLog"
         WHERE date::date = ${dateExpr}
         ORDER BY "clockInTime" ASC
@@ -103,12 +103,13 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
       pool.query(`SELECT COUNT(*) FROM hrfs."BranchStaff" ${where}`, params),
       pool.query(
         `SELECT id, "name", "nickname", "nric", "email", "phone", "role",
-                "branch", "department", "position", "status", "employmentType",
-                "startDate", "endDate", "dob", "age", "gender", "nationality",
-                "homeAddress", "residential", "location", "university",
-                "emergencyName", "emergencyPhone", "emergencyRelation",
-                "signedDate", "probation", "rate", "employeeId",
-                "accessStatus", "createdAt", "updatedAt"
+                "branch", "department", "position", "status", employment_type,
+                start_date, "endDate", "dob", "age", "gender", "nationality",
+                home_address, "residential", "location", "university",
+                emergency_name, emergency_phone, emergency_relation,
+                signed_date, "probation", "rate", "employeeId",
+                "accessStatus", "bank", bank_name, bank_account,
+                "contract", "createdAt", "updatedAt"
          FROM hrfs."BranchStaff" ${where}
          ORDER BY "createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
@@ -131,7 +132,15 @@ router.get('/leave-transactions', requireAuth, requireRole(ALLOWED_ROLES), async
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
-      conditions.push(`(lt."EmployeeCode" ILIKE $${idx} OR bs."name" ILIKE $${idx})`);
+      conditions.push(`(
+        lt."EmployeeCode" ILIKE $${idx}
+        OR lt."EmployeeName" ILIKE $${idx}
+        OR EXISTS (
+          SELECT 1 FROM hrfs."LeaveTransaction" lt2
+          WHERE lt2."EmployeeCode" = lt."EmployeeCode"
+            AND lt2."EmployeeName" ILIKE $${idx}
+        )
+      )`);
       params.push(`%${search}%`); idx++;
     }
     if (status) { conditions.push(`lt."ApplyStatus" = $${idx++}`); params.push(status); }
@@ -142,18 +151,31 @@ router.get('/leave-transactions', requireAuth, requireRole(ALLOWED_ROLES), async
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
+    // Build a code -> latest non-empty EmployeeName fallback so rows missing
+    // EmployeeName still display the correct person.
+    const nameLookupCte = `
+      WITH name_lookup AS (
+        SELECT DISTINCT ON ("EmployeeCode") "EmployeeCode", "EmployeeName"
+        FROM hrfs."LeaveTransaction"
+        WHERE "EmployeeName" IS NOT NULL AND TRIM("EmployeeName") <> ''
+        ORDER BY "EmployeeCode", created_at DESC
+      )
+    `;
+
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."LeaveTransaction" lt LEFT JOIN hrfs."BranchStaff" bs ON lt."EmployeeCode" = bs."employeeId" ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM hrfs."LeaveTransaction" lt ${where}`, params),
       pool.query(
-        `SELECT lt.id, lt."EmployeeCode", lt."LeaveTypeCode", lt."LeaveTransId",
+        `${nameLookupCte}
+         SELECT lt.id, lt."EmployeeCode",
+                COALESCE(NULLIF(TRIM(lt."EmployeeName"), ''), nl."EmployeeName") AS employee_name,
+                lt."LeaveTypeCode", lt."LeaveTransId",
                 lt."ApplyDate", lt."ApplyReason", lt."ApplyStatus", lt."Attachment",
                 lt."DayNo", lt."HourNo", lt."Days", lt."Source", lt."LeaveAdjustmentId",
                 lt."LeaveDate", lt."FromTime", lt."ToTime", lt."IsHourly", lt."IsAdjustment",
                 lt."LeaveCreditId", lt."ActionRemark", lt."RequiredThirdParty",
-                lt."WorkingHours", lt."created_at",
-                bs."name" AS employee_name, bs."department", bs."branch"
+                lt."WorkingHours", lt."created_at"
          FROM hrfs."LeaveTransaction" lt
-         LEFT JOIN hrfs."BranchStaff" bs ON lt."EmployeeCode" = bs."employeeId"
+         LEFT JOIN name_lookup nl ON nl."EmployeeCode" = lt."EmployeeCode"
          ${where}
          ORDER BY lt."created_at" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]

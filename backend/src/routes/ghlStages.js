@@ -7,6 +7,20 @@ const router = express.Router();
 
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv'];
 
+// `master_leads_powerbi` was simplified upstream and dropped PII columns
+// (full_name, email, phone). Pull from `master_leads_base` and alias the
+// columns so existing query text below keeps working unchanged.
+const LEADS_SRC = `(SELECT
+    source           AS lead_source,
+    full_name,
+    email,
+    phone            AS phone_number,
+    branch           AS clean_branch,
+    branch           AS raw_branch_text,
+    NULL::text       AS region,
+    submission_date  AS submitted_at
+  FROM master_leads_base) AS leads_view`;
+
 function getStageKey(raw) {
   const s = (raw || '').toLowerCase();
   if (s.includes('new lead'))   return 'NL';
@@ -30,6 +44,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     const data = req.body;
+    const cd   = data.customData || {};
 
     const email       = (data.email        || '').trim().toLowerCase();
     const lastName    = (data.last_name    || '').trim();
@@ -40,22 +55,53 @@ router.post('/webhook', async (req, res) => {
     const pipelineName = (data.pipeline_name || '').trim();
     const contactType = (data.contact_type || 'lead').trim();
     const leadSource  = (data.source || data.contact_source || data.opportunity_source || data['Lead Source'] || '').trim();
+    // GHL nests custom fields under customData; keep the root fallback for safety
+    const preferredDay = (cd.preferred_day || data.preferred_day || '').trim();
+    const timeSlot    = (cd.time_slot     || data.time_slot     || '').trim();
 
     const stageKey = getStageKey(rawStage);
     if (!stageKey) {
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
+    // If the payload carries no custom fields and a record for this email+stage
+    // already exists, ignore it — this is the duplicate fire from the second
+    // "Opportunity Updated" workflow that arrived before the BM filled in the fields.
+    if (!preferredDay && !timeSlot) {
+      const { rows: exists } = await pool.query(
+        `SELECT 1 FROM ghl_stages WHERE email = $1 AND stage_key = $2 LIMIT 1`,
+        [email, stageKey]
+      );
+      if (exists.length > 0) {
+        return res.status(200).json({ status: 'ignored', reason: 'duplicate without custom fields' });
+      }
+    }
+
     // Fingerprint: same logic as GSheet code
     const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
-    // Upsert — ON CONFLICT DO NOTHING deduplicates permanently
+    // Upsert with merge: when the same fingerprint fires again (e.g. the BM
+    // updated preferred_day / time_slot in GHL after the first stage-change
+    // webhook), prefer the NEW payload's value when it's non-empty, otherwise
+    // keep what's already stored. Empty incoming fields never overwrite real
+    // values. stage_raw / stage_key never need updating because the fingerprint
+    // includes stage_raw, so a conflict guarantees they're identical.
     await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       ON CONFLICT (fingerprint) DO NOTHING`,
-      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource]
+         (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       ON CONFLICT (fingerprint) DO UPDATE SET
+         email         = COALESCE(NULLIF(EXCLUDED.email, ''),         ghl_stages.email),
+         last_name     = COALESCE(NULLIF(EXCLUDED.last_name, ''),     ghl_stages.last_name),
+         phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
+         pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
+         branch        = COALESCE(NULLIF(EXCLUDED.branch, ''),        ghl_stages.branch),
+         student_name  = COALESCE(NULLIF(EXCLUDED.student_name, ''),  ghl_stages.student_name),
+         contact_type  = COALESCE(NULLIF(EXCLUDED.contact_type, ''),  ghl_stages.contact_type),
+         lead_source   = COALESCE(NULLIF(EXCLUDED.lead_source, ''),   ghl_stages.lead_source),
+         preferred_day = COALESCE(NULLIF(EXCLUDED.preferred_day, ''), ghl_stages.preferred_day),
+         time_slot     = COALESCE(NULLIF(EXCLUDED.time_slot, ''),     ghl_stages.time_slot)`,
+      [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
     return res.status(200).json({ status: 'ok' });
@@ -108,12 +154,28 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
+    // Deduplicate: one row per email+stage_key, preferring the row that has
+    // preferred_day/time_slot, then the most recent.
+    const dedupCte = `
+      WITH deduped AS (
+        SELECT DISTINCT ON (email, stage_key)
+          id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch,
+          student_name, contact_type, lead_source, preferred_day, time_slot, received_at
+        FROM ghl_stages
+        ${where}
+        ORDER BY email, stage_key,
+          CASE WHEN preferred_day <> '' OR time_slot <> '' THEN 0 ELSE 1 END,
+          received_at DESC
+      )
+    `;
+
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM ghl_stages ${where}`, params),
+      pool.query(`${dedupCte} SELECT COUNT(*) FROM deduped`, params),
       pool.query(
-        `SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source,
+        `${dedupCte}
+         SELECT id, email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot,
                 (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at_local
-         FROM ghl_stages ${where}
+         FROM deduped
          ORDER BY received_at DESC
          LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
@@ -153,13 +215,20 @@ router.get('/by-pipeline', requireAuth, requireRole(ALLOWED_ROLES), async (req, 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const { rows } = await pool.query(
-      `SELECT pipeline_name,
+      `WITH deduped AS (
+         SELECT DISTINCT ON (email, stage_key) pipeline_name, stage_key
+         FROM ghl_stages
+         ${where}
+         ORDER BY email, stage_key,
+           CASE WHEN preferred_day <> '' OR time_slot <> '' THEN 0 ELSE 1 END,
+           received_at DESC
+       )
+       SELECT pipeline_name,
               COUNT(*) FILTER (WHERE stage_key = 'NL')  AS nl,
               COUNT(*) FILTER (WHERE stage_key = 'CT')  AS ct,
               COUNT(*) FILTER (WHERE stage_key = 'SU')  AS su,
               COUNT(*) FILTER (WHERE stage_key = 'ENR') AS enr
-       FROM ghl_stages
-       ${where}
+       FROM deduped
        GROUP BY pipeline_name`,
       params,
     );
@@ -191,14 +260,14 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 
     const { rows } = await pool.query(
       `SELECT
-         COALESCE(NULLIF(TRIM(m.lead_source),''), 'Unknown') AS lead_source,
+         COALESCE(NULLIF(TRIM(leads_view.lead_source),''), 'Unknown') AS lead_source,
          COUNT(*) FILTER (WHERE g.stage_key = 'CT')  AS ct,
          COUNT(*) FILTER (WHERE g.stage_key = 'SU')  AS su,
          COUNT(*) FILTER (WHERE g.stage_key = 'ENR') AS enr
        FROM ghl_stages g
-       LEFT JOIN master_leads_powerbi m ON LOWER(TRIM(m.email)) = g.email
+       LEFT JOIN ${LEADS_SRC} ON LOWER(TRIM(leads_view.email)) = g.email
        WHERE ${conditions.join(' AND ')}
-       GROUP BY COALESCE(NULLIF(TRIM(m.lead_source),''), 'Unknown')
+       GROUP BY COALESCE(NULLIF(TRIM(leads_view.lead_source),''), 'Unknown')
        ORDER BY ct DESC`,
       params,
     );
@@ -214,7 +283,7 @@ router.get('/by-source', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 // ──────────────────────────────────────────────────────────────
 router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
-    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '' } = req.body;
+    const { email = '', last_name = '', phone = '', stage_raw = '', pipeline_name = '', branch = '', student_name = '', contact_type = 'lead', lead_source = '', preferred_day = '', time_slot = '' } = req.body;
 
     const stageKey = getStageKey(stage_raw);
     if (!stageKey) return res.status(400).json({ error: 'Invalid stage. Use: New Lead (NL), Confirmed (CT), Show-Up (SU), or Enrolled (ENR)' });
@@ -222,11 +291,11 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
     const fingerprint = `${email.trim().toLowerCase()}|${last_name.trim()}|${student_name.trim()}|${stage_raw.trim()}`.replace(/\s+/g, '');
 
     const { rows } = await pool.query(
-      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        ON CONFLICT (fingerprint) DO NOTHING
        RETURNING id`,
-      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim()]
+      [email.trim().toLowerCase(), last_name.trim(), phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim(), preferred_day.trim(), time_slot.trim()]
     );
 
     if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same fingerprint already exists)' });
@@ -242,7 +311,7 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
 router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source } = req.body;
+    const { email, last_name, phone, stage_raw, pipeline_name, branch, student_name, contact_type, lead_source, preferred_day, time_slot } = req.body;
 
     // Recalculate stage_key if stage_raw changed
     let stageKey;
@@ -264,6 +333,8 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     if (student_name !== undefined) { sets.push(`student_name = $${idx++}`);  params.push(student_name.trim()); }
     if (contact_type !== undefined) { sets.push(`contact_type = $${idx++}`);  params.push(contact_type.trim()); }
     if (lead_source !== undefined)  { sets.push(`lead_source = $${idx++}`);   params.push(lead_source.trim()); }
+    if (preferred_day !== undefined){ sets.push(`preferred_day = $${idx++}`); params.push(preferred_day.trim()); }
+    if (time_slot !== undefined)    { sets.push(`time_slot = $${idx++}`);     params.push(time_slot.trim()); }
 
     if (sets.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
@@ -323,6 +394,8 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       const studentName = (r.student_name || '').trim();
       const contactType = (r.contact_type || 'lead').trim();
       const leadSource  = (r.lead_source || '').trim();
+      const preferredDay = (r.preferred_day || '').trim();
+      const timeSlot    = (r.time_slot || '').trim();
       const receivedAt  = r.received_at || null;
 
       const stageKey = getStageKey(rawStage);
@@ -334,10 +407,10 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       const bulkFingerprint = `${fingerprint}|${receivedAt || Date.now()}|${inserted + skipped}`;
 
       const { rowCount } = await pool.query(
-        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, received_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, COALESCE($12::timestamptz, NOW()))
+        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, received_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, COALESCE($14::timestamptz, NOW()))
          ON CONFLICT (fingerprint) DO NOTHING`,
-        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, receivedAt]
+        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, preferredDay, timeSlot, receivedAt]
       );
 
       if (rowCount > 0) inserted++;
@@ -353,11 +426,11 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
 // ──────────────────────────────────────────────────────────────
 // GET /api/ghl-stages/tally — raw DB leads vs GHL leads for comparison
 // ──────────────────────────────────────────────────────────────
-router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
+router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '', pipeline = '', lead_source = '' } = req.query;
 
-    // Raw leads from master_leads_powerbi
+    // Raw leads — see LEADS_SRC at top (master_leads_base aliased to old powerbi contract)
     const rawConditions = [];
     const rawParams = [];
     let ridx = 1;
@@ -370,7 +443,7 @@ router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res,
     const { rows: rawLeads } = await pool.query(
       `SELECT LOWER(TRIM(email)) AS email, full_name, phone_number AS phone, clean_branch AS branch, lead_source,
               (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
-       FROM master_leads_powerbi ${rawWhere}
+       FROM ${LEADS_SRC} ${rawWhere}
        ORDER BY submitted_at DESC`,
       rawParams,
     );
@@ -389,7 +462,7 @@ router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res,
     const ghlWhere = ghlConditions.length ? `WHERE ${ghlConditions.join(' AND ')}` : '';
 
     const { rows: ghlLeads } = await pool.query(
-      `SELECT email, last_name, phone, pipeline_name, stage_key, lead_source,
+      `SELECT email, last_name, phone, pipeline_name, stage_key, lead_source, preferred_day, time_slot,
               (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at
        FROM ghl_stages ${ghlWhere}
        ORDER BY received_at DESC`,
@@ -397,6 +470,39 @@ router.get('/tally', requireAuth, requireRole(['super_admin']), async (req, res,
     );
 
     return res.json({ rawLeads, ghlLeads });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// GET /api/ghl-stages/ct-calendar — CT counts grouped by pipeline × preferred_day × time_slot
+// Used by the Trial Slot calendar on the Tally page so BMs can plan manpower.
+// ──────────────────────────────────────────────────────────────
+router.get('/ct-calendar', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
+  try {
+    const { date_from = '', date_to = '' } = req.query;
+    const conditions = [`stage_key = 'CT'`, `preferred_day <> ''`, `time_slot <> ''`];
+    const params = [];
+    let idx = 1;
+    if (date_from) {
+      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+      params.push(date_from);
+    }
+    if (date_to) {
+      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+      params.push(date_to);
+    }
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    const { rows } = await pool.query(
+      `SELECT pipeline_name, preferred_day, time_slot, COUNT(*)::int AS n
+       FROM ghl_stages
+       ${where}
+       GROUP BY pipeline_name, preferred_day, time_slot
+       ORDER BY pipeline_name, preferred_day, time_slot`,
+      params,
+    );
+    return res.json({ rows });
   } catch (err) {
     return next(err);
   }

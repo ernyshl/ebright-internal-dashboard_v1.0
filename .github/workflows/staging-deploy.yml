@@ -9,10 +9,43 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to staging server
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          VITE_API_BASE_URL="" npm run build
+
+      - name: Upload dist, nginx config, and backend source to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 103.209.156.225
+          username: deploy
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: "frontend/dist,nginx,backend/src"
+          target: /home/deploy/apps/ebright-dashboard
+
+      - name: Rebuild backend and nginx, then restart
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 103.209.156.225
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
-          script: /home/deploy/deploy.sh dashboard
+          script: |
+            cd /home/deploy/apps/ebright-dashboard
+            # Ensure CORS_ORIGIN is set correctly in staging .env
+            sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://staging-dashboard.ebright.my|' backend/.env 2>/dev/null \
+              || echo "CORS_ORIGIN=https://staging-dashboard.ebright.my" >> backend/.env
+            # Rebuild backend with new source code
+            docker compose stop backend 2>/dev/null || docker-compose stop backend || true
+            docker compose rm -f backend 2>/dev/null || docker-compose rm -f backend || true
+            docker compose build --no-cache backend 2>/dev/null || docker-compose build --no-cache backend
+            # Rebuild nginx with new frontend
+            docker compose stop nginx 2>/dev/null || docker-compose stop nginx || true
+            docker compose rm -f nginx 2>/dev/null || docker-compose rm -f nginx || true
+            docker compose build --no-cache nginx 2>/dev/null || docker-compose build --no-cache nginx
+            # Start everything
+            docker compose up -d 2>/dev/null || docker-compose up -d
+            echo "Done!"

@@ -27,6 +27,8 @@ const { faDashboardRouter } = require('./routes/faDashboard');
 const { hrfsRouter } = require('./routes/hrfs');
 const { okrAttendanceRouter } = require('./routes/okrAttendance');
 const { studentRecordsRouter } = require('./routes/studentRecords');
+const { archivedStudentsRouter } = require('./routes/archivedStudents');
+const { branchPerformanceRouter } = require('./routes/branchPerformance');
 
 const jwt = require('jsonwebtoken');
 
@@ -92,19 +94,12 @@ function createApp() {
     crossOriginEmbedderPolicy: false,
   }));
 
-  const corsOptions = {
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
-      if (env.NODE_ENV === 'production' && origin === env.CORS_ORIGIN) return callback(null, true);
-      callback(new Error('Not allowed by CORS'));
-    },
+  app.use(cors({
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  };
-
-  app.use(cors(corsOptions));
+  }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -158,6 +153,8 @@ function createApp() {
   app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
   app.use('/api/okr-attendance', applyRoleBasedRateLimit, okrAttendanceRouter);
   app.use('/api/student-records', applyRoleBasedRateLimit, studentRecordsRouter);
+  app.use('/api/archived-students', applyRoleBasedRateLimit, archivedStudentsRouter);
+  app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

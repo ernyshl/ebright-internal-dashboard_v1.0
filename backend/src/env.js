@@ -7,6 +7,9 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  // ADD THIS LINE BELOW:
+  INV_DATABASE_URL: z.string().min(1, 'INV_DATABASE_URL is required'), 
+  
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('8h'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
@@ -27,6 +30,12 @@ const EnvSchema = z.object({
   META_TT_ID: z.string().optional(),
   META_SARA_ID: z.string().optional(),
   META_ONLINE_ID: z.string().optional(),
+
+  // Telegram bot (required at runtime when bot is used, optional at boot)
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_ALLOWED_CHATS: z.string().optional(),
+  TELEGRAM_REPORT_CHATS: z.string().optional(),
+  TELEGRAM_ALERT_CHATS: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
