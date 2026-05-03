@@ -333,7 +333,7 @@ router.get('/overview-v2', requireAuth, requireRole(ALLOWED_ROLES), async (_req,
         FROM hrfs."BranchStaff"
         WHERE "endDate" ~ ${ISO_RE}
           AND substring("endDate", 1, 10)::date >= CURRENT_DATE - INTERVAL '1 week'
-          AND substring("endDate", 1, 10)::date <= CURRENT_DATE + INTERVAL '2 months'
+          AND substring("endDate", 1, 10)::date <= CURRENT_DATE + INTERVAL '6 months'
         ORDER BY substring("endDate", 1, 10)::date ASC
       `),
       pool.query(`

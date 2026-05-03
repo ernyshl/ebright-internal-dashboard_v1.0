@@ -321,7 +321,7 @@ export function HrfsOverviewV2Page() {
           />
           <DashCard
             title="OFFBOARDING"
-            subtitle="-1 week → +2 months"
+            subtitle="-1 week → +6 months"
             color="var(--brand)"
             lightColor="var(--brandLight)"
             records={offboarded}
