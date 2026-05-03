@@ -2,8 +2,10 @@ const { env } = require('./env');
 const { createApp } = require('./app');
 const { pool } = require('./db');
 const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
+const { getTableNames } = require('./utils/tableNames');
 
 async function runMigrations() {
+  const { students: studentsTbl } = getTableNames();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS branch_okr_attendance (
       id SERIAL PRIMARY KEY,
@@ -47,7 +49,7 @@ async function runMigrations() {
       UNIQUE(branch, week_date)
     )
   `);
-  // Drop ALL CHECK constraints on studentrecords so all branches (incl. KTG) are accepted
+  // Drop ALL CHECK constraints on the active student table so all branches (incl. KTG) are accepted
   await pool.query(`
     DO $$
     DECLARE
@@ -56,10 +58,10 @@ async function runMigrations() {
       FOR con_name IN
         SELECT conname
         FROM pg_constraint
-        WHERE conrelid = 'studentrecords'::regclass
+        WHERE conrelid = '${studentsTbl}'::regclass
           AND contype = 'c'
       LOOP
-        EXECUTE 'ALTER TABLE studentrecords DROP CONSTRAINT IF EXISTS ' || quote_ident(con_name);
+        EXECUTE 'ALTER TABLE ${studentsTbl} DROP CONSTRAINT IF EXISTS ' || quote_ident(con_name);
         RAISE NOTICE 'Dropped CHECK constraint: %', con_name;
       END LOOP;
     END

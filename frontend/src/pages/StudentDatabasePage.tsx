@@ -77,6 +77,16 @@ export function StudentDatabasePage() {
     }
   }, [setStudents]);
 
+  // ── After smart bulk upload completes — refresh list & show summary ──────
+  const handleBulkUploadComplete = useCallback(async (counts: { added: number; restored: number; skipped: number; archived: number }) => {
+    try {
+      const res = await apiFetch('/api/student-records');
+      if (res.data) setStudents(res.data);
+    } catch { /* keep local state if refetch fails */ }
+    setSuccessMsg(`✅ Upload complete — Added ${counts.added}, Restored ${counts.restored}, Skipped ${counts.skipped}, Archived ${counts.archived}.`);
+    setTimeout(() => setSuccessMsg(''), 6000);
+  }, [setStudents]);
+
   // ── Update student ────────────────────────────────────────────────────────
   const updateStudent = useCallback(async (updated: any) => {
     const reconciled = {
@@ -344,7 +354,7 @@ export function StudentDatabasePage() {
       )}
 
       {/* Modals */}
-      {showAdd     && <AddStudentModal    onClose={() => setShowAdd(false)}      onAdd={addStudents} />}
+      {showAdd     && <AddStudentModal    onClose={() => setShowAdd(false)}      onAdd={addStudents} onBulkComplete={handleBulkUploadComplete} />}
       {editStudent && <EditStudentModal   student={editStudent} onClose={() => setEditStudent(null)}   onSave={updateStudent} />}
       {deleteStudent && <DeleteConfirmModal student={deleteStudent} onClose={() => setDeleteStudent(null)} onConfirm={() => deleteStudentById(deleteStudent.id)} />}
 

@@ -46,6 +46,7 @@ import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage
 import { UiUxTestingPage } from './pages/UiUxTestingPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
 import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
+import { StudentAttendancePage } from './pages/StudentAttendancePage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
 import { CtWithTimeSlotPage } from './pages/CtWithTimeSlotPage';
 import { BranchPerformancePage } from './pages/BranchPerformancePage';
@@ -203,6 +204,9 @@ export default function App() {
           } />
           <Route path="/archived-students" element={
             <RequirePermission dashboard="student_db"><ArchivedStudentsPage /></RequirePermission>
+          } />
+          <Route path="/student-attendance" element={
+            <RequirePermission dashboard="student_db"><StudentAttendancePage /></RequirePermission>
           } />
           <Route path="/okr-attendance" element={
             <RequirePermission dashboard="operations"><OkrAttendancePage /></RequirePermission>

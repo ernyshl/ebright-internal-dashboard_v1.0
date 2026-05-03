@@ -157,6 +157,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
         { label: '🗂 Archived Students', path: '/archived-students', dashboard: 'student_db' },
+        { label: '📋 Student Attendance', path: '/student-attendance', dashboard: 'student_db' },
       ]
     },
     {

@@ -2,6 +2,9 @@ import { useState, useRef } from 'react';
 import { BRANCHES, GRADES, CHAPTERS } from '../../lib/studentTypes';
 import { getFaCount, getPcmCount } from '../../lib/studentFaLogic';
 import { parseExcelFile, generateId } from '../../lib/studentExcelParser';
+import { usePreviewUpload, useConfirmUpload } from '../../hooks/useStudentUpload';
+import type { PreviewResponse, ConfirmResponse } from '../../api/studentUpload';
+import UploadConfirmationModal from '../UploadConfirmationModal';
 
 const sel = { fontSize:11, border:'1px solid var(--border)', borderRadius:6, padding:'4px 8px', background:'var(--bg)', color:'var(--text)', outline:'none' };
 const inp = { fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', background:'var(--bg)', color:'var(--text)', outline:'none', width:'100%', boxSizing:'border-box' as const };
@@ -13,16 +16,20 @@ function emptyForm() {
 }
 
 /* ─── Bulk Upload Tab ─── */
-function BulkUploadTab({ onAdd, onClose }) {
+function BulkUploadTab({ onBulkComplete, onClose }: { onBulkComplete: (counts: ConfirmResponse) => Promise<void> | void; onClose: () => void }) {
   const [step, setStep]               = useState('upload');
-  const [preview, setPreview]         = useState([]);
+  const [preview, setPreview]         = useState<any[]>([]);
   const [defaultBranch, setDefaultBranch] = useState('ONL');
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState('');
   const [fileName, setFileName]       = useState('');
-  const fileInputRef                  = useRef(null);
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file) {
+  const previewMutation = usePreviewUpload();
+  const confirmMutation = useConfirmUpload();
+  const [previewResp, setPreviewResp] = useState<PreviewResponse | null>(null);
+
+  async function handleFile(file: any) {
     if (!file) return;
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext !== 'xlsx' && ext !== 'xls') { setError('Please upload an Excel file (.xlsx or .xls)'); return; }
@@ -36,30 +43,58 @@ function BulkUploadTab({ onAdd, onClose }) {
     setLoading(false);
   }
 
-  function updateRow(tempId, field, value) {
+  function updateRow(tempId: any, field: any, value: any) {
     setPreview(prev => prev.map(r => r.tempId === tempId ? { ...r, [field]: value } : r));
   }
 
-  function removeRow(tempId) {
+  function removeRow(tempId: any) {
     setPreview(prev => { const next = prev.filter(r => r.tempId !== tempId); if (!next.length) setStep('upload'); return next; });
   }
 
-  function handleSave() {
-    const students = preview.map(r => ({
-      id: generateId(), name: r.name, gender: r.gender, enrollmentDate: r.enrollmentDate,
-      status: r.status, grade: r.grade, chapter: r.chapter, branch: r.branch,
-      faAttended:  Array(getFaCount(r.grade, r.chapter)).fill(false),
-      pcmAttended: Array(getPcmCount(r.grade, r.chapter)).fill(false),
-    }));
-    onAdd(students); onClose();
+  async function handleSave() {
+    setError('');
+    try {
+      const rows = preview.map(({ tempId, ...rest }) => rest);
+      const resp = await previewMutation.mutateAsync({ rows, branch: defaultBranch });
+      setPreviewResp(resp);
+    } catch (err: any) {
+      setError(err?.data?.error || err?.message || 'Failed to preview upload.');
+    }
+  }
+
+  async function handleConfirm() {
+    if (!previewResp) return;
+    try {
+      const result = await confirmMutation.mutateAsync({ categorized: previewResp.payload, branch: defaultBranch });
+      setPreviewResp(null);
+      await onBulkComplete(result);
+      onClose();
+    } catch (err: any) {
+      setError(err?.data?.error || err?.message || 'Failed to apply upload.');
+    }
+  }
+
+  function handleCancelConfirmation() {
+    if (confirmMutation.isPending) return;
+    setPreviewResp(null);
   }
 
   if (step === 'preview') {
+    const isPreviewing = previewMutation.isPending;
+    const isConfirming = confirmMutation.isPending;
     return (
       <>
+        {previewResp && (
+          <UploadConfirmationModal
+            preview={previewResp}
+            onConfirm={handleConfirm}
+            onCancel={handleCancelConfirmation}
+            isLoading={isConfirming}
+          />
+        )}
         <div style={{ overflowY:'auto', flex:1, padding:16 }}>
           <p style={{ fontSize:11, color:'var(--muted)', margin:'0 0 12px' }}>
-            <span style={{ color:'#22c55e', fontWeight:700 }}>✓ {fileName}</span> — {preview.length} rows extracted
+            <span style={{ color:'#22c55e', fontWeight:700 }}>✓ {fileName}</span> — {preview.length} rows extracted · branch <strong style={{ color:'#6366f1' }}>{defaultBranch}</strong>
           </p>
           <div style={{ overflowX:'auto' }}>
             <table style={{ minWidth:'100%', borderCollapse:'collapse', fontSize:12 }}>
@@ -90,10 +125,11 @@ function BulkUploadTab({ onAdd, onClose }) {
           </div>
         </div>
         <div style={{ padding:'16px 24px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <button onClick={() => { setStep('upload'); setFileName(''); setPreview([]); }} style={{ fontSize:13, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>← Upload different file</button>
+          <button onClick={() => { setStep('upload'); setFileName(''); setPreview([]); }} disabled={isPreviewing || isConfirming} style={{ fontSize:13, color:'var(--muted)', background:'none', border:'none', cursor: (isPreviewing || isConfirming) ? 'not-allowed' : 'pointer', textDecoration:'underline', opacity: (isPreviewing || isConfirming) ? 0.4 : 1 }}>← Upload different file</button>
+          {error && <p style={{ fontSize:12, color:'#dc2626', margin:0, flex:1, textAlign:'center' }}>{error}</p>}
           <div style={{ display:'flex', gap:12 }}>
-            <button onClick={onClose} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', cursor:'pointer' }}>Cancel</button>
-            <button onClick={handleSave} style={{ fontSize:13, padding:'8px 24px', borderRadius:8, border:'none', background:'#4f46e5', color:'#fff', cursor:'pointer', fontWeight:600 }}>Save {preview.length} Student{preview.length!==1?'s':''}</button>
+            <button onClick={onClose} disabled={isPreviewing || isConfirming} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', cursor: (isPreviewing || isConfirming) ? 'not-allowed' : 'pointer', opacity: (isPreviewing || isConfirming) ? 0.5 : 1 }}>Cancel</button>
+            <button onClick={handleSave} disabled={isPreviewing || isConfirming} style={{ fontSize:13, padding:'8px 24px', borderRadius:8, border:'none', background:'#4f46e5', color:'#fff', cursor: (isPreviewing || isConfirming) ? 'not-allowed' : 'pointer', fontWeight:600, opacity: (isPreviewing || isConfirming) ? 0.7 : 1 }}>{isPreviewing ? 'Analyzing…' : `Review ${preview.length} Student${preview.length!==1?'s':''}`}</button>
           </div>
         </div>
       </>
@@ -273,7 +309,13 @@ function ManualEntryTab({ onAdd, onClose }) {
 }
 
 /* ─── Main Modal ─── */
-export default function AddStudentModal({ onClose, onAdd }) {
+type AddStudentModalProps = {
+  onClose: () => void;
+  onAdd: (students: any[]) => void;
+  onBulkComplete: (counts: ConfirmResponse) => Promise<void> | void;
+};
+
+export default function AddStudentModal({ onClose, onAdd, onBulkComplete }: AddStudentModalProps) {
   const [activeTab, setActiveTab] = useState<'bulk' | 'manual'>('bulk');
 
   const tabBtn = (id: 'bulk' | 'manual', label: string) => (
@@ -308,7 +350,7 @@ export default function AddStudentModal({ onClose, onAdd }) {
         </div>
 
         {activeTab === 'bulk'
-          ? <BulkUploadTab onAdd={onAdd} onClose={onClose} />
+          ? <BulkUploadTab onBulkComplete={onBulkComplete} onClose={onClose} />
           : <ManualEntryTab onAdd={onAdd} onClose={onClose} />
         }
       </div>

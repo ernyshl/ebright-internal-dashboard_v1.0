@@ -29,6 +29,8 @@ const { okrAttendanceRouter } = require('./routes/okrAttendance');
 const { studentRecordsRouter } = require('./routes/studentRecords');
 const { archivedStudentsRouter } = require('./routes/archivedStudents');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
+const { studentUploadRouter } = require('./routes/studentUpload');
+const { studentAttendanceRouter } = require('./routes/studentAttendance');
 
 const jwt = require('jsonwebtoken');
 
@@ -155,6 +157,8 @@ function createApp() {
   app.use('/api/student-records', applyRoleBasedRateLimit, studentRecordsRouter);
   app.use('/api/archived-students', applyRoleBasedRateLimit, archivedStudentsRouter);
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
+  app.use('/api/student-upload', applyRoleBasedRateLimit, studentUploadRouter);
+  app.use('/api/student-attendance', applyRoleBasedRateLimit, studentAttendanceRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

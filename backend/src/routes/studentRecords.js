@@ -1,5 +1,6 @@
 const express = require('express');
 const { prisma } = require('../prismaClient');
+const { getTableNames } = require('../utils/tableNames');
 
 const router = express.Router();
 
@@ -30,11 +31,12 @@ function toTotalStr(arr) {
 
 router.get('/', async (req, res, next) => {
   try {
+    const { students } = getTableNames();
     const { branch } = req.query;
     const rows = await prisma.$queryRawUnsafe(
       branch
-        ? `SELECT * FROM studentrecords WHERE branch = $1 ORDER BY name ASC`
-        : `SELECT * FROM studentrecords ORDER BY name ASC`,
+        ? `SELECT * FROM ${students} WHERE branch = $1 ORDER BY name ASC`
+        : `SELECT * FROM ${students} ORDER BY name ASC`,
       ...(branch ? [branch] : [])
     );
     return res.json({ data: rows.map(rowToStudent) });
@@ -51,9 +53,10 @@ router.post('/bulk', async (req, res, next) => {
     return res.status(400).json({ error: 'students array required' });
 
   try {
+    const { students: tbl } = getTableNames();
     for (const s of students) {
       await prisma.$queryRawUnsafe(
-        `INSERT INTO studentrecords
+        `INSERT INTO ${tbl}
            (name, status, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm)
          VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10)`,
@@ -69,7 +72,7 @@ router.post('/bulk', async (req, res, next) => {
         toTotalStr(s.pcmAttended),
       );
     }
-    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM studentrecords ORDER BY name ASC`);
+    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM ${tbl} ORDER BY name ASC`);
     return res.json({ ok: true, data: rows.map(rowToStudent) });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Internal server error' });
@@ -86,8 +89,9 @@ router.put('/:id', async (req, res, next) => {
     ? s.enrollmentDate
     : null;
   try {
+    const { students: tbl } = getTableNames();
     await prisma.$queryRawUnsafe(
-      `UPDATE studentrecords SET
+      `UPDATE ${tbl} SET
          name=$1, status=$2, gender=$3, branch=$4,
          enrollment_date = COALESCE($5::date, enrollment_date),
          grade_chapter=$6, fa_progress_json=$7::jsonb, total_fa=$8,
@@ -105,7 +109,7 @@ router.put('/:id', async (req, res, next) => {
       toTotalStr(s.pcmAttended),
       id,
     );
-    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM studentrecords WHERE id=$1`, id);
+    const rows = await prisma.$queryRawUnsafe(`SELECT * FROM ${tbl} WHERE id=$1`, id);
     return res.json({ ok: true, data: rowToStudent(rows[0]) });
   } catch (err) {
     return next(err);
@@ -117,10 +121,11 @@ router.put('/:id', async (req, res, next) => {
 router.delete('/', async (req, res, next) => {
   const { branch } = req.query;
   try {
+    const { students: tbl } = getTableNames();
     if (branch && branch !== 'All') {
-      await prisma.$queryRawUnsafe(`DELETE FROM studentrecords WHERE branch=$1`, branch);
+      await prisma.$queryRawUnsafe(`DELETE FROM ${tbl} WHERE branch=$1`, branch);
     } else {
-      await prisma.$queryRawUnsafe(`DELETE FROM studentrecords`);
+      await prisma.$queryRawUnsafe(`DELETE FROM ${tbl}`);
     }
     return res.json({ ok: true });
   } catch (err) {
@@ -133,7 +138,8 @@ router.delete('/', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   try {
-    await prisma.$queryRawUnsafe(`DELETE FROM studentrecords WHERE id=$1`, id);
+    const { students: tbl } = getTableNames();
+    await prisma.$queryRawUnsafe(`DELETE FROM ${tbl} WHERE id=$1`, id);
     return res.json({ ok: true });
   } catch (err) {
     return next(err);

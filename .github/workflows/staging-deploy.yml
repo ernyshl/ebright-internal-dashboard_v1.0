@@ -38,6 +38,13 @@ jobs:
             # Ensure CORS_ORIGIN is set correctly in staging .env
             sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://staging-dashboard.ebright.my|' backend/.env 2>/dev/null \
               || echo "CORS_ORIGIN=https://staging-dashboard.ebright.my" >> backend/.env
+            # Pin staging to the testing tables so it never writes to production student data
+            grep -q '^STUDENT_TABLE=' backend/.env \
+              && sed -i 's|^STUDENT_TABLE=.*|STUDENT_TABLE=studentrecords_testing|' backend/.env \
+              || echo "STUDENT_TABLE=studentrecords_testing" >> backend/.env
+            grep -q '^ARCHIVED_TABLE=' backend/.env \
+              && sed -i 's|^ARCHIVED_TABLE=.*|ARCHIVED_TABLE=archived_students_testing|' backend/.env \
+              || echo "ARCHIVED_TABLE=archived_students_testing" >> backend/.env
             # Rebuild backend with new source code
             docker compose stop backend 2>/dev/null || docker-compose stop backend || true
             docker compose rm -f backend 2>/dev/null || docker-compose rm -f backend || true
