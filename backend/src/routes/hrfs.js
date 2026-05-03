@@ -44,7 +44,9 @@ router.get('/attendance', requireAuth, requireRole(ALLOWED_ROLES), async (req, r
 
 // HQ-type branch codes — staff under any of these are treated as HQ for
 // scheduling (Tue–Sat) and are merged behind the "HQ" filter button.
-const HQ_BRANCHES = ['HQ', 'HR', 'OD', 'MKT', 'FINANCE', 'ACADEMY', 'OPERATION'];
+// Includes both the short codes used in BranchStaff (ACD, FNC) and longer
+// variants in case they ever appear.
+const HQ_BRANCHES = ['HQ', 'HR', 'OD', 'MKT', 'FNC', 'FINANCE', 'ACD', 'ACADEMY', 'OPERATION'];
 
 // GET /api/hrfs/attendance-dashboard — summary cards + expected-today list
 //
@@ -117,12 +119,12 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
             OR (bs.position ILIKE '%intern%' AND ${dow} IN (2,3,4,5,6))
             OR (
               (bs.position IS NULL OR (bs.position NOT ILIKE '%coach%' AND bs.position NOT ILIKE '%intern%'))
-              AND UPPER(COALESCE(bs.branch, '')) = ANY('{HQ,HR,OD,MKT,FINANCE,ACADEMY,OPERATION}'::text[])
+              AND UPPER(COALESCE(bs.branch, '')) = ANY('{HQ,HR,OD,MKT,FNC,FINANCE,ACD,ACADEMY,OPERATION}'::text[])
               AND ${dow} IN (2,3,4,5,6)
             )
             OR (
               (bs.position IS NULL OR (bs.position NOT ILIKE '%coach%' AND bs.position NOT ILIKE '%intern%'))
-              AND UPPER(COALESCE(bs.branch, '')) <> ALL('{HQ,HR,OD,MKT,FINANCE,ACADEMY,OPERATION}'::text[])
+              AND UPPER(COALESCE(bs.branch, '')) <> ALL('{HQ,HR,OD,MKT,FNC,FINANCE,ACD,ACADEMY,OPERATION}'::text[])
               AND ${dow} IN (3,4,5,6,0)
             )
           )

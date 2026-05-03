@@ -114,8 +114,8 @@ function ExpectedTable({ title, records, color }) {
 }
 
 // Branch codes that are merged behind a single "HQ" filter button. Mirrors the
-// list in backend/src/routes/hrfs.js HQ_BRANCHES.
-const HQ_BRANCH_CODES = ['HQ', 'HR', 'OD', 'MKT', 'FINANCE', 'ACADEMY', 'OPERATION'];
+// list in backend/src/routes/hrfs.js HQ_BRANCHES (includes ACD/FNC short codes).
+const HQ_BRANCH_CODES = ['HQ', 'HR', 'OD', 'MKT', 'FNC', 'FINANCE', 'ACD', 'ACADEMY', 'OPERATION'];
 
 export function HrfsAttendanceDashboardPage() {
   const [branch, setBranch] = useState<string>('all');
