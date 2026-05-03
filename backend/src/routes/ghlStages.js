@@ -124,9 +124,9 @@ router.post('/webhook', async (req, res) => {
 
     const { rowCount } = await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-       ON CONFLICT (email, opportunity_name, stage_key) DO UPDATE SET
+         (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'webhook')
+       ON CONFLICT (email, opportunity_name, stage_key) WHERE source = 'webhook' DO UPDATE SET
          last_name     = COALESCE(NULLIF(EXCLUDED.last_name, ''),     ghl_stages.last_name),
          phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
          pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
@@ -335,16 +335,23 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
 
     const oppName = (opportunity_name || last_name || student_name || '').trim();
     const fingerprint = `${email.trim().toLowerCase()}|${last_name.trim()}|${student_name.trim()}|${stage_raw.trim()}`.replace(/\s+/g, '');
+    const emailLc = email.trim().toLowerCase();
+
+    // Pre-check across ALL sources — manual create still rejects duplicates of
+    // any existing row (webhook, replay, or another manual).
+    const { rows: dup } = await pool.query(
+      `SELECT 1 FROM ghl_stages WHERE email = $1 AND opportunity_name = $2 AND stage_key = $3 LIMIT 1`,
+      [emailLc, oppName, stageKey]
+    );
+    if (dup.length > 0) return res.status(409).json({ error: 'Duplicate record (same email+opportunity_name+stage already exists)' });
 
     const { rows } = await pool.query(
-      `INSERT INTO ghl_stages (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-       ON CONFLICT (email, opportunity_name, stage_key) DO NOTHING
+      `INSERT INTO ghl_stages (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'manual')
        RETURNING id`,
-      [email.trim().toLowerCase(), last_name.trim(), oppName, phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim(), preferred_day.trim(), time_slot.trim()]
+      [emailLc, last_name.trim(), oppName, phone.trim(), stage_raw.trim(), stageKey, pipeline_name.trim(), branch.trim(), student_name.trim(), contact_type.trim(), fingerprint, lead_source.trim(), preferred_day.trim(), time_slot.trim()]
     );
 
-    if (rows.length === 0) return res.status(409).json({ error: 'Duplicate record (same email+opportunity_name+stage already exists)' });
     return res.status(201).json({ id: rows[0].id });
   } catch (err) {
     return next(err);
@@ -449,15 +456,18 @@ router.post('/bulk', requireAuth, requireRole(['super_admin']), async (req, res,
       if (!stageKey) { skipped++; continue; }
 
       const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
+      const oppName = (r.opportunity_name || lastName || studentName || '').trim();
 
-      // Use a unique fingerprint per row to allow duplicates in bulk import
+      // Use a unique fingerprint per row to allow duplicates in bulk import.
+      // source='manual' so the partial unique index on webhook rows does
+      // not block bulk backfill that overlaps with existing webhook rows.
       const bulkFingerprint = `${fingerprint}|${receivedAt || Date.now()}|${inserted + skipped}`;
 
       const { rowCount } = await pool.query(
-        `INSERT INTO ghl_stages (email, last_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, received_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, COALESCE($14::timestamptz, NOW()))
+        `INSERT INTO ghl_stages (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, received_at, source)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, COALESCE($15::timestamptz, NOW()), 'manual')
          ON CONFLICT (fingerprint) DO NOTHING`,
-        [email, lastName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, preferredDay, timeSlot, receivedAt]
+        [email, lastName, oppName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, bulkFingerprint, leadSource, preferredDay, timeSlot, receivedAt]
       );
 
       if (rowCount > 0) inserted++;
@@ -669,22 +679,15 @@ router.post('/ignored/:id/replay', requireAuth, requireRole(['super_admin']), as
 
     const fingerprint = `${email}|${lastName}|${studentName}|${rawStage}`.replace(/\s+/g, '');
 
-    // Upsert against the (email, opportunity_name, stage_key) unique index —
-    // non-empty values overwrite the existing row, empty values preserve it.
+    // Replay path is allowed to insert a duplicate of an existing
+    // (email, opportunity_name, stage_key) row. The partial unique index only
+    // covers source = 'webhook', so this insert with source = 'replay'
+    // bypasses it. The Lead Centre display dedups via DISTINCT ON, so
+    // duplicates render as one row.
     await pool.query(
       `INSERT INTO ghl_stages
-         (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-       ON CONFLICT (email, opportunity_name, stage_key) DO UPDATE SET
-         last_name     = COALESCE(NULLIF(EXCLUDED.last_name, ''),     ghl_stages.last_name),
-         phone         = COALESCE(NULLIF(EXCLUDED.phone, ''),         ghl_stages.phone),
-         pipeline_name = COALESCE(NULLIF(EXCLUDED.pipeline_name, ''), ghl_stages.pipeline_name),
-         branch        = COALESCE(NULLIF(EXCLUDED.branch, ''),        ghl_stages.branch),
-         student_name  = COALESCE(NULLIF(EXCLUDED.student_name, ''),  ghl_stages.student_name),
-         contact_type  = COALESCE(NULLIF(EXCLUDED.contact_type, ''),  ghl_stages.contact_type),
-         lead_source   = COALESCE(NULLIF(EXCLUDED.lead_source, ''),   ghl_stages.lead_source),
-         preferred_day = COALESCE(NULLIF(EXCLUDED.preferred_day, ''), ghl_stages.preferred_day),
-         time_slot     = COALESCE(NULLIF(EXCLUDED.time_slot, ''),     ghl_stages.time_slot)`,
+         (email, last_name, opportunity_name, phone, stage_raw, stage_key, pipeline_name, branch, student_name, contact_type, fingerprint, lead_source, preferred_day, time_slot, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'replay')`,
       [email, lastName, opportunityName, phone, rawStage, stageKey, pipelineName, branch, studentName, contactType, fingerprint, leadSource, preferredDay, timeSlot]
     );
 
