@@ -24,7 +24,7 @@ jobs:
           host: 103.209.156.225
           username: deploy
           key: ${{ secrets.STAGING_SSH_KEY }}
-          source: "frontend/dist,nginx,backend/src"
+          source: "frontend/dist,nginx,backend/src,backend/package.json,backend/package-lock.json,backend/prisma,backend/Dockerfile"
           target: /home/deploy/apps/ebright-dashboard
 
       - name: Rebuild backend and nginx, then restart
@@ -38,6 +38,16 @@ jobs:
             # Ensure CORS_ORIGIN is set correctly in staging .env
             sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://staging-dashboard.ebright.my|' backend/.env 2>/dev/null \
               || echo "CORS_ORIGIN=https://staging-dashboard.ebright.my" >> backend/.env
+            # Pin staging to the testing tables so it never writes to production student data
+            grep -q '^STUDENT_TABLE=' backend/.env \
+              && sed -i 's|^STUDENT_TABLE=.*|STUDENT_TABLE=studentrecords_testing|' backend/.env \
+              || echo "STUDENT_TABLE=studentrecords_testing" >> backend/.env
+            grep -q '^ARCHIVED_TABLE=' backend/.env \
+              && sed -i 's|^ARCHIVED_TABLE=.*|ARCHIVED_TABLE=archived_students_testing|' backend/.env \
+              || echo "ARCHIVED_TABLE=archived_students_testing" >> backend/.env
+            # INV_DATABASE_URL is required by env.js boot validation; keep in sync if Dina provides a real inventory DB
+            grep -q '^INV_DATABASE_URL=' backend/.env \
+              || echo "INV_DATABASE_URL=postgresql://optidept:ebrightoptidept2025@103.209.156.174:5433/ebrightleads_db" >> backend/.env
             # Rebuild backend with new source code
             docker compose stop backend 2>/dev/null || docker-compose stop backend || true
             docker compose rm -f backend 2>/dev/null || docker-compose rm -f backend || true

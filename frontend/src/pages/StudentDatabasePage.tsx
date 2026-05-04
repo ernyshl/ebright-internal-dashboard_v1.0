@@ -9,6 +9,7 @@ import { apiFetch } from '../lib/api';
 import AddStudentModal from '../components/StudentDB/AddStudentModal';
 import EditStudentModal from '../components/StudentDB/EditStudentModal';
 import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
+import ArchiveConfirmModal from '../components/StudentDB/ArchiveConfirmModal';
 
 function toIsoDate(val: string): string {
   if (!val) return '';
@@ -31,6 +32,7 @@ export function StudentDatabasePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [editStudent, setEditStudent] = useState<any>(null);
   const [deleteStudent, setDeleteStudent] = useState<any>(null);
+  const [archiveStudent, setArchiveStudent] = useState<any>(null);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const [deleteAllBranch, setDeleteAllBranch] = useState('All');
@@ -117,6 +119,21 @@ export function StudentDatabasePage() {
     setStudents((prev: any[]) => prev.filter(s => s.id !== id));
     setDeleteStudent(null);
   }, [setStudents]);
+
+  // ── Archive student ───────────────────────────────────────────────────────
+  const archiveStudentById = useCallback(async (student: any) => {
+    try {
+      await apiFetch(`/api/student-records/${student.id}/archive`, { method: 'POST' });
+      setStudents((prev: any[]) => prev.filter(s => s.id !== student.id));
+      setArchiveStudent(null);
+      setSuccessMsg(`📦 ${student.name} archived. Redirecting…`);
+      setTimeout(() => navigate('/archived-students'), 800);
+    } catch (err: any) {
+      setArchiveStudent(null);
+      setSuccessMsg(`❌ Archive failed: ${err?.data?.error || err?.message || 'server error'}`);
+      setTimeout(() => setSuccessMsg(''), 6000);
+    }
+  }, [setStudents, navigate]);
 
   // ── Delete ALL students ───────────────────────────────────────────────────
   const deleteAllStudents = useCallback(async (branch: string) => {
@@ -212,6 +229,8 @@ export function StudentDatabasePage() {
           </div>
         </div>
       </div>
+
+      {apiError && <div style={{ background:'#fee2e2', border:'1px solid #fca5a5', borderRadius:8, padding:'10px 16px', marginBottom:12, fontSize:13, color:'#dc2626' }}>⚠ API Error: {apiError}</div>}
 
       {/* Success notification */}
       {successMsg && (
@@ -339,6 +358,7 @@ export function StudentDatabasePage() {
                     <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
                       <div style={{ display:'flex', gap:8 }}>
                         <button onClick={() => setEditStudent(student)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'rgba(59,130,246,0.12)', color:'#2563eb', cursor:'pointer', fontWeight:600 }}>Edit</button>
+                        <button onClick={() => setArchiveStudent(student)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'rgba(245,158,11,0.12)', color:'#d97706', cursor:'pointer', fontWeight:600 }}>Archive</button>
                         <button onClick={() => setDeleteStudent(student)} style={{ fontSize:11, padding:'4px 10px', borderRadius:6, border:'none', background:'rgba(239,68,68,0.1)', color:'#dc2626', cursor:'pointer', fontWeight:600 }}>Delete</button>
                       </div>
                     </td>
@@ -355,6 +375,7 @@ export function StudentDatabasePage() {
       {showAdd     && <AddStudentModal    onClose={() => setShowAdd(false)}      onAdd={addStudents} onBulkComplete={handleBulkUploadComplete} />}
       {editStudent && <EditStudentModal   student={editStudent} onClose={() => setEditStudent(null)}   onSave={updateStudent} />}
       {deleteStudent && <DeleteConfirmModal student={deleteStudent} onClose={() => setDeleteStudent(null)} onConfirm={() => deleteStudentById(deleteStudent.id)} />}
+      {archiveStudent && <ArchiveConfirmModal student={archiveStudent} onClose={() => setArchiveStudent(null)} onConfirm={() => archiveStudentById(archiveStudent)} />}
 
       {/* Delete All Confirmation Modal */}
       {showDeleteAll && (
