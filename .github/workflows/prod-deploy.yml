@@ -24,7 +24,7 @@ jobs:
           host: 103.209.156.174
           username: staff1
           key: ${{ secrets.PROD_SSH_KEY }}
-          source: "frontend/dist,nginx,backend/src"
+          source: "frontend/dist,nginx,backend/src,backend/package.json,backend/package-lock.json,backend/prisma,backend/Dockerfile"
           target: /home/staff1/_deploy_tmp
 
       - name: Rebuild backend and nginx, then restart
@@ -53,18 +53,28 @@ jobs:
             echo "==> APP_DIR: $APP_DIR"
             if [ -z "$APP_DIR" ]; then echo "ERROR: app dir not found"; exit 1; fi
 
-            # Step 3: Copy built frontend + nginx + backend src
+            # Step 3: Copy built frontend + nginx + backend src + package files + prisma
             mkdir -p "$APP_DIR/frontend/dist"
             rsync -a --delete /home/staff1/_deploy_tmp/frontend/dist/ "$APP_DIR/frontend/dist/"
             rsync -a /home/staff1/_deploy_tmp/nginx/ "$APP_DIR/nginx/"
-            mkdir -p "$APP_DIR/backend/src"
+            mkdir -p "$APP_DIR/backend/src" "$APP_DIR/backend/prisma"
             rsync -a --delete /home/staff1/_deploy_tmp/backend/src/ "$APP_DIR/backend/src/"
+            cp /home/staff1/_deploy_tmp/backend/package.json "$APP_DIR/backend/package.json"
+            cp /home/staff1/_deploy_tmp/backend/package-lock.json "$APP_DIR/backend/package-lock.json"
+            rsync -a --delete /home/staff1/_deploy_tmp/backend/prisma/ "$APP_DIR/backend/prisma/"
+            [ -f /home/staff1/_deploy_tmp/backend/Dockerfile ] && cp /home/staff1/_deploy_tmp/backend/Dockerfile "$APP_DIR/backend/Dockerfile"
 
             # Step 4: Patch env
             sed -i 's|CORS_ORIGIN=.*|CORS_ORIGIN=https://dashboard.ebright.my|' "$APP_DIR/backend/.env" 2>/dev/null \
               || echo "CORS_ORIGIN=https://dashboard.ebright.my" >> "$APP_DIR/backend/.env"
             sed -i 's|NODE_ENV=.*|NODE_ENV=production|' "$APP_DIR/backend/.env" 2>/dev/null \
               || echo "NODE_ENV=production" >> "$APP_DIR/backend/.env"
+            # INV_DATABASE_URL is required by env.js boot validation; only append if missing so a real value (set by Dina) survives
+            grep -q '^INV_DATABASE_URL=' "$APP_DIR/backend/.env" \
+              || echo "INV_DATABASE_URL=postgresql://optidept:ebrightoptidept2025@103.209.156.174:5433/ebrightleads_db" >> "$APP_DIR/backend/.env"
+            # Defensive: NEVER let prod point at testing tables, even if someone copy-pasted staging .env by mistake
+            sed -i '/^STUDENT_TABLE=/d' "$APP_DIR/backend/.env"
+            sed -i '/^ARCHIVED_TABLE=/d' "$APP_DIR/backend/.env"
 
             # Step 5: Rebuild backend + nginx
             cd "$APP_DIR"
