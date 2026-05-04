@@ -46,7 +46,7 @@ def myt_day_to_utc_range(target):
 
 def get_page_token():
     """sync_meta_leads.py reads from meta_integration; replicate that here."""
-    conn = psycopg2.connect(config.DATABASE_URL)
+    conn = psycopg2.connect(**config.DB_CONFIG)
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -111,7 +111,7 @@ def fetch_form_leads(token, form_id, start_utc, end_utc):
 def fetch_db_leads(target):
     """All meta_leads with raw_data->>'created_time' inside the MYT day."""
     start_utc, end_utc = myt_day_to_utc_range(target)
-    conn = psycopg2.connect(config.DATABASE_URL)
+    conn = psycopg2.connect(**config.DB_CONFIG)
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -139,9 +139,23 @@ def main():
         print("❌ No access token. Check meta_integration table or config.LEADS_ACCESS_TOKEN.")
         sys.exit(1)
 
-    page_id = getattr(config, "PAGE_ID", None) or os.environ.get("PAGE_ID")
+    page_id = (
+        getattr(config, "PAGE_ID", None)
+        or getattr(config, "META_PAGE_ID", None)
+        or getattr(config, "FB_PAGE_ID", None)
+        or os.environ.get("PAGE_ID")
+    )
     if not page_id:
-        print("❌ PAGE_ID not configured in config.py.")
+        # Last resort: ask Meta which page this token belongs to.
+        try:
+            r = requests.get(f"{GRAPH}/me", params={"access_token": token}, timeout=15)
+            data = r.json()
+            page_id = data.get("id")
+            print(f"📄 Page (auto-discovered via /me): {data.get('name', '?')}")
+        except Exception:
+            pass
+    if not page_id:
+        print("❌ PAGE_ID not configured in config.py and /me lookup failed.")
         sys.exit(1)
 
     print(f"📄 Page: {page_id}")
