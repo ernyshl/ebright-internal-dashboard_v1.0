@@ -17,11 +17,11 @@ export const BRANCH_TO_PIPELINE = {
   'Eco Grandeur':            '15 EGR',
   'Bandar Seri Putra':       '16 BSP',
   'Bandar Rimbayu':          '17 RBY',
-  'Kajang Perdana':          '18 TSG',
-  'Kajang':                  '18 TSG',
-  'Kajang TTDI Grove':       '18 TSG',
+  'Kajang Perdana':          '20 KTG',
+  'Kajang':                  '20 KTG',
+  'Kajang TTDI Grove':       '20 KTG',
   'Kota Warisan':            '19 KW',
-  'Taman Sri Gombak':        '20 KTG',
+  'Taman Sri Gombak':        '18 TSG',
   'Dataran Puchong Utama':   '21 DPU',
 };
 
@@ -79,9 +79,9 @@ export const PIPELINE_TO_BRANCH = {
   '15 EGR':  'Eco Grandeur',
   '16 BSP':  'Bandar Seri Putra',
   '17 RBY':  'Bandar Rimbayu',
-  '18 TSG':  'Kajang TTDI Grove',
+  '18 TSG':  'Taman Sri Gombak',
   '19 KW':   'Kota Warisan',
-  '20 KTG':  'Taman Sri Gombak',
+  '20 KTG':  'Kajang TTDI Grove',
   '21 DPU':  'Dataran Puchong Utama',
 };
 

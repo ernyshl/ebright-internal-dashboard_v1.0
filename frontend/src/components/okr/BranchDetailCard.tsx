@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DAYS } from '../../lib/okr/constants';
-import { n, weekRange, getRateColor, formatPct } from '../../lib/okr/utils';
+import { n, weekRange, getRateColor, formatPct, toWednesday } from '../../lib/okr/utils';
 import { RateBar } from './RateBar';
 import { DailyAttendanceChart } from './DailyAttendanceChart';
 import { FourWeekChart } from './FourWeekChart';
+import { FrozenStudentsModal } from './FrozenStudentsModal';
 import { apiFetch } from '../../lib/api';
 
 const WEEK_LABELS = ['3 Weeks', '2 Weeks', 'Last Week', 'This Week'];
@@ -15,6 +16,13 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
   const [activeStudentsInput, setActiveStudentsInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'ok' | 'error' | null>(null);
+  const [openStatus, setOpenStatus] = useState<null | 'frozen' | 'replaced' | 'absent' | 'attended'>(null);
+
+  // Reset the trend-toggle to "This Week" whenever the parent's branch or week changes
+  // so we never accidentally display a stale toggle position from a previous branch
+  useEffect(() => {
+    setSelectedWeekIdx(3);
+  }, [r?.branch, r?.week_date]);
 
   // Resolve the record/metrics to display based on selected week toggle
   const displayRecord  = trendWeeks?.[selectedWeekIdx]?.record  || r;
@@ -59,11 +67,23 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
     }
   };
 
+  // Active students trend (this week vs last week) for this branch
+  const prevActive = n(trendWeeks?.[2]?.record?.active_students);
+  const currActive = n(rec.active_students);
+  const activeDiff = currActive - prevActive;
+  const activePct  = prevActive > 0 ? (activeDiff / prevActive) * 100 : 0;
+  const activeTrendLabel = prevActive > 0
+    ? `${activeDiff >= 0 ? '▲' : '▼'} ${activeDiff >= 0 ? '+' : ''}${activeDiff} (${activePct >= 0 ? '+' : ''}${activePct.toFixed(1)}%) vs last week`
+    : 'No prev-week data';
+  const activeTrendColor = prevActive === 0
+    ? 'var(--textSecondary)'
+    : (activeDiff >= 0 ? '#15803d' : '#b91c1c');
+
   const kpis = [
     { label: 'Total Attendance',  value: met.totalAttendance,                       color: 'var(--info)' },
     { label: 'Attendance Rate',   value: formatPct(met.attendanceRate, 2),           color: getRateColor(met.attendanceRate) },
     { label: 'Rate w/ Freeze',    value: formatPct(met.attendanceRateWithFreeze, 2), color: getRateColor(met.attendanceRateWithFreeze) },
-    { label: 'Active Students',   value: activeStudentsInput || (rec.active_students ?? '—'), color: 'var(--text)' },
+    { label: 'Active Students',   value: activeStudentsInput || (rec.active_students ?? '—'), color: 'var(--text)', unit: activeTrendLabel, unitColor: activeTrendColor },
     { label: 'Outstanding Inv.',  value: formatPct(liveOutstandingPct, 2),           color: liveOutstandingPct <= 25 ? 'var(--success)' : 'var(--brand)', unit: 'Target 20–25%' },
   ];
 
@@ -74,7 +94,7 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
           <div className="okrDetailBranchIcon">🏢</div>
           <div>
             <h2 className="okrDetailBranch">{rec.branch}</h2>
-            <span className="okrDetailWeek">Week of {weekRange(rec.week_date?.slice(0, 10))}</span>
+            <span className="okrDetailWeek">Week of {weekRange(toWednesday(rec.week_date?.slice(0, 10) ?? ''))}</span>
           </div>
         </div>
         <div className="okrDetailHeaderRight">
@@ -88,11 +108,15 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
       </div>
 
       <div className="okrKpiRow">
-        {kpis.map(k => (
+        {kpis.map((k: any) => (
           <div className="okrKpi" key={k.label}>
             <span className="okrKpiLabel">{k.label}</span>
             <span className="okrKpiValue" style={{ color: k.color }}>{k.value}</span>
-            {k.unit && <span className="okrKpiUnit">{k.unit}</span>}
+            {k.unit && (
+              <span className="okrKpiUnit" style={k.unitColor ? { color: k.unitColor, fontWeight: 600 } : undefined}>
+                {k.unit}
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -139,6 +163,35 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
                 <span>{met.totalFrozen}</span>
                 <span>{met.totalReplaced}</span>
               </div>
+              {/* Status buttons — open modal with names list per status */}
+              <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {([
+                  { status: 'frozen' as const,   icon: '❄️', label: 'Frozen',   count: met.totalFrozen,   bg: '#eff6ff', border: '#93c5fd', color: '#1e40af', badge: '#1e40af' },
+                  { status: 'replaced' as const, icon: '🔁', label: 'Replaced', count: met.totalReplaced, bg: '#fffbeb', border: '#fcd34d', color: '#92400e', badge: '#92400e' },
+                  { status: 'absent' as const,   icon: '⛔', label: 'Absent',   count: met.totalAbsent,   bg: '#fef2f2', border: '#fca5a5', color: '#991b1b', badge: '#991b1b' },
+                  { status: 'attended' as const, icon: '✅', label: 'Attended', count: met.totalAttended, bg: '#f0fdf4', border: '#86efac', color: '#15803d', badge: '#15803d' },
+                ]).map(b => (
+                  <button
+                    key={b.status}
+                    type="button"
+                    onClick={() => setOpenStatus(b.status)}
+                    style={{
+                      padding: '9px 14px', borderRadius: 8,
+                      border: `1.5px solid ${b.border}`, background: b.bg,
+                      color: b.color, fontWeight: 700, fontSize: '0.85rem',
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                      gap: 8, transition: 'all 0.12s',
+                    }}
+                  >
+                    {b.icon} {b.label} Students
+                    {b.count > 0 && (
+                      <span style={{ background: b.badge, color: '#fff', padding: '1px 8px', borderRadius: 12, fontSize: '0.72rem' }}>
+                        {b.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
             <DailyAttendanceChart record={rec} />
           </div>
@@ -166,7 +219,7 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
               <div className="okrRateVisualLabel">Rate WITH FREEZE</div>
               <div className="okrRateVisualValue" style={{ color: getRateColor(met.attendanceRateWithFreeze) }}>{met.attendanceRateWithFreeze.toFixed(2)}%</div>
               <RateBar value={met.attendanceRateWithFreeze} />
-              <div className="okrRateFormula">(Sat attended + Sun attended) ÷ Total Attendance</div>
+              <div className="okrRateFormula">Total Attended ÷ Total Attendance</div>
             </div>
           </div>
         </div>
@@ -258,6 +311,26 @@ export function BranchDetailCard({ record: r, metrics: m, trendWeeks }) {
           </div>
         </div>
       </div>
+
+      <FrozenStudentsModal
+        open={openStatus !== null}
+        onClose={() => setOpenStatus(null)}
+        status={openStatus ?? 'frozen'}
+        branch={rec.branch}
+        weekRangeLabel={weekRange(toWednesday(rec.week_date?.slice(0, 10) ?? ''))}
+        names={
+          openStatus === 'replaced' ? (rec.replaced_student_names ?? '') :
+          openStatus === 'absent'   ? (rec.absent_student_names   ?? '') :
+          openStatus === 'attended' ? (rec.attended_student_names ?? '') :
+                                      (rec.frozen_student_names   ?? '')
+        }
+        expectedCount={
+          openStatus === 'replaced' ? met.totalReplaced :
+          openStatus === 'absent'   ? met.totalAbsent :
+          openStatus === 'attended' ? met.totalAttended :
+                                      met.totalFrozen
+        }
+      />
     </div>
   );
 }

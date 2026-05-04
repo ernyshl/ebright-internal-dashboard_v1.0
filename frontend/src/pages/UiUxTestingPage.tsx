@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
@@ -9,6 +9,77 @@ const REGION_BRANCHES = {
   'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak'],
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
+
+const HOURLY_TARGETS = [
+  { label: '9:00 AM',  hour: 9,  minute: 0, target: 30  },
+  { label: '11:00 AM', hour: 11, minute: 0, target: 45  },
+  { label: '4:00 PM',  hour: 16, minute: 0, target: 70  },
+  { label: '6:00 PM',  hour: 18, minute: 0, target: 85  },
+  { label: '8:00 PM',  hour: 20, minute: 0, target: 130 },
+];
+
+function HourlyTargetCard({ currentLeads }) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const checkpoints = HOURLY_TARGETS.map(t => ({ ...t, totalMinutes: t.hour * 60 + t.minute }));
+  const previous = [...checkpoints].reverse().find(c => nowMinutes >= c.totalMinutes);
+  const next = checkpoints.find(c => nowMinutes < c.totalMinutes);
+
+  const prevMet = previous ? currentLeads >= previous.target : null;
+  const statusTone = previous == null ? 'pending' : (prevMet ? 'good' : 'bad');
+  const previousClass = prevMet === true ? 'hourlyTargetBlock--met' : prevMet === false ? 'hourlyTargetBlock--missed' : '';
+
+  return (
+    <div className={`hourlyTargetCard hourlyTargetCard--${statusTone}`}>
+      <div className="hourlyTargetHeader">
+        <span className="hourlyTargetHeaderIcon">🎯</span>
+        <span className="hourlyTargetHeaderTitle">Hourly Target</span>
+      </div>
+      <div className="hourlyTargetBody">
+        <div className={`hourlyTargetBlock hourlyTargetBlock--previous ${previousClass}`}>
+          <div className="hourlyTargetLabel">
+            <span className="hourlyTargetLabelKey">Previous</span>
+            {previous && <span className="hourlyTargetLabelTime">· {previous.label}</span>}
+          </div>
+          {previous ? (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetNumber">{formatNumber(previous.target)}</span>
+              <span className="hourlyTargetUnit">
+                {prevMet ? `✓ ${formatNumber(currentLeads)} today` : `✗ short by ${previous.target - currentLeads}`}
+              </span>
+            </div>
+          ) : (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetUnit">Before 9:00 AM — not yet due</span>
+            </div>
+          )}
+        </div>
+        <div className="hourlyTargetBlock hourlyTargetBlock--next">
+          <div className="hourlyTargetLabel">
+            <span className="hourlyTargetLabelKey">Next</span>
+            {next && <span className="hourlyTargetLabelTime">· {next.label}</span>}
+          </div>
+          {next ? (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetNumber">{formatNumber(next.target)}</span>
+              <span className="hourlyTargetUnit">leads needed</span>
+            </div>
+          ) : (
+            <div className="hourlyTargetMetric">
+              <span className="hourlyTargetUnit">All checkpoints passed</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function getLeadCentreUrl(leadSourceKey, period, region = '') {
   const now = new Date();
@@ -296,19 +367,24 @@ export function UiUxTestingPage() {
         <div className="errorText">{q.error?.data?.error || 'Failed to load leads data.'}</div>
       ) : (
         <>
-          {/* Summary Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
-            <StatCard title="Total Leads (30d)" value={totalLeads} icon="L" color="#3b82f6" subtitle="All sources combined" to={getLeadCentreUrl('', '30days')} />
-            <StatCard title="Today's Leads | Online" value={todayTotal - onlineToday} bracketValue={onlineToday} icon="T" color="#10b981" subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`} to={getLeadCentreUrl('', 'today')} />
-            <StatCard title="Yesterday's Leads" value={yesterdayTotal} icon="Y" color="#f59e0b" subtitle={`${todayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% change today`} to={getLeadCentreUrl('', 'yesterday')} />
-            <StatCard title="Active Regions" value={regionCount} icon="R" color="#6366f1" subtitle="With lead activity" />
-            <StatCard title="Active Branches" value={branchCount} icon="B" color="#ec4899" subtitle="With lead activity" />
+          {/* Hourly Target + Summary Stats — integrated flex row */}
+          <div style={{ display: 'flex', gap: 14, marginBottom: 24, alignItems: 'stretch' }}>
+            <div style={{ position: 'relative', width: 220, minHeight: 180, flexShrink: 0 }}>
+              <HourlyTargetCard currentLeads={todayTotal} />
+            </div>
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              <StatCard title="Total Leads (30d)" value={totalLeads} icon="L" color="#3b82f6" subtitle="All sources combined" to={getLeadCentreUrl('', '30days')} />
+              <StatCard title="Today's Leads | Online" value={todayTotal - onlineToday} bracketValue={onlineToday} icon="T" color="#10b981" subtitle={`${yesterdayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% vs yesterday`} to={getLeadCentreUrl('', 'today')} />
+              <StatCard title="Yesterday's Leads" value={yesterdayTotal} icon="Y" color="#f59e0b" subtitle={`${todayTotal ? ((todayTotal/yesterdayTotal - 1) * 100).toFixed(1) : 0}% change today`} to={getLeadCentreUrl('', 'yesterday')} />
+              <StatCard title="Active Regions" value={regionCount} icon="R" color="#6366f1" subtitle="With lead activity" />
+              <StatCard title="Active Branches" value={branchCount} icon="B" color="#ec4899" subtitle="With lead activity" />
+            </div>
           </div>
 
           {/* Lead Sources */}
           <div style={{ marginBottom: 32 }}>
             <SectionHeader letter="S" color="#3b82f6" title="Lead Sources (without siblings)" subtitle="Performance breakdown by acquisition channel" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
               {[
                 { key: 'Meta', img: '/facebook_logo.svg', color: '#1877f2', tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.' } },
                 { key: 'TikTok', img: '/tiktok_logo.svg', color: '#69c9d0', tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.' } },
@@ -335,7 +411,7 @@ export function UiUxTestingPage() {
           {/* Regions */}
           <div style={{ marginBottom: 32 }}>
             <SectionHeader letter="R" color="#10b981" title="Regional Breakdown (with siblings)" subtitle="Lead distribution across mapped regions" />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
               {(() => {
                 const regions = q.data?.regions || [];
                 const totalCounts = {

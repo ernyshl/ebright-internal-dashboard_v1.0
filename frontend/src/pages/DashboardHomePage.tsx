@@ -20,7 +20,18 @@ export function DashboardHomePage() {
     }
   ];
 
-  const departmentData = [
+  const departmentData: any[] = [
+    {
+      id: 'operations_dept',
+      name: 'Operations',
+      icon: '🎯',
+      color: '#0ea5e9',
+      links: [
+        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations_dept' },
+        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations_dept' },
+        { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations_dept' },
+      ]
+    },
     {
       id: 'academy',
       name: 'Academy',
@@ -37,7 +48,7 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#6366f1',
       links: [
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' }
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'fa_testing' }
       ]
     },
     {
@@ -46,8 +57,8 @@ export function DashboardHomePage() {
       icon: '🎪',
       color: '#f43f5e',
       links: [
-        { label: 'Event Dashboard', path: '/events', dashboard: 'events' },
-        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'events' },
+        { label: 'Event Dashboard', path: '/events', dashboard: 'event_mkt' },
+        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'event_mkt' },
       ]
     },
     {
@@ -57,7 +68,9 @@ export function DashboardHomePage() {
       color: '#10b981',
       links: [
         { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
-        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
+        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' },
+        // ADD THIS LINE BELOW:
+        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' }
       ]
     },
     {
@@ -107,10 +120,10 @@ export function DashboardHomePage() {
       icon: '🗄️',
       color: '#0891b2',
       links: [
-        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
-        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr' },
-        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr' },
-        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
+        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_db' },
+        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr_db' },
+        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr_db' },
+        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr_db' },
       ]
     },
     {
@@ -130,10 +143,11 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#14b8a6',
       links: [
-        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'testing' },
-        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'testing' },
-        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'testing' },
-        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'testing' },
+        { label: 'Overview v2', path: '/hrfs-overview-v2', dashboard: 'hr_testing' },
+        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'hr_testing' },
+        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
+        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
+        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
       ]
     },
     {
@@ -157,6 +171,7 @@ export function DashboardHomePage() {
         { label: 'Permissions', path: '/permissions', dashboard: 'admin' },
         { label: '📺 TV Devices', path: '/admin/devices', dashboard: 'admin' },
         { label: '📋 Audit Log', path: '/admin/audit-log', dashboard: 'admin' },
+        { label: '🚫 GHL Ignored Payloads', path: '/admin/ghl-ignored', dashboard: 'admin' },
       ]
     },
     {
@@ -165,10 +180,20 @@ export function DashboardHomePage() {
       icon: '🧪',
       color: '#f97316',
       links: [
-        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'testing' },
-        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'testing' },
+        { label: 'Branch Performance', path: '/branch-performance', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
         { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
+      ]
+    },
+    {
+      id: 'manjeet',
+      name: 'For Manjeet',
+      icon: '🎯',
+      color: '#f59e0b',
+      links: [
+        { label: 'Leads Dashboard v2', path: '/leads-dashboard-v2', dashboard: 'manjeet' },
+        { label: 'Day Distribution',    path: '/day-distribution',    dashboard: 'manjeet' },
+        { label: 'Time Slot Distribution', path: '/time-slot-distribution', dashboard: 'manjeet' },
       ]
     },
     {
@@ -218,7 +243,7 @@ export function DashboardHomePage() {
           <div
             key={dept.id}
             className="dashboardHomeCard"
-            style={{ '--card-color': dept.color }}
+            style={{ '--card-color': dept.color } as React.CSSProperties}
           >
             <div className="dashboardHomeCardHeader">
               <span className="dashboardHomeCardIcon">{dept.icon}</span>

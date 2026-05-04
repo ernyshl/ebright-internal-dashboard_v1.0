@@ -6,14 +6,14 @@ const router = express.Router();
 
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
-// GET /api/hr-staff-movements/dashboard — dashboard view (-2 weeks to +2 months)
+// GET /api/hr-staff-movements/dashboard — onboarding (-1 week → +6 months) + offboarding (-1 week → +2 months)
 router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
     const { rows: onboarding } = await pool.query(
       `SELECT id, name, position, department_branch, start_date, end_date
        FROM hr_staff_movements
        WHERE start_date IS NOT NULL
-         AND start_date >= CURRENT_DATE - INTERVAL '1 month'
+         AND start_date >= CURRENT_DATE - INTERVAL '1 week'
          AND start_date <= CURRENT_DATE + INTERVAL '6 months'
        ORDER BY start_date ASC`
     );

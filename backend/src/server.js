@@ -2,6 +2,7 @@ const { env } = require('./env');
 const { createApp } = require('./app');
 const { pool } = require('./db');
 const { getTableNames } = require('./utils/tableNames');
+const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
 
 async function runMigrations() {
   const { students: studentsTbl } = getTableNames();
@@ -77,6 +78,7 @@ async function start() {
     // eslint-disable-next-line no-console
     console.log(`API listening on http://0.0.0.0:${env.PORT}`);
   });
+  startFinanceRefreshJob();
 }
 
 start().catch(err => {
