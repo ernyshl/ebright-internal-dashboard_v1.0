@@ -24,6 +24,8 @@ function sanitizeForPut(s: any) {
 const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
 const td = { padding:'10px 14px', fontSize:12 };
 
+const PAGE_SIZE = 50;
+
 export function StudentDatabasePage() {
   const navigate = useNavigate();
   const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch } = useAcademy();
@@ -33,6 +35,7 @@ export function StudentDatabasePage() {
   const [editStudent, setEditStudent] = useState<any>(null);
   const [deleteStudent, setDeleteStudent] = useState<any>(null);
   const [archiveStudent, setArchiveStudent] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
   const [deleteAllBranch, setDeleteAllBranch] = useState('All');
@@ -50,6 +53,9 @@ export function StudentDatabasePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Reset to page 1 when filter/search changes so user doesn't land on an empty later page
+  useEffect(() => { setCurrentPage(1); }, [branchFilter, searchQuery]);
+
   function handleBranchChange(branch: string) {
     setBranchFilter(branch);
     setSharedBranch(branch);
@@ -60,6 +66,12 @@ export function StudentDatabasePage() {
 
   const q = searchQuery.trim().toLowerCase();
   const displayed = q ? branchFiltered.filter(s => s.name.toLowerCase().includes(q)) : branchFiltered;
+
+  const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageEnd = Math.min(pageStart + PAGE_SIZE, displayed.length);
+  const paginated = displayed.slice(pageStart, pageEnd);
 
   // FA stats computed from branch-filtered active students (not search-filtered)
   const faDue     = activeFiltered.reduce((acc, s) => acc + s.faAttended.length, 0);
@@ -275,9 +287,14 @@ export function StudentDatabasePage() {
 
         {(branchFilter !== 'All' || q) && (
           <span style={{ fontSize:13, color:'#4f46e5', fontWeight:500 }}>
-            Showing {displayed.length} student{displayed.length!==1?'s':''}
+            Showing {displayed.length === 0 ? 0 : `${pageStart + 1}-${pageEnd}`} of {displayed.length} student{displayed.length!==1?'s':''}
             {branchFilter !== 'All' ? ` in ${branchFilter}` : ''}
             {q ? ` matching "${searchQuery.trim()}"` : ''}
+          </span>
+        )}
+        {(branchFilter === 'All' && !q) && displayed.length > 0 && (
+          <span style={{ fontSize:13, color:'var(--muted)', fontWeight:500 }}>
+            Showing {pageStart + 1}-{pageEnd} of {displayed.length}
           </span>
         )}
       </div>
@@ -309,12 +326,12 @@ export function StudentDatabasePage() {
                     </p>
                   </div>
                 </td></tr>
-              ) : displayed.map((student, idx) => {
+              ) : paginated.map((student, idx) => {
                 const fa  = faSummary(student.faAttended);
                 const pcm = faSummary(student.pcmAttended);
                 return (
                   <tr key={student.id} style={{ borderTop:'1px solid var(--border)' }}>
-                    <td style={{ ...td, color:'var(--muted)' }}>{idx+1}</td>
+                    <td style={{ ...td, color:'var(--muted)' }}>{pageStart + idx + 1}</td>
                     <td style={td}>
                       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                         <span style={{ fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{student.name}</span>
@@ -368,6 +385,51 @@ export function StudentDatabasePage() {
             </tbody>
           </table>
         </div>
+        {displayed.length > PAGE_SIZE && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderTop:'1px solid var(--border)', flexWrap:'wrap', gap:12 }}>
+            <span style={{ fontSize:12, color:'var(--muted)' }}>
+              Page {safePage} of {totalPages} · {displayed.length} students
+            </span>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={safePage === 1}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===1?'not-allowed':'pointer', opacity:safePage===1?0.4:1, fontWeight:500 }}
+              >« First</button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===1?'not-allowed':'pointer', opacity:safePage===1?0.4:1, fontWeight:500 }}
+              >‹ Prev</button>
+              {(() => {
+                const windowSize = 5;
+                const half = Math.floor(windowSize / 2);
+                let start = Math.max(1, safePage - half);
+                const end = Math.min(totalPages, start + windowSize - 1);
+                start = Math.max(1, end - windowSize + 1);
+                const pages = [];
+                for (let p = start; p <= end; p++) pages.push(p);
+                return pages.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:p===safePage?'#4f46e5':'var(--panel)', color:p===safePage?'#fff':'var(--text)', cursor:'pointer', fontWeight:p===safePage?700:500, minWidth:32 }}
+                  >{p}</button>
+                ));
+              })()}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===totalPages?'not-allowed':'pointer', opacity:safePage===totalPages?0.4:1, fontWeight:500 }}
+              >Next ›</button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={safePage === totalPages}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===totalPages?'not-allowed':'pointer', opacity:safePage===totalPages?0.4:1, fontWeight:500 }}
+              >Last »</button>
+            </div>
+          </div>
+        )}
       </div>
       )}
 
