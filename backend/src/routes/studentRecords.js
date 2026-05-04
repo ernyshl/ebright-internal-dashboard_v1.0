@@ -1,5 +1,6 @@
 const express = require('express');
 const { prisma } = require('../prismaClient');
+const { pool } = require('../db');
 const { getTableNames } = require('../utils/tableNames');
 
 const router = express.Router();
@@ -113,6 +114,70 @@ router.put('/:id', async (req, res, next) => {
     return res.json({ ok: true, data: rowToStudent(rows[0]) });
   } catch (err) {
     return next(err);
+  }
+});
+
+// ── POST /api/student-records/:id/archive  (single-student archive) ─────────
+
+router.post('/:id/archive', async (req, res, next) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid student id' });
+  }
+
+  const { students: studentsTbl, archived: archivedTbl } = getTableNames();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const sel = await client.query(
+      `SELECT name, status, gender, branch, enrollment_date, grade_chapter,
+              fa_progress_json, total_fa, pcm_progress_json, total_pcm
+         FROM ${studentsTbl} WHERE id = $1`,
+      [id]
+    );
+    if (sel.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    const s = sel.rows[0];
+
+    await client.query(
+      `INSERT INTO ${archivedTbl}
+         (student_id, name, gender, branch, enrollment_date, date_of_birth,
+          archived_on, guardian_name, guardian_mobile, guardian_email,
+          grade_chapter, fa_progress_json, total_fa, pcm_progress_json, total_pcm, status)
+       VALUES ($1,$2,$3,$4,$5::date,$6::date,
+               NOW(),$7,$8,$9,
+               $10,$11::jsonb,$12,$13::jsonb,$14,$15)`,
+      [
+        '—',
+        s.name,
+        s.gender || 'Male',
+        s.branch || '',
+        s.enrollment_date,
+        null,
+        '—',
+        '—',
+        '—',
+        s.grade_chapter || 'G1 — C1',
+        JSON.stringify(Array.isArray(s.fa_progress_json) ? s.fa_progress_json : []),
+        s.total_fa || '0/0',
+        JSON.stringify(Array.isArray(s.pcm_progress_json) ? s.pcm_progress_json : []),
+        s.total_pcm || '0/0',
+        s.status === 'Active' ? 'Inactive' : (s.status || 'Inactive'),
+      ]
+    );
+
+    await client.query(`DELETE FROM ${studentsTbl} WHERE id = $1`, [id]);
+
+    await client.query('COMMIT');
+    return res.json({ success: true, archived: s.name });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+    return next(err);
+  } finally {
+    client.release();
   }
 });
 
