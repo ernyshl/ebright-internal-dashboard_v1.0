@@ -9,7 +9,7 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const REGIONS: ('A' | 'B' | 'C')[] = ['A', 'B', 'C'];
 const REGION_COLOR: Record<string, string> = { A: '#dc2626', B: '#2563eb', C: '#16a34a' };
 
-type Range = 'annual' | 'this' | 'last' | 'pick' | 'custom';
+type Range = 'annual' | 'this' | 'last' | 'thisWeek' | 'lastWeek' | 'pick' | 'custom';
 
 interface Aggregate {
   attended: number;
@@ -53,6 +53,17 @@ function dateRangeForMonth(year: number, month1to12: number) {
   const mm = String(month1to12).padStart(2, '0');
   return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${last}` };
 }
+function fmtYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function dateRangeForWeek(weeksBack: number) {
+  // Mon-anchored Mon→Sun week, weeksBack=0 ⇒ this week, 1 ⇒ last week
+  const mon = new Date();
+  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) - weeksBack * 7);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return { from: fmtYMD(mon), to: fmtYMD(sun) };
+}
 function shiftRange(from: string, to: string): { from: string; to: string } {
   // For trend baseline: shift the same range by exactly its length backwards.
   const f = new Date(from + 'T00:00:00');
@@ -74,14 +85,16 @@ export function OkrRegionView() {
 
   // Resolve current period range
   const { from, to } = useMemo(() => {
-    if (range === 'annual') return dateRangeForYear(year);
-    if (range === 'this')   return dateRangeForMonth(now.getFullYear(), now.getMonth() + 1);
+    if (range === 'annual')   return dateRangeForYear(year);
+    if (range === 'this')     return dateRangeForMonth(now.getFullYear(), now.getMonth() + 1);
     if (range === 'last') {
       let m = now.getMonth(); let y = now.getFullYear();
       if (m === 0) { m = 12; y -= 1; }
       return dateRangeForMonth(y, m);
     }
-    if (range === 'pick')   return dateRangeForMonth(year, pickMonth);
+    if (range === 'thisWeek') return dateRangeForWeek(0);
+    if (range === 'lastWeek') return dateRangeForWeek(1);
+    if (range === 'pick')     return dateRangeForMonth(year, pickMonth);
     return { from: customFrom, to: customTo };
   }, [range, year, pickMonth, customFrom, customTo, now]);
 
@@ -147,14 +160,16 @@ export function OkrRegionView() {
   })), [perRegion]);
 
   const rangeLabel = useMemo(() => {
-    if (range === 'annual') return `Year ${year}`;
-    if (range === 'this')   return `This Month (${MONTH_SHORT[now.getMonth()]} ${now.getFullYear()})`;
+    if (range === 'annual')   return `Year ${year}`;
+    if (range === 'this')     return `This Month (${MONTH_SHORT[now.getMonth()]} ${now.getFullYear()})`;
     if (range === 'last') {
       let m = now.getMonth(); let y = now.getFullYear();
       if (m === 0) { m = 12; y -= 1; }
       return `Last Month (${MONTH_SHORT[m - 1]} ${y})`;
     }
-    if (range === 'pick')   return `${MONTH_SHORT[pickMonth - 1]} ${year}`;
+    if (range === 'thisWeek') { const r = dateRangeForWeek(0); return `This Week (${r.from} → ${r.to})`; }
+    if (range === 'lastWeek') { const r = dateRangeForWeek(1); return `Last Week (${r.from} → ${r.to})`; }
+    if (range === 'pick')     return `${MONTH_SHORT[pickMonth - 1]} ${year}`;
     return `${customFrom} → ${customTo}`;
   }, [range, year, pickMonth, customFrom, customTo, now]);
 
@@ -190,11 +205,13 @@ export function OkrRegionView() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
           <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Range:</span>
           {([
-            { id: 'annual' as Range, label: 'Annual'   },
-            { id: 'this'   as Range, label: 'This Month' },
-            { id: 'last'   as Range, label: 'Last Month' },
-            { id: 'pick'   as Range, label: 'Pick Month' },
-            { id: 'custom' as Range, label: 'Custom Range' },
+            { id: 'annual'   as Range, label: 'Annual'      },
+            { id: 'this'     as Range, label: 'This Month'  },
+            { id: 'last'     as Range, label: 'Last Month'  },
+            { id: 'thisWeek' as Range, label: 'This Week'   },
+            { id: 'lastWeek' as Range, label: 'Last Week'   },
+            { id: 'pick'     as Range, label: 'Pick Month'  },
+            { id: 'custom'   as Range, label: 'Custom Range' },
           ]).map(r => (
             <button
               key={r.id}
