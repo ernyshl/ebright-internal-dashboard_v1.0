@@ -164,12 +164,21 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
       };
     };
 
-    const [today, yesterday] = await Promise.all([
-      fetchDay(`(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date`),
-      fetchDay(`(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1`),
+    // "Last Saturday" / "Last Sunday" = most recent Sat/Sun strictly in the
+    // past. If today IS Sat/Sun, jump back a full week so the user sees a
+    // distinct prior day rather than today's data twice.
+    const todayMyt = `(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date`;
+    const lastSatExpr = `(${todayMyt} - (CASE WHEN EXTRACT(DOW FROM ${todayMyt})::int = 6 THEN 7 ELSE EXTRACT(DOW FROM ${todayMyt})::int + 1 END))`;
+    const lastSunExpr = `(${todayMyt} - (CASE WHEN EXTRACT(DOW FROM ${todayMyt})::int = 0 THEN 7 ELSE EXTRACT(DOW FROM ${todayMyt})::int END))`;
+
+    const [today, yesterday, last_sat, last_sun] = await Promise.all([
+      fetchDay(todayMyt),
+      fetchDay(`${todayMyt} - 1`),
+      fetchDay(lastSatExpr),
+      fetchDay(lastSunExpr),
     ]);
 
-    return res.json({ today, yesterday, branches });
+    return res.json({ today, yesterday, last_sat, last_sun, branches });
   } catch (err) { return next(err); }
 });
 

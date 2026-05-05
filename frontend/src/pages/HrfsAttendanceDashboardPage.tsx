@@ -119,7 +119,7 @@ const HQ_BRANCH_CODES = ['HQ', 'HR', 'OD', 'MKT', 'FNC', 'FINANCE', 'ACD', 'ACAD
 
 export function HrfsAttendanceDashboardPage() {
   const [branch, setBranch] = useState<string>('all');
-  const [view, setView]     = useState<'today' | 'yesterday'>('today');
+  const [view, setView]     = useState<'today' | 'yesterday' | 'last_sat' | 'last_sun'>('today');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['hrfsAttendanceDashboard', branch],
@@ -127,8 +127,11 @@ export function HrfsAttendanceDashboardPage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const today = data?.today || { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [], not_clocked_in_yet: [] };
-  const yesterday = data?.yesterday || { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [], not_clocked_in_yet: [] };
+  const emptyDay = { total: 0, on_time: 0, late: 0, no_clock_in: 0, no_clock_out: 0, records: [], not_clocked_in_yet: [] };
+  const today = data?.today || emptyDay;
+  const yesterday = data?.yesterday || emptyDay;
+  const lastSat = data?.last_sat || emptyDay;
+  const lastSun = data?.last_sun || emptyDay;
 
   // Split known branches: HQ-types collapse into one "HQ" button; everything
   // else gets its own button, alphabetised.
@@ -187,16 +190,20 @@ export function HrfsAttendanceDashboardPage() {
             </div>
           </div>
 
-          {/* Today/Yesterday toggle */}
+          {/* Day toggle */}
           <div className="ldFilterBar" style={{ marginBottom: 16 }}>
             <button className={`btn ${view === 'today' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('today')}>Today ({today.total})</button>
             <button className={`btn ${view === 'yesterday' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('yesterday')}>Yesterday ({yesterday.total})</button>
+            <button className={`btn ${view === 'last_sat' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('last_sat')}>Last Sat ({lastSat.total})</button>
+            <button className={`btn ${view === 'last_sun' ? 'btnPrimary' : 'btnGhost'} btnSmall`} onClick={() => setView('last_sun')}>Last Sun ({lastSun.total})</button>
           </div>
 
           {/* Staff lists — clocked-in (latest first) | expected today, no clock-in */}
           {(() => {
-            const day = view === 'today' ? today : yesterday;
-            const dayColor = view === 'today' ? '#3b82f6' : '#f59e0b';
+            const dayMap = { today, yesterday, last_sat: lastSat, last_sun: lastSun };
+            const colorMap = { today: '#3b82f6', yesterday: '#f59e0b', last_sat: '#8b5cf6', last_sun: '#ec4899' };
+            const day = dayMap[view];
+            const dayColor = colorMap[view];
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <StaffTable title="Clocked In · latest → earliest" records={clockedIn(day.records)} color={dayColor} />
