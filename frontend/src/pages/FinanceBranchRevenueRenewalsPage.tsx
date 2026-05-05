@@ -213,7 +213,7 @@ export function FinanceBranchRevenueRenewalsPage() {
         </div>
         <div className="brRankFilterGroup brRankTotalInline">
           <label className="brRankLabel">Total Renewals</label>
-          <div className="brRankTotalValue" style={{ color: RENEWAL_COLOR }}>
+          <div className="brRankTotalValue" style={{ color: '#b45309' }}>
             {isLoading ? '—' : formatRM(grandRenewalTotal)}
           </div>
         </div>
@@ -291,12 +291,19 @@ export function FinanceBranchRevenueRenewalsPage() {
                             {b.renewal > 0 && (
                               <span style={{
                                 display: 'block',
-                                fontSize: '0.78em',
-                                opacity: 0.8,
-                                color: RENEWAL_COLOR,
-                                fontWeight: 600,
+                                width: 'fit-content',
+                                marginTop: 4,
+                                padding: '2px 8px',
+                                fontSize: '0.82em',
+                                fontWeight: 700,
+                                color: '#92400e',
+                                background: 'rgba(251, 191, 36, 0.20)',
+                                border: '1px solid rgba(217, 119, 6, 0.35)',
+                                borderRadius: 6,
+                                whiteSpace: 'nowrap',
+                                letterSpacing: '0.01em',
                               }}>
-                                renewal: {formatRM(b.renewal)}
+                                Renewal: {formatRM(b.renewal)}
                               </span>
                             )}
                           </span>
