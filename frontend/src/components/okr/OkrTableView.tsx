@@ -21,7 +21,8 @@ function lastWeekMonday(): string {
 }
 
 type SortDir = 'asc' | 'desc';
-type SortKey = 'rank' | 'branch' | 'attended' | 'absent' | 'frozen' | 'replaced' | 'total' | 'active' | 'rate' | 'rateFreeze';
+type SortKey = 'rank' | 'branch' | 'attended' | 'absent' | 'frozen' | 'replaced' | 'total' | 'active' | 'rate' | 'rateFreeze'
+             | 'notEnrolled' | 'outstandingInv' | 'expiredPkg' | 'newlyEnrolled';
 
 interface Props {
   /** Click on branch row → open the dedicated branch detail page for that branch + week */
@@ -76,6 +77,11 @@ export function OkrTableView({ onSelect }: Props) {
         rate:     m.attendanceRate,
         rateFreeze: m.attendanceRateWithFreeze,
         active: Number(r.active_students ?? 0),
+        // Discrepancy categories (matches the BranchDetailCard 1a-1d layout)
+        notEnrolled:    Number(r.not_enrolled ?? 0),
+        outstandingInv: Number(r.outstanding_invoice_disc ?? 0),
+        expiredPkg:     Number(r.expired_package ?? 0),
+        newlyEnrolled:  Number(r.newly_enrolled ?? 0),
       };
     });
   }, [records]);
@@ -131,7 +137,12 @@ export function OkrTableView({ onSelect }: Props) {
       replaced: acc.replaced + r.replaced,
       total:    acc.total    + r.total,
       active:   acc.active   + r.active,
-    }), { attended: 0, absent: 0, frozen: 0, replaced: 0, total: 0, active: 0 });
+      notEnrolled:    acc.notEnrolled    + r.notEnrolled,
+      outstandingInv: acc.outstandingInv + r.outstandingInv,
+      expiredPkg:     acc.expiredPkg     + r.expiredPkg,
+      newlyEnrolled:  acc.newlyEnrolled  + r.newlyEnrolled,
+    }), { attended: 0, absent: 0, frozen: 0, replaced: 0, total: 0, active: 0,
+          notEnrolled: 0, outstandingInv: 0, expiredPkg: 0, newlyEnrolled: 0 });
   }, [filteredRows]);
 
   const isThisWeek = weekDate === thisWeekMonday();
@@ -232,6 +243,10 @@ export function OkrTableView({ onSelect }: Props) {
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('active')}   title="Sort by active students">Active{arrow('active')}</th>
                 <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('rate')} title="Sort by attendance rate">Attendance Rate{arrow('rate')}</th>
                 <th className="p-3 border font-semibold text-right" style={hStyle()} onClick={() => handleSort('rateFreeze')} title="Sort by rate w/ freeze">Rate w/ Freeze{arrow('rateFreeze')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('notEnrolled')}    title="1a) Not Enrolled to Any Lesson">1a) Not Enrolled{arrow('notEnrolled')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('outstandingInv')} title="1b) With Outstanding Invoice">1b) Outstanding Inv.{arrow('outstandingInv')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('expiredPkg')}     title="1c) Expired Package">1c) Expired Pkg.{arrow('expiredPkg')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('newlyEnrolled')}  title="1d) Newly Enrolled Student">1d) Newly Enrolled{arrow('newlyEnrolled')}</th>
               </tr>
             </thead>
             <tbody>
@@ -278,11 +293,15 @@ export function OkrTableView({ onSelect }: Props) {
                     <td className="p-3 border text-center">{r.active}</td>
                     <td className="p-3 border text-center font-bold bg-gray-50" style={{ color: getRateColor(r.rate) }}>{r.rate.toFixed(2)}%</td>
                     <td className="p-3 border text-right" style={{ color: getRateColor(r.rateFreeze) }}>{r.rateFreeze.toFixed(2)}%</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.notEnrolled}</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.outstandingInv}</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.expiredPkg}</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.newlyEnrolled}</td>
                   </tr>
                 );
               }) : (
                 <tr>
-                  <td colSpan={10} className="p-10 text-center text-gray-500">No OKR records found for this week.</td>
+                  <td colSpan={14} className="p-10 text-center text-gray-500">No OKR records found for this week.</td>
                 </tr>
               )}
             </tbody>
@@ -299,6 +318,10 @@ export function OkrTableView({ onSelect }: Props) {
                   <td className="p-3 border text-center">{totals.active}</td>
                   <td className="p-3 border text-center">—</td>
                   <td className="p-3 border text-right">—</td>
+                  <td className="p-3 border text-center">{totals.notEnrolled}</td>
+                  <td className="p-3 border text-center">{totals.outstandingInv}</td>
+                  <td className="p-3 border text-center">{totals.expiredPkg}</td>
+                  <td className="p-3 border text-center">{totals.newlyEnrolled}</td>
                 </tr>
               </tfoot>
             )}
