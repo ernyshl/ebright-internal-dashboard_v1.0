@@ -71,7 +71,7 @@ async function refreshFinanceRenewals() {
       const upsertResult = await client.query(`
         INSERT INTO finance_renewals
           (doc_no, doc_date, branch_code, package, amount,
-           student_name, raw_description, detail_seq, source_last_modified)
+           student_name, raw_description, detail_key, source_last_modified)
         SELECT
           ai.doc_no,
           ai.doc_date::date,
@@ -80,7 +80,7 @@ async function refreshFinanceRenewals() {
           (d->>'subTotal')::numeric,
           TRIM(SPLIT_PART(d->>'description', ',', 1)),
           d->>'description',
-          (d->>'seq')::int,
+          (d->>'dtlKey')::bigint,
           ai.last_modified
         FROM autocount_invoices ai,
              LATERAL jsonb_array_elements(ai.data->'details') AS d
@@ -88,8 +88,8 @@ async function refreshFinanceRenewals() {
           AND TRIM(SPLIT_PART(d->>'description', ',', 3)) = 'Renewal'
           AND TRIM(SPLIT_PART(d->>'description', ',', 2)) IN ('3M','6M','9M','12M')
           AND d->>'deptNo' ~ '^[0-9]+[A-Z]+$'
-          AND d->>'seq' IS NOT NULL
-        ON CONFLICT (doc_no, detail_seq) DO UPDATE SET
+          AND d->>'dtlKey' IS NOT NULL
+        ON CONFLICT (doc_no, detail_key) DO UPDATE SET
           doc_date             = EXCLUDED.doc_date,
           branch_code          = EXCLUDED.branch_code,
           package              = EXCLUDED.package,
@@ -107,7 +107,7 @@ async function refreshFinanceRenewals() {
           FROM autocount_invoices ai,
                LATERAL jsonb_array_elements(ai.data->'details') AS d
           WHERE ai.doc_no = fr.doc_no
-            AND (d->>'seq')::int = fr.detail_seq
+            AND (d->>'dtlKey')::bigint = fr.detail_key
             AND ai.doc_type = 'Invoice'
             AND TRIM(SPLIT_PART(d->>'description', ',', 3)) = 'Renewal'
             AND TRIM(SPLIT_PART(d->>'description', ',', 2)) IN ('3M','6M','9M','12M')

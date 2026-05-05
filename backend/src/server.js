@@ -80,10 +80,10 @@ async function runMigrations() {
       amount                  NUMERIC(12,2) NOT NULL,
       student_name            TEXT,
       raw_description         TEXT,
-      detail_seq              INTEGER       NOT NULL,
+      detail_key              BIGINT        NOT NULL,
       source_last_modified    TIMESTAMPTZ,
       parsed_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-      CONSTRAINT finance_renewals_doc_no_seq_unique UNIQUE (doc_no, detail_seq)
+      CONSTRAINT finance_renewals_doc_no_key_unique UNIQUE (doc_no, detail_key)
     )
   `);
   await pool.query(`
