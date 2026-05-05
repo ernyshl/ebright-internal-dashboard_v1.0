@@ -5,7 +5,7 @@ import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 
 import { REGIONS, DAYS, EMPTY_FORM } from '../lib/okr/constants';
-import { weekRange, calcMetrics, getRateColor, parseExcelPaste, parseStudentRoster, toWednesday } from '../lib/okr/utils';
+import { weekRange, calcMetrics, getRateColor, parseExcelPaste, parseStudentRoster, parseAoneExportFull, toWednesday } from '../lib/okr/utils';
 import { useOkrData } from '../lib/okr/useOkrData';
 
 import { BranchDetailCard } from '../components/okr/BranchDetailCard';
@@ -48,6 +48,9 @@ export function OkrAttendancePage() {
   const [pasteStatus, setPasteStatus]   = useState(null);
   const [pastePreview, setPastePreview] = useState(null);
   const pasteTextareaRef = useRef(null);
+  const aoneFileRef      = useRef<HTMLInputElement | null>(null);
+  const [aoneStatus, setAoneStatus]   = useState<null | { kind: 'ok' | 'error'; msg: string }>(null);
+  const [isUploadingAone, setIsUploadingAone] = useState(false);
 
   // ── All data fetching in one hook ──
   const {
@@ -107,6 +110,59 @@ export function OkrAttendancePage() {
       setPastePreview(null);
     }
     setTimeout(() => setPasteStatus(null), 4000);
+  };
+
+  // AOne Excel upload — fills daily counts AND auto-categorises the student roster
+  // in one go, no clipboard juggling. Mirrors the Daily Bulk Entry's upload flow.
+  const handleAoneUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (aoneFileRef.current) aoneFileRef.current.value = '';
+    if (!file) return;
+
+    setIsUploadingAone(true);
+    setAoneStatus(null);
+    try {
+      const { counts, names, totalRows } = await parseAoneExportFull(file);
+
+      // 1. Fill the 5 daily attendance fields (absent/attended/frozen/replaced)
+      const dailyFields: Record<string, string> = {};
+      (['wed', 'thu', 'fri', 'sat', 'sun'] as const).forEach(d => {
+        dailyFields[`${d}_absent`]   = String(counts[d].absent);
+        dailyFields[`${d}_attended`] = String(counts[d].attended);
+        dailyFields[`${d}_frozen`]   = String(counts[d].frozen);
+        dailyFields[`${d}_replaced`] = String(counts[d].replaced);
+      });
+
+      // 2. Build the roster textarea content (so user sees what was parsed and
+      //    can still edit it), plus the four categorised name fields directly.
+      const rosterRaw = [
+        ...names.attended.map(n => `${n}\tattended`),
+        ...names.absent.map(n   => `${n}\tabsent`),
+        ...names.frozen.map(n   => `${n}\tfrozen`),
+        ...names.replaced.map(n => `${n}\treplaced`),
+      ].join('\n');
+
+      setForm(p => ({
+        ...p,
+        ...dailyFields,
+        attended_student_names: names.attended.join('\n'),
+        absent_student_names:   names.absent.join('\n'),
+        frozen_student_names:   names.frozen.join('\n'),
+        replaced_student_names: names.replaced.join('\n'),
+        student_roster_raw: rosterRaw,
+      }));
+
+      const totalNames = names.attended.length + names.absent.length + names.frozen.length + names.replaced.length;
+      setAoneStatus({
+        kind: 'ok',
+        msg: `✅ Imported ${totalRows} rows · ${totalNames} students categorised (${names.attended.length} attended, ${names.absent.length} absent, ${names.frozen.length} frozen, ${names.replaced.length} replaced)`,
+      });
+    } catch (err: any) {
+      setAoneStatus({ kind: 'error', msg: `❌ ${err?.message ?? 'Upload failed'}` });
+    } finally {
+      setIsUploadingAone(false);
+      setTimeout(() => setAoneStatus(null), 8000);
+    }
   };
 
   const handleReadClipboard = async () => {
@@ -428,7 +484,52 @@ export function OkrAttendancePage() {
           {/* Daily Attendance */}
           <div className="okrEntrySection">
             <div className="okrEntrySectionTitle">
-              Daily Attendance <span className="okrEntrySectionHint">from Mastercopy</span>
+              Daily Attendance <span className="okrEntrySectionHint">Upload your AOne export — fills all 5 days + student roster automatically</span>
+            </div>
+
+            {/* AOne file upload — primary path. Fills daily counts AND roster in one click. */}
+            <input
+              ref={aoneFileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleAoneUpload}
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              onClick={() => aoneFileRef.current?.click()}
+              disabled={isUploadingAone}
+              style={{
+                width: '100%', padding: '14px 18px', borderRadius: 10,
+                border: '2px dashed #93c5fd', background: '#eff6ff',
+                color: '#1e40af', fontWeight: 800, fontSize: '0.95rem',
+                cursor: isUploadingAone ? 'not-allowed' : 'pointer',
+                marginBottom: 10, transition: 'all 0.12s',
+                opacity: isUploadingAone ? 0.6 : 1,
+              }}
+              onMouseEnter={e => !isUploadingAone && (e.currentTarget.style.background = '#dbeafe')}
+              onMouseLeave={e => !isUploadingAone && (e.currentTarget.style.background = '#eff6ff')}
+            >
+              {isUploadingAone
+                ? '⏳ Reading file…'
+                : '📁 Upload AOne Excel File (.xlsx / .xls / .csv) — auto-fills everything'}
+            </button>
+            {aoneStatus && (
+              <div
+                style={{
+                  marginBottom: 10, padding: '8px 12px', borderRadius: 8,
+                  background: aoneStatus.kind === 'ok' ? '#f0fdf4' : '#fef2f2',
+                  border: `1px solid ${aoneStatus.kind === 'ok' ? '#86efac' : '#fca5a5'}`,
+                  color: aoneStatus.kind === 'ok' ? '#15803d' : '#991b1b',
+                  fontSize: '0.82rem', fontWeight: 600,
+                }}
+              >
+                {aoneStatus.msg}
+              </div>
+            )}
+
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '14px 0 6px' }}>
+              Or paste manually
             </div>
             <button type="button" className="okrPasteImportBtn okrPasteImportBtnFull" onClick={handleReadClipboard}>
               📋 Read from Clipboard
