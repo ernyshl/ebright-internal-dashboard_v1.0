@@ -21,6 +21,7 @@ import { EventDashboardPage } from './pages/EventDashboardPage';
 import { EventEntryPage } from './pages/EventEntryPage';
 import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { BranchRankingPage } from './pages/BranchRankingPage';
+import { FinanceBranchRevenueRenewalsPage } from './pages/FinanceBranchRevenueRenewalsPage';
 import { TvPage } from './pages/TvPage';
 import { DeviceManagerPage } from './pages/DeviceManagerPage';
 import { LeadsDashboardPage } from './pages/LeadsDashboardPage';
@@ -101,6 +102,9 @@ export default function App() {
           } />
           <Route path="/finance/renewal-by-branch" element={
             <RequirePermission dashboard="finance"><FinanceRenewalByBranchPage /></RequirePermission>
+          } />
+          <Route path="/finance/branch-revenue-renewals" element={
+            <RequirePermission dashboard="finance"><FinanceBranchRevenueRenewalsPage /></RequirePermission>
           } />
           <Route path="/department" element={
             <RequirePermission dashboard="department"><DepartmentDashboardPage /></RequirePermission>
