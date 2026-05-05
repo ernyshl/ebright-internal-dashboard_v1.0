@@ -127,107 +127,100 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords, dashWeek }: Props
         </div>
 
         {/* Breakdown */}
-        {expanded && (() => {
-          // Per-day-and-status totals for the current and previous week
-          const dayField = (recs: any[], day: string, field: string) => sumField(recs, `${day}_${field}`);
-
-          const renderRow = (
-            title: string,
-            field: 'attended' | 'absent' | 'frozen' | 'replaced',
-            opts: { showTrend?: boolean; status?: 'frozen' | 'replaced' | 'absent' | 'attended'; bg: string; border: string; color: string; icon?: string } = {} as any,
-          ) => (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                {opts.icon ? `${opts.icon} ` : ''}{title}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
-                {DAYS.map(d => {
-                  const cur  = dayField(weekRecords,     d.key, field);
-                  const prev = dayField(prevWeekRecords, d.key, field);
-                  const diff = cur - prev;
-                  const pct  = prev > 0 ? (diff / prev) * 100 : 0;
-                  const tile = (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: opts.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {DAY_LABEL[d.key].slice(0, 3)} {field === 'attended' ? 'Att.' : field === 'absent' ? 'Abs.' : field === 'frozen' ? 'Frz.' : 'Repl.'}
-                        </div>
-                        {opts.status && <span style={{ fontSize: '0.58rem', color: opts.color, fontWeight: 600 }}>👥</span>}
-                      </div>
-                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: opts.color, marginTop: 2 }}>
-                        {cur.toLocaleString()}
-                      </div>
-                      {opts.showTrend && (
-                        prev === 0 && cur === 0 ? (
-                          <div style={{ fontSize: '0.62rem', color: 'var(--textSecondary)', fontWeight: 600 }}>—</div>
-                        ) : (
-                          <div style={{ fontSize: '0.62rem', fontWeight: 700, color: diff >= 0 ? '#15803d' : '#b91c1c' }}>
-                            {diff >= 0 ? '▲' : '▼'} {diff >= 0 ? '+' : ''}{diff}
-                            {prev > 0 && <span style={{ color: 'var(--textSecondary)', fontWeight: 500, marginLeft: 4 }}>({pct >= 0 ? '+' : ''}{pct.toFixed(1)}%)</span>}
-                          </div>
-                        )
-                      )}
-                    </>
-                  );
-                  const tileStyle: React.CSSProperties = {
-                    background: opts.bg, border: `1px solid ${opts.border}`,
-                    borderRadius: 8, padding: '8px 10px',
-                    transition: 'transform 0.12s, box-shadow 0.12s',
-                    cursor: opts.status ? 'pointer' : 'default',
-                  };
-                  return opts.status ? (
-                    <div
-                      key={d.key}
-                      onClick={(e) => { e.stopPropagation(); setOpenStatus(opts.status!); }}
-                      style={tileStyle}
-                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 4px 10px ${opts.border}40`; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
-                    >
-                      {tile}
+        {expanded && (
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ marginTop: 16, paddingTop: 16, borderTop: '1.5px dashed var(--border)' }}
+          >
+            {/* Row 1: Wed→Sun daily attendance + Replaced + Frozen (original layout) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+              {DAYS.map(d => {
+                const dayTotal = dailyTotal[d.key];
+                return (
+                  <div key={d.key} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {DAY_LABEL[d.key]} Attendance
                     </div>
-                  ) : (
-                    <div key={d.key} style={tileStyle}>{tile}</div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-
-          return (
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{ marginTop: 16, paddingTop: 16, borderTop: '1.5px dashed var(--border)' }}
-            >
-              {renderRow('Daily Attendance (Attended)', 'attended', {
-                showTrend: true,
-                bg: '#f8fafc', border: 'var(--border)', color: 'var(--text)',
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)', marginTop: 4 }}>
+                      {dayTotal.toLocaleString()}
+                    </div>
+                  </div>
+                );
               })}
 
-              {renderRow('Replaced (Daily)', 'replaced', {
-                status: 'replaced',
-                bg: '#fef3c7', border: '#fcd34d', color: '#92400e', icon: '🔁',
-              })}
-
-              {renderRow('Frozen (Daily)', 'frozen', {
-                status: 'frozen',
-                bg: '#dbeafe', border: '#93c5fd', color: '#1e40af', icon: '❄️',
-              })}
-
-              {renderRow('Absent (Daily)', 'absent', {
-                bg: '#fee2e2', border: '#fca5a5', color: '#991b1b', icon: '⛔',
-              })}
-
-              <div style={{ background: '#dcfce7', border: '1.5px solid #86efac', borderRadius: 8, padding: '10px 14px', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  ✅ Total Weekly Attendance
+              <div
+                onClick={(e) => { e.stopPropagation(); setOpenStatus('replaced'); }}
+                style={{
+                  background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 12px',
+                  cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(146,64,14,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Replaced
+                  </div>
+                  <span style={{ fontSize: '0.62rem', color: '#92400e', fontWeight: 600 }}>👥 click</span>
                 </div>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#15803d' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#92400e', marginTop: 4 }}>
+                  {totalReplaced.toLocaleString()}
+                </div>
+              </div>
+
+              <div
+                onClick={(e) => { e.stopPropagation(); setOpenStatus('frozen'); }}
+                style={{
+                  background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: '10px 12px',
+                  cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(30,64,175,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Frozen
+                  </div>
+                  <span style={{ fontSize: '0.62rem', color: '#1e40af', fontWeight: 600 }}>👥 click</span>
+                </div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e40af', marginTop: 4 }}>
+                  {totalFrozen.toLocaleString()}
+                </div>
+              </div>
+
+              <div style={{ background: '#dcfce7', border: '1.5px solid #86efac', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Total Weekly Attendance
+                </div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#15803d', marginTop: 4 }}>
                   {totalAttendance.toLocaleString()}
                 </div>
               </div>
             </div>
-          );
-        })()}
+
+            {/* Row 2: Absent broken down Wed → Sun (the new bit) */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                ⛔ Absent (Daily Breakdown)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                {DAYS.map(d => {
+                  const dayAbsent = sumField(weekRecords, `${d.key}_absent`);
+                  return (
+                    <div key={d.key} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 12px' }}>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {DAY_LABEL[d.key]} Absent
+                      </div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#991b1b', marginTop: 4 }}>
+                        {dayAbsent.toLocaleString()}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <AllBranchesStudentModal
