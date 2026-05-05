@@ -21,8 +21,11 @@ async function logRun(client, fields) {
 
 async function refreshFinanceRenewals() {
   const start = Date.now();
-  const client = await pool.connect();
+  let client = null;
+  let didCommit = false;
   try {
+    client = await pool.connect();
+
     // 1. Acquire advisory lock (prevents concurrent runs after a deploy hiccup).
     const lockResult = await client.query(
       'SELECT pg_try_advisory_lock($1) AS got',
@@ -113,6 +116,7 @@ async function refreshFinanceRenewals() {
       `);
 
       await client.query('COMMIT');
+      didCommit = true;
 
       await logRun(client, {
         sourceMax: currentMax,
@@ -127,23 +131,36 @@ async function refreshFinanceRenewals() {
       );
     } finally {
       // 6. Always release the advisory lock.
-      await client.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCK_KEY]);
+      try {
+        await client.query('SELECT pg_advisory_unlock($1)', [ADVISORY_LOCK_KEY]);
+      } catch (unlockErr) {
+        // If we already committed, the work is safe — just warn and move on.
+        // If we did not commit, the outer catch will handle the original error.
+        console.warn('[finance-renewals] advisory unlock failed:', unlockErr.message);
+      }
     }
   } catch (err) {
-    // Roll back if the transaction is open. A second BEGIN-ROLLBACK is a no-op when none is open.
-    try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
-    try {
-      await logRun(client, {
-        durationMs: Date.now() - start,
-        status: 'error',
-        errorMessage: err.message,
-      });
-    } catch (logErr) {
-      console.error('[finance-renewals] failed to log error:', logErr.message);
+    if (didCommit) {
+      // Work is already committed and logged 'ok'. Don't overwrite as error.
+      console.error('[finance-renewals] post-commit error (work is safe):', err.message);
+      return;
+    }
+    // Roll back if a transaction is open. Harmless when none is open.
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+      try {
+        await logRun(client, {
+          durationMs: Date.now() - start,
+          status: 'error',
+          errorMessage: err.message,
+        });
+      } catch (logErr) {
+        console.error('[finance-renewals] failed to log error:', logErr.message);
+      }
     }
     console.error('[finance-renewals] FAILED:', err.message);
   } finally {
-    client.release();
+    client?.release();
   }
 }
 
