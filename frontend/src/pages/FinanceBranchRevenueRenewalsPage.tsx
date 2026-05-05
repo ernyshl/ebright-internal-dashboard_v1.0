@@ -213,7 +213,7 @@ export function FinanceBranchRevenueRenewalsPage() {
         </div>
         <div className="brRankFilterGroup brRankTotalInline">
           <label className="brRankLabel">Total Renewals</label>
-          <div className="brRankTotalValue" style={{ color: '#b45309' }}>
+          <div className="brRankTotalValue">
             {isLoading ? '—' : formatRM(grandRenewalTotal)}
           </div>
         </div>
@@ -236,6 +236,30 @@ export function FinanceBranchRevenueRenewalsPage() {
         <div className="errorText">Failed to load branch revenue & renewals data.</div>
       ) : (
         <div className="card brRankChartCard">
+          <div style={{
+            display: 'flex',
+            gap: 18,
+            padding: '10px 16px',
+            fontSize: '0.85em',
+            color: 'var(--textSecondary)',
+            alignItems: 'center',
+            borderBottom: '1px solid var(--border)',
+            flexWrap: 'wrap',
+          }}>
+            <strong style={{ color: 'var(--textPrimary)', fontSize: '0.92em' }}>Legend:</strong>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 14, height: 14, background: RENEWAL_COLOR, borderRadius: 3, display: 'inline-block' }} />
+              Total Renewal
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 14, height: 14, background: 'linear-gradient(90deg, hsl(142,71%,45%), hsl(28,84%,55%))', borderRadius: 3, display: 'inline-block' }} />
+              Total Revenue
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 2, height: 14, background: '#f97316', display: 'inline-block' }} />
+              Jackpot threshold (RM80,000)
+            </span>
+          </div>
           <table className="brRankBarTable">
             <tbody>
               {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
@@ -244,7 +268,6 @@ export function FinanceBranchRevenueRenewalsPage() {
                   const totalPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
                   const renewalPct = b.total > 0 ? (b.renewal / maxTotal) * 100 : 0;
                   const restPct = Math.max(totalPct - renewalPct, 0);
-                  const isJackpot = b.total >= JACKPOT;
                   const isTierFirst = i === 0 && tIdx > 0;
                   return (
                     <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
@@ -261,11 +284,11 @@ export function FinanceBranchRevenueRenewalsPage() {
                               style={{
                                 width: `${renewalPct}%`,
                                 background: RENEWAL_COLOR,
-                                height: '100%',
                                 position: 'absolute',
                                 left: 0,
                                 top: 0,
                                 bottom: 0,
+                                borderRadius: restPct > 0 ? '4px 0 0 4px' : '4px',
                               }}
                             />
                           )}
@@ -279,35 +302,28 @@ export function FinanceBranchRevenueRenewalsPage() {
                                 left: `${renewalPct}%`,
                                 top: 0,
                                 bottom: 0,
+                                borderRadius: renewalPct > 0 ? '0 4px 4px 0' : '4px',
                               }}
                             />
                           )}
                           <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
                           <span
-                            className={`brRankRevenueLabel${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}
+                            className={`brRankRevenueLabel${b.total === 0 ? ' brRankZeroVal' : ''}`}
                             style={{ left: `calc(${totalPct}% + 6px)` }}
                           >
                             {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
-                            {b.renewal > 0 && (
-                              <span style={{
-                                display: 'block',
-                                width: 'fit-content',
-                                marginTop: 4,
-                                padding: '2px 8px',
-                                fontSize: '0.82em',
-                                fontWeight: 700,
-                                color: '#92400e',
-                                background: 'rgba(251, 191, 36, 0.20)',
-                                border: '1px solid rgba(217, 119, 6, 0.35)',
-                                borderRadius: 6,
-                                whiteSpace: 'nowrap',
-                                letterSpacing: '0.01em',
-                              }}>
-                                Renewal: {formatRM(b.renewal)}
-                              </span>
-                            )}
                           </span>
                         </div>
+                      </td>
+                      <td style={{
+                        textAlign: 'right',
+                        paddingRight: 14,
+                        whiteSpace: 'nowrap',
+                        fontWeight: 700,
+                        fontSize: '0.95em',
+                        color: b.renewal > 0 ? '#d97706' : 'var(--textSecondary, #94a3b8)',
+                      }}>
+                        {b.renewal > 0 ? formatRM(b.renewal) : '—'}
                       </td>
                       {i === 0 && (
                         <td
