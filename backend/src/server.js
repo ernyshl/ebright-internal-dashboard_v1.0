@@ -83,11 +83,17 @@ async function runMigrations() {
       source_last_modified    TIMESTAMPTZ,
       parsed_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
       CONSTRAINT finance_renewals_doc_no_seq_unique UNIQUE (doc_no, detail_seq)
-    );
+    )
+  `);
+  await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_finance_renewals_branch_date
-      ON finance_renewals (branch_code, doc_date);
+      ON finance_renewals (branch_code, doc_date)
+  `);
+  await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_finance_renewals_doc_date
-      ON finance_renewals (doc_date);
+      ON finance_renewals (doc_date)
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS finance_renewals_refresh_log (
       id                        SERIAL      PRIMARY KEY,
       ran_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -97,9 +103,11 @@ async function runMigrations() {
       duration_ms               INTEGER,
       status                    TEXT,
       error_message             TEXT
-    );
+    )
+  `);
+  await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_finance_renewals_refresh_log_status_ran_at
-      ON finance_renewals_refresh_log (status, ran_at DESC);
+      ON finance_renewals_refresh_log (status, ran_at DESC)
   `);
   // eslint-disable-next-line no-console
   console.log('✅ DB migrations complete');
