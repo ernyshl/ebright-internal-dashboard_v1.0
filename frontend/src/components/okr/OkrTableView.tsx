@@ -21,16 +21,18 @@ function lastWeekMonday(): string {
 }
 
 type SortDir = 'asc' | 'desc';
+type SortKey = 'rank' | 'branch' | 'attended' | 'absent' | 'frozen' | 'replaced' | 'total' | 'active' | 'rate' | 'rateFreeze';
 
 interface Props {
-  /** Click on branch row → switch to Dashboard → Weekly View at that branch + week */
+  /** Click on branch row → open the dedicated branch detail page for that branch + week */
   onSelect: (opts: { branch: string; week: string }) => void;
 }
 
 export function OkrTableView({ onSelect }: Props) {
   const [weekDate, setWeekDate]             = useState<string>(() => lastWeekMonday());
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
-  const [rateSortDir, setRateSortDir]       = useState<SortDir>('desc');
+  const [sortKey, setSortKey]               = useState<SortKey>('rate');
+  const [sortDir, setSortDir]               = useState<SortDir>('desc');
 
   const dw = new Date((weekDate || thisWeekMonday()) + 'T00:00:00');
   const selectedYear  = dw.getFullYear();
@@ -90,9 +92,36 @@ export function OkrTableView({ onSelect }: Props) {
 
   const filteredRows = useMemo(() => {
     let out = selectedBranch === 'ALL' ? allRows : allRows.filter(r => r.branch === selectedBranch);
-    out = [...out].sort((a, b) => rateSortDir === 'asc' ? a.rate - b.rate : b.rate - a.rate);
+    out = [...out].sort((a, b) => {
+      let av: number | string;
+      let bv: number | string;
+      if (sortKey === 'rank') {
+        av = rankByRate.get(a.branch) ?? 999;
+        bv = rankByRate.get(b.branch) ?? 999;
+      } else if (sortKey === 'branch') {
+        av = a.branch.toLowerCase();
+        bv = b.branch.toLowerCase();
+      } else {
+        av = (a as any)[sortKey] ?? 0;
+        bv = (b as any)[sortKey] ?? 0;
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
     return out;
-  }, [allRows, selectedBranch, rateSortDir]);
+  }, [allRows, selectedBranch, sortKey, sortDir, rankByRate]);
+
+  const handleSort = (k: SortKey) => {
+    if (sortKey === k) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(k);
+      // Numeric metrics default to desc (highest first), branch name defaults to asc
+      setSortDir(k === 'branch' || k === 'rank' ? 'asc' : 'desc');
+    }
+  };
+  const arrow = (k: SortKey) => sortKey !== k ? ' ↕' : (sortDir === 'asc' ? ' ▲' : ' ▼');
 
   const totals = useMemo(() => {
     return filteredRows.reduce((acc, r) => ({
@@ -107,6 +136,8 @@ export function OkrTableView({ onSelect }: Props) {
 
   const isThisWeek = weekDate === thisWeekMonday();
   const isLastWeek = weekDate === lastWeekMonday();
+
+  const hStyle = (): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none' });
 
   return (
     <div className="branchRankingPage">
@@ -191,23 +222,16 @@ export function OkrTableView({ onSelect }: Props) {
           <table className="brRankBarTable w-full text-left border-collapse">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 border font-semibold text-center">Rank</th>
-                <th className="p-3 border font-semibold">Branch</th>
-                <th className="p-3 border font-semibold text-center">Attended</th>
-                <th className="p-3 border font-semibold text-center">Absent</th>
-                <th className="p-3 border font-semibold text-center">Frozen</th>
-                <th className="p-3 border font-semibold text-center">Replaced</th>
-                <th className="p-3 border font-bold text-center bg-gray-200">Total Attendance</th>
-                <th className="p-3 border font-semibold text-center">Active</th>
-                <th
-                  className="p-3 border font-bold text-center bg-gray-200"
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  onClick={() => setRateSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                  title="Click to flip sort order"
-                >
-                  Attendance Rate {rateSortDir === 'desc' ? '▼' : '▲'}
-                </th>
-                <th className="p-3 border font-semibold text-right">Rate w/ Freeze</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('rank')}     title="Sort by rank">Rank{arrow('rank')}</th>
+                <th className="p-3 border font-semibold"             style={hStyle()} onClick={() => handleSort('branch')}   title="Sort by branch name">Branch{arrow('branch')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('attended')} title="Sort by attended">Attended{arrow('attended')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('absent')}   title="Sort by absent">Absent{arrow('absent')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('frozen')}   title="Sort by frozen">Frozen{arrow('frozen')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('replaced')} title="Sort by replaced">Replaced{arrow('replaced')}</th>
+                <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('total')} title="Sort by total attendance">Total Attendance{arrow('total')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('active')}   title="Sort by active students">Active{arrow('active')}</th>
+                <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('rate')} title="Sort by attendance rate">Attendance Rate{arrow('rate')}</th>
+                <th className="p-3 border font-semibold text-right" style={hStyle()} onClick={() => handleSort('rateFreeze')} title="Sort by rate w/ freeze">Rate w/ Freeze{arrow('rateFreeze')}</th>
               </tr>
             </thead>
             <tbody>
