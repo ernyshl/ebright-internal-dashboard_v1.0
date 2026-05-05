@@ -71,25 +71,40 @@ async function refreshFinanceRenewals() {
       const upsertResult = await client.query(`
         INSERT INTO finance_renewals
           (doc_no, doc_date, branch_code, package, amount,
-           student_name, raw_description, detail_key, source_last_modified)
+           student_name, raw_description, detail_key, student_index, source_last_modified)
         SELECT
           ai.doc_no,
           ai.doc_date::date,
           TRIM(REGEXP_REPLACE(TRIM(d->>'deptNo'), '^[0-9]+', '')),
           TRIM(SPLIT_PART(d->>'description', ',', 2)),
-          (d->>'subTotal')::numeric,
-          TRIM(SPLIT_PART(d->>'description', ',', 1)),
+          ROUND(
+            (d->>'subTotal')::numeric
+            / GREATEST(
+                ARRAY_LENGTH(
+                  REGEXP_SPLIT_TO_ARRAY(TRIM(SPLIT_PART(d->>'description', ',', 1)), '\\s*&\\s*'),
+                  1
+                ),
+                1
+              ),
+            2
+          ),
+          TRIM(s.student_name),
           d->>'description',
           (d->>'dtlKey')::bigint,
+          s.idx::int,
           ai.last_modified
         FROM autocount_invoices ai,
-             LATERAL jsonb_array_elements(ai.data->'details') AS d
+             LATERAL jsonb_array_elements(ai.data->'details') AS d,
+             LATERAL REGEXP_SPLIT_TO_TABLE(
+               TRIM(SPLIT_PART(d->>'description', ',', 1)),
+               '\\s*&\\s*'
+             ) WITH ORDINALITY AS s(student_name, idx)
         WHERE ai.doc_type = 'Invoice'
           AND TRIM(SPLIT_PART(d->>'description', ',', 3)) = 'Renewal'
           AND TRIM(SPLIT_PART(d->>'description', ',', 2)) IN ('3M','6M','9M','12M')
           AND TRIM(d->>'deptNo') ~ '^[0-9]+[A-Z]+$'
           AND d->>'dtlKey' IS NOT NULL
-        ON CONFLICT (doc_no, detail_key) DO UPDATE SET
+        ON CONFLICT (doc_no, detail_key, student_index) DO UPDATE SET
           doc_date             = EXCLUDED.doc_date,
           branch_code          = EXCLUDED.branch_code,
           package              = EXCLUDED.package,
@@ -105,9 +120,14 @@ async function refreshFinanceRenewals() {
         WHERE NOT EXISTS (
           SELECT 1
           FROM autocount_invoices ai,
-               LATERAL jsonb_array_elements(ai.data->'details') AS d
+               LATERAL jsonb_array_elements(ai.data->'details') AS d,
+               LATERAL REGEXP_SPLIT_TO_TABLE(
+                 TRIM(SPLIT_PART(d->>'description', ',', 1)),
+                 '\\s*&\\s*'
+               ) WITH ORDINALITY AS s(student_name, idx)
           WHERE ai.doc_no = fr.doc_no
             AND (d->>'dtlKey')::bigint = fr.detail_key
+            AND s.idx::int = fr.student_index
             AND ai.doc_type = 'Invoice'
             AND TRIM(SPLIT_PART(d->>'description', ',', 3)) = 'Renewal'
             AND TRIM(SPLIT_PART(d->>'description', ',', 2)) IN ('3M','6M','9M','12M')

@@ -14,10 +14,11 @@ CREATE TABLE IF NOT EXISTS finance_renewals (
   student_name            TEXT,
   raw_description         TEXT,
   detail_key              BIGINT        NOT NULL,
+  student_index           INTEGER       NOT NULL,
   source_last_modified    TIMESTAMPTZ,
   parsed_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT finance_renewals_doc_no_key_unique UNIQUE (doc_no, detail_key)
+  CONSTRAINT finance_renewals_doc_key_student_unique UNIQUE (doc_no, detail_key, student_index)
 );
 
 CREATE INDEX IF NOT EXISTS idx_finance_renewals_branch_date
