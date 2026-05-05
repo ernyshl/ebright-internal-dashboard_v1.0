@@ -31,8 +31,9 @@ async function executeUpload(categorized, branch) {
       await client.query(
         `INSERT INTO ${studentsTbl}
            (name, status, gender, branch, enrollment_date, grade_chapter,
-            fa_progress_json, total_fa, pcm_progress_json, total_pcm)
-         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10)`,
+            fa_progress_json, total_fa, pcm_progress_json, total_pcm,
+            guardian_name, guardian_mobile)
+         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12)`,
         [
           row.name,
           row.status || 'Active',
@@ -44,6 +45,8 @@ async function executeUpload(categorized, branch) {
           '0/0',
           '[]',
           '0/0',
+          row.guardianName   || '',
+          row.guardianMobile || '',
         ]
       );
     }
@@ -53,8 +56,9 @@ async function executeUpload(categorized, branch) {
       await client.query(
         `INSERT INTO ${studentsTbl}
            (name, status, gender, branch, enrollment_date, grade_chapter,
-            fa_progress_json, total_fa, pcm_progress_json, total_pcm)
-         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10)`,
+            fa_progress_json, total_fa, pcm_progress_json, total_pcm,
+            guardian_name, guardian_mobile)
+         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12)`,
         [
           a.name,
           'Active',
@@ -66,6 +70,8 @@ async function executeUpload(categorized, branch) {
           a.total_fa || '0/0',
           jsonbStringOf(a.pcm_progress_json),
           a.total_pcm || '0/0',
+          a.guardian_name   || '',
+          a.guardian_mobile || '',
         ]
       );
       await client.query(
@@ -91,9 +97,9 @@ async function executeUpload(categorized, branch) {
           s.branch || branch,
           s.enrollment_date ?? null,
           null,
-          '—',
-          '—',
-          '—',
+          s.guardian_name   || '',
+          s.guardian_mobile || '',
+          '',
           s.grade_chapter || 'G1 — C1',
           jsonbStringOf(s.fa_progress_json),
           s.total_fa || '0/0',

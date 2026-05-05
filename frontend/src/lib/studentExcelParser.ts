@@ -17,7 +17,9 @@ export async function parseExcelFile(file, defaultBranch = 'ONL') {
     const enrollmentDate = String(row[12] ?? '').trim();
     const statusRaw = String(row[13] ?? '').trim().toLowerCase();
     const status = statusRaw === 'inactive' ? 'Inactive' : 'Active';
-    results.push({ name, gender, enrollmentDate, status, grade: 'G1', chapter: 'C1', branch: defaultBranch });
+    const guardianName = String(row[16] ?? '').trim();
+    const guardianMobile = String(row[18] ?? '').trim();
+    results.push({ name, gender, enrollmentDate, status, grade: 'G1', chapter: 'C1', branch: defaultBranch, guardianName, guardianMobile });
   }
   return results;
 }

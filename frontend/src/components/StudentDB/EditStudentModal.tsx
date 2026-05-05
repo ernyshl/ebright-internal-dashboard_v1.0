@@ -90,6 +90,28 @@ export default function EditStudentModal({ student, onClose, onSave }) {
             <p style={{ fontSize:12, color:'#6366f1', margin:'0 0 4px' }}>FA: <strong>{faCount}</strong> checkbox{faCount !== 1 ? 'es' : ''}{chNum < 12 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C12)</span>}</p>
             <p style={{ fontSize:12, color:'#f59e0b', margin:0 }}>PCM: <strong>{pcmCount}</strong> checkbox{pcmCount !== 1 ? 'es' : ''}{chNum < 10 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C10)</span>}</p>
           </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div>
+              <label style={lbl}>Guardian Name</label>
+              <input
+                type="text"
+                style={inp}
+                placeholder="e.g., Aisha Mum"
+                value={form.guardianName || ''}
+                onChange={e => set('guardianName', e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={lbl}>Guardian Mobile</label>
+              <input
+                type="text"
+                style={inp}
+                placeholder="e.g., 0123456789"
+                value={form.guardianMobile || ''}
+                onChange={e => set('guardianMobile', e.target.value)}
+              />
+            </div>
+          </div>
         </div>
         <div style={{ padding:'16px 24px', borderTop:'1px solid var(--border)', display:'flex', gap:12, justifyContent:'flex-end' }}>
           <button onClick={onClose} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'transparent', color:'var(--text)', cursor:'pointer' }}>Cancel</button>

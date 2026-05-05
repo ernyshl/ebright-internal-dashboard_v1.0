@@ -225,7 +225,8 @@ router.post('/:no/restore', async (req, res, next) => {
 
     const sel = await client.query(
       `SELECT name, gender, branch, enrollment_date, grade_chapter,
-              fa_progress_json, total_fa, pcm_progress_json, total_pcm
+              fa_progress_json, total_fa, pcm_progress_json, total_pcm,
+              guardian_name, guardian_mobile
          FROM ${archivedTbl} WHERE no = $1`,
       [no]
     );
@@ -238,8 +239,9 @@ router.post('/:no/restore', async (req, res, next) => {
     await client.query(
       `INSERT INTO ${studentsTbl}
          (name, status, gender, branch, enrollment_date, grade_chapter,
-          fa_progress_json, total_fa, pcm_progress_json, total_pcm)
-       VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10)`,
+          fa_progress_json, total_fa, pcm_progress_json, total_pcm,
+          guardian_name, guardian_mobile)
+       VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12)`,
       [
         a.name,
         'Active',
@@ -251,6 +253,8 @@ router.post('/:no/restore', async (req, res, next) => {
         a.total_fa || '0/0',
         JSON.stringify(Array.isArray(a.pcm_progress_json) ? a.pcm_progress_json : []),
         a.total_pcm || '0/0',
+        a.guardian_name   || '',
+        a.guardian_mobile || '',
       ]
     );
 

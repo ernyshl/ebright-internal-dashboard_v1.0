@@ -12,7 +12,7 @@ const inp = { fontSize:13, border:'1px solid var(--border)', borderRadius:8, pad
 const SORTED_BRANCHES = [...BRANCHES].sort();
 
 function emptyForm() {
-  return { name:'', gender:'Male', status:'Active', branch:'AMP', enrollmentDate:'', grade:'G1', chapter:'C1' };
+  return { name:'', gender:'Male', status:'Active', branch:'AMP', enrollmentDate:'', grade:'G1', chapter:'C1', guardianName:'', guardianMobile:'' };
 }
 
 /* ─── Bulk Upload Tab ─── */
@@ -195,6 +195,8 @@ function ManualEntryTab({ onAdd, onClose }) {
       chapter:        form.chapter,
       faAttended:     Array(faCount).fill(false),
       pcmAttended:    Array(pcmCount).fill(false),
+      guardianName:   String(form.guardianName || '').trim(),
+      guardianMobile: String(form.guardianMobile || '').trim(),
     };
     onAdd([student]);
     setForm(emptyForm());
@@ -280,6 +282,30 @@ function ManualEntryTab({ onAdd, onClose }) {
           <select value={form.chapter} onChange={e => set('chapter', e.target.value)} style={{ ...inp, cursor:'pointer' }}>
             {CHAPTERS.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+        </div>
+
+        {/* Guardian Name */}
+        <div style={fieldWrap}>
+          <label style={labelStyle}>Guardian Name <span style={{ color:'var(--muted)', fontWeight:400 }}>(optional)</span></label>
+          <input
+            type="text"
+            placeholder="e.g., Aisha Mum"
+            value={form.guardianName || ''}
+            onChange={e => set('guardianName', e.target.value)}
+            style={inp}
+          />
+        </div>
+
+        {/* Guardian Mobile */}
+        <div style={fieldWrap}>
+          <label style={labelStyle}>Guardian Mobile <span style={{ color:'var(--muted)', fontWeight:400 }}>(optional)</span></label>
+          <input
+            type="text"
+            placeholder="e.g., 0123456789"
+            value={form.guardianMobile || ''}
+            onChange={e => set('guardianMobile', e.target.value)}
+            style={inp}
+          />
         </div>
       </div>
 
