@@ -358,6 +358,7 @@ export function OkrAttendancePage() {
                     <WeeklyKpiCards
                       weekRecords={weekRecords}
                       prevWeekRecords={week1Records ?? []}
+                      dashWeek={dashWeek}
                     />
                   )}
 

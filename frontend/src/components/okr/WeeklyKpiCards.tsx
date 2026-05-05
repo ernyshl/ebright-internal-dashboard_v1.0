@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { DAYS } from '../../lib/okr/constants';
-import { n } from '../../lib/okr/utils';
+import { n, weekRange } from '../../lib/okr/utils';
+import { AllBranchesStudentModal } from './AllBranchesStudentModal';
 
 interface Props {
   weekRecords: any[];
   prevWeekRecords: any[];
+  dashWeek?: string;
 }
 
 const DAY_LABEL: Record<string, string> = {
@@ -19,8 +21,9 @@ function sumDayCategory(records: any[], day: string, cats: string[]): number {
   return cats.reduce((s, c) => s + sumField(records, `${day}_${c}`), 0);
 }
 
-export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
+export function WeeklyKpiCards({ weekRecords, prevWeekRecords, dashWeek }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [openStatus, setOpenStatus] = useState<null | 'frozen' | 'replaced' | 'absent' | 'attended'>(null);
 
   // Total Active Students
   const totalActive = sumField(weekRecords, 'active_students');
@@ -144,18 +147,40 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
                 );
               })}
 
-              <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Replaced
+              <div
+                onClick={(e) => { e.stopPropagation(); setOpenStatus('replaced'); }}
+                style={{
+                  background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 12px',
+                  cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(146,64,14,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Replaced
+                  </div>
+                  <span style={{ fontSize: '0.62rem', color: '#92400e', fontWeight: 600 }}>👥 click</span>
                 </div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#92400e', marginTop: 4 }}>
                   {totalReplaced.toLocaleString()}
                 </div>
               </div>
 
-              <div style={{ background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Frozen
+              <div
+                onClick={(e) => { e.stopPropagation(); setOpenStatus('frozen'); }}
+                style={{
+                  background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: '10px 12px',
+                  cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(30,64,175,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Frozen
+                  </div>
+                  <span style={{ fontSize: '0.62rem', color: '#1e40af', fontWeight: 600 }}>👥 click</span>
                 </div>
                 <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e40af', marginTop: 4 }}>
                   {totalFrozen.toLocaleString()}
@@ -184,6 +209,13 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
         )}
       </div>
 
+      <AllBranchesStudentModal
+        open={openStatus !== null}
+        onClose={() => setOpenStatus(null)}
+        status={openStatus ?? 'frozen'}
+        weekRangeLabel={dashWeek ? weekRange(dashWeek) : ''}
+        weekRecords={weekRecords}
+      />
     </div>
   );
 }
