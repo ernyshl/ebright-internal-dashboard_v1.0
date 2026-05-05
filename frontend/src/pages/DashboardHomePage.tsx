@@ -69,8 +69,8 @@ export function DashboardHomePage() {
       links: [
         { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
         { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' },
-        // ADD THIS LINE BELOW:
-        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' }
+        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' },
+        { label: 'Branch Revenue & Renewals', path: '/finance/branch-revenue-renewals', dashboard: 'finance' }
       ]
     },
     {
