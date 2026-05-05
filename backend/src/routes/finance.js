@@ -243,23 +243,43 @@ financeRouter.get('/branch-revenue-renewals', async (req, res, next) => {
       ORDER BY total_revenue DESC, ab.branches ASC
     `, params);
 
-    // Query 2: Renewal total per branch (from finance_renewals; uses date_from/date_to only)
-    const renewalParams = [];
-    let renewalDateWhere = '';
-    if (date_from && date_to) {
-      renewalParams.push(date_from, date_to);
-      renewalDateWhere = `WHERE doc_date >= $1 AND doc_date <= $2`;
-    } else if (date_from) {
-      renewalParams.push(date_from);
-      renewalDateWhere = `WHERE doc_date >= $1`;
-    } else if (date_to) {
-      renewalParams.push(date_to);
-      renewalDateWhere = `WHERE doc_date <= $1`;
+    // Query 2: Renewal total per branch (from finance_renewals).
+    // Translate full branch name → short code for filtering, since
+    // finance_renewals.branch_code uses short codes (e.g. 'PJY') while the
+    // `branch` query param is a full name (e.g. 'Ebright Putrajaya').
+    let renewalBranchCode = null;
+    if (branch) {
+      for (const [code, fullName] of Object.entries(BRANCH_CODE_TO_FULL_NAME)) {
+        if (fullName === branch) {
+          renewalBranchCode = code;
+          break;
+        }
+      }
     }
+
+    const renewalConditions = [];
+    const renewalParams = [];
+    let rIdx = 1;
+    if (date_from) {
+      renewalConditions.push(`doc_date >= $${rIdx++}`);
+      renewalParams.push(date_from);
+    }
+    if (date_to) {
+      renewalConditions.push(`doc_date <= $${rIdx++}`);
+      renewalParams.push(date_to);
+    }
+    if (renewalBranchCode) {
+      renewalConditions.push(`branch_code = $${rIdx++}`);
+      renewalParams.push(renewalBranchCode);
+    }
+    const renewalWhere = renewalConditions.length
+      ? `WHERE ${renewalConditions.join(' AND ')}`
+      : '';
+
     const renewalsPromise = pool.query(`
       SELECT branch_code, SUM(amount) AS renewal_total
       FROM finance_renewals
-      ${renewalDateWhere}
+      ${renewalWhere}
       GROUP BY branch_code
     `, renewalParams);
 
