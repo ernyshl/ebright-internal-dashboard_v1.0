@@ -75,7 +75,7 @@ async function refreshFinanceRenewals() {
         SELECT
           ai.doc_no,
           ai.doc_date::date,
-          TRIM(REGEXP_REPLACE(d->>'deptNo', '^[0-9]+', '')),
+          TRIM(REGEXP_REPLACE(TRIM(d->>'deptNo'), '^[0-9]+', '')),
           TRIM(SPLIT_PART(d->>'description', ',', 2)),
           (d->>'subTotal')::numeric,
           TRIM(SPLIT_PART(d->>'description', ',', 1)),
