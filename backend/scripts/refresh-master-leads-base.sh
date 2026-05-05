@@ -17,5 +17,5 @@ RESULT=$(docker exec -i "$DB_CONTAINER" psql -U optidept -d ebrightleads_db -t -
   exit 0   # don't fail cron run loudly; log and move on
 }
 
-IFS='|' read -r META_INS TT_INS <<< "$RESULT"
-echo "[$(date)] meta_inserted=${META_INS:-0} tiktok_inserted=${TT_INS:-0}"
+IFS='|' read -r META_INS TT_INS WIX_INS <<< "$RESULT"
+echo "[$(date)] meta_inserted=${META_INS:-0} tiktok_inserted=${TT_INS:-0} wix_inserted=${WIX_INS:-0}"
