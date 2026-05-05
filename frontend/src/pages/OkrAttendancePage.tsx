@@ -16,6 +16,7 @@ import { YearlyDashboardView } from '../components/okr/YearlyDashboardView';
 import { YearlyBulkEntry } from '../components/okr/YearlyBulkEntry';
 import { WeeklyKpiCards } from '../components/okr/WeeklyKpiCards';
 import { OkrTableView } from '../components/okr/OkrTableView';
+import { OkrRegionView } from '../components/okr/OkrRegionView';
 import { WeeklyRankingTable } from '../components/okr/WeeklyRankingTable';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
@@ -24,6 +25,7 @@ const TABS = [
   { id: 'entry',     label: 'Data Entry', icon: '✏️' },
   { id: 'history',   label: 'History',    icon: '📋' },
   { id: 'table',     label: 'Table',      icon: '🏆' },
+  { id: 'region',    label: 'Region',     icon: '🌐' },
 ];
 
 export function OkrAttendancePage() {
@@ -881,6 +883,11 @@ export function OkrAttendancePage() {
           }}
         />
       )}
+
+      {/* ══════════════════════════════════════
+          REGION TAB — per-region attendance comparison + trend
+      ══════════════════════════════════════ */}
+      {activeTab === 'region' && <OkrRegionView />}
     </div>
   );
 }
