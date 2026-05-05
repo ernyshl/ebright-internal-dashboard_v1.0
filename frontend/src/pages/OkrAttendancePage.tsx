@@ -15,6 +15,7 @@ import { DailyAttendanceView } from '../components/okr/DailyAttendanceView';
 import { YearlyDashboardView } from '../components/okr/YearlyDashboardView';
 import { YearlyBulkEntry } from '../components/okr/YearlyBulkEntry';
 import { WeeklyKpiCards } from '../components/okr/WeeklyKpiCards';
+import { OkrTableView } from '../components/okr/OkrTableView';
 import { WeeklyRankingTable } from '../components/okr/WeeklyRankingTable';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'entry',     label: 'Data Entry', icon: '✏️' },
   { id: 'history',   label: 'History',    icon: '📋' },
+  { id: 'table',     label: 'Table',      icon: '🏆' },
 ];
 
 export function OkrAttendancePage() {
@@ -864,6 +866,21 @@ export function OkrAttendancePage() {
           </div>
         );
       })()}
+
+      {/* ══════════════════════════════════════
+          TABLE TAB — Renewal-style ranking table
+      ══════════════════════════════════════ */}
+      {activeTab === 'table' && (
+        <OkrTableView
+          onSelect={({ branch, week }) => {
+            setDashWeek(week);
+            setDashBranch(branch);
+            setDashView('weekly');
+            setActiveTab('dashboard');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      )}
     </div>
   );
 }
