@@ -87,7 +87,7 @@ async function refreshFinanceRenewals() {
         WHERE ai.doc_type = 'Invoice'
           AND TRIM(SPLIT_PART(d->>'description', ',', 3)) = 'Renewal'
           AND TRIM(SPLIT_PART(d->>'description', ',', 2)) IN ('3M','6M','9M','12M')
-          AND d->>'deptNo' ~ '^[0-9]+[A-Z]+$'
+          AND TRIM(d->>'deptNo') ~ '^[0-9]+[A-Z]+$'
           AND d->>'dtlKey' IS NOT NULL
         ON CONFLICT (doc_no, detail_key) DO UPDATE SET
           doc_date             = EXCLUDED.doc_date,
@@ -111,7 +111,7 @@ async function refreshFinanceRenewals() {
             AND ai.doc_type = 'Invoice'
             AND TRIM(SPLIT_PART(d->>'description', ',', 3)) = 'Renewal'
             AND TRIM(SPLIT_PART(d->>'description', ',', 2)) IN ('3M','6M','9M','12M')
-            AND d->>'deptNo' ~ '^[0-9]+[A-Z]+$'
+            AND TRIM(d->>'deptNo') ~ '^[0-9]+[A-Z]+$'
         )
       `);
 
