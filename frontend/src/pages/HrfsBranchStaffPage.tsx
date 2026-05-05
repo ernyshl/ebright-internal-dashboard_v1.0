@@ -116,14 +116,15 @@ export function HrfsBranchStaffPage() {
       ) : (
         <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
           <table className="dataTable">
-            <thead><tr><th>#</th><th>Name</th><th>Nickname</th><th>Email</th><th>Phone</th><th>Branch</th><th>Department</th><th>Position</th><th>Status</th><th>Employment Type</th><th>Start Date</th></tr></thead>
+            <thead><tr><th>#</th><th>Employee ID</th><th>Name</th><th>Nickname</th><th>Email</th><th>Phone</th><th>Branch</th><th>Department</th><th>Position</th><th>Status</th><th>Employment Type</th><th>Start Date</th></tr></thead>
             <tbody>
-              {records.length === 0 ? (<tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
+              {records.length === 0 ? (<tr><td colSpan={12} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No records</td></tr>
               ) : records.map((r, i) => {
                 const sc = STATUS_COLORS[(r.status || '').toLowerCase()] || {};
                 return (
                   <tr key={r.id}>
                     <td style={{ color: 'var(--muted)', fontSize: 11 }}>{(page - 1) * PAGE_SIZE + i + 1}</td>
+                    <td style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12 }}>{r.employeeId || '—'}</td>
                     <td><strong>{r.name}</strong></td>
                     <td>{r.nickname || '—'}</td>
                     <td style={{ fontSize: 12 }}>{r.email || '—'}</td>
