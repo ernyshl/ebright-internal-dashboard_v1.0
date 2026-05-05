@@ -3,6 +3,7 @@ const { createApp } = require('./app');
 const { pool } = require('./db');
 const { getTableNames } = require('./utils/tableNames');
 const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
+const { startFinanceRenewalsRefreshJob } = require('./jobs/refreshFinanceRenewals');
 
 async function runMigrations() {
   const { students: studentsTbl } = getTableNames();
@@ -121,6 +122,7 @@ async function start() {
     console.log(`API listening on http://0.0.0.0:${env.PORT}`);
   });
   startFinanceRefreshJob();
+  startFinanceRenewalsRefreshJob();
 }
 
 start().catch(err => {
