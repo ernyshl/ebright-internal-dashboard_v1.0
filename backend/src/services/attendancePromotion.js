@@ -5,7 +5,7 @@ const { isFoundationLesson } = require('../utils/lessonKeywords');
 const { bumpChapter } = require('../utils/chapterBump');
 const { getTableNames } = require('../utils/tableNames');
 
-const VALID_STATUSES = new Set(['attended', 'absent']);
+const VALID_STATUSES = new Set(['attended', 'absent', 'replaced']);
 
 function tickFaAt(faProgress, index) {
   const arr = Array.isArray(faProgress) ? faProgress.slice() : [];

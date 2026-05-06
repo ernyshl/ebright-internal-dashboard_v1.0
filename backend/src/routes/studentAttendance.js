@@ -11,7 +11,7 @@ const {
 
 const router = express.Router();
 
-const STATUS_ENUM = z.enum(['attended', 'absent']);
+const STATUS_ENUM = z.enum(['attended', 'absent', 'replaced']);
 
 async function lookupStudent(client, name, branch) {
   const { students: tbl } = getTableNames();
@@ -240,8 +240,11 @@ router.put('/:id', async (req, res, next) => {
     let reverseAction   = null;
 
     if (oldStatus !== newStatus) {
-      if (oldStatus === 'attended' && newStatus === 'absent') {
-        // Reverse the OLD row's effect on the OLD student
+      const wasAttended   = oldStatus === 'attended';
+      const isNowAttended = newStatus === 'attended';
+
+      if (wasAttended && !isNowAttended) {
+        // attended → absent OR attended → replaced: reverse the OLD row's grade promotion
         const student = await lookupStudent(client, oldRow.student_name, oldRow.branch);
         if (student) {
           studentName     = student.name;
@@ -255,8 +258,8 @@ router.put('/:id', async (req, res, next) => {
             newGradeChapter = oldGradeChapter;
           }
         }
-      } else if (oldStatus === 'absent' && newStatus === 'attended') {
-        // Apply forward effect of the NEW row on the NEW student
+      } else if (!wasAttended && isNowAttended) {
+        // absent → attended OR replaced → attended: apply forward grade promotion
         const student = await lookupStudent(client, body.studentName, body.branch);
         if (student) {
           studentName     = student.name;
@@ -278,6 +281,7 @@ router.put('/:id', async (req, res, next) => {
           }
         }
       }
+      // absent ↔ replaced: no grade change (neither state promotes)
     }
 
     await client.query('COMMIT');
