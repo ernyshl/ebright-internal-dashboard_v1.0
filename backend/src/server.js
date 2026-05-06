@@ -3,6 +3,7 @@ const { createApp } = require('./app');
 const { pool } = require('./db');
 const { getTableNames } = require('./utils/tableNames');
 const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
+const { startFinanceRenewalsRefreshJob } = require('./jobs/refreshFinanceRenewals');
 
 async function runMigrations() {
   const { students: studentsTbl } = getTableNames();
@@ -67,6 +68,49 @@ async function runMigrations() {
     END
     $$;
   `);
+  // finance_renewals: derived from autocount_invoices.data JSON, populated by
+  // refreshFinanceRenewals.js cron. See docs/superpowers/specs/2026-05-05-finance-renewals-table-design.md
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS finance_renewals (
+      id                      BIGSERIAL     PRIMARY KEY,
+      doc_no                  TEXT          NOT NULL,
+      doc_date                DATE          NOT NULL,
+      branch_code             TEXT          NOT NULL,
+      package                 TEXT          NOT NULL,
+      amount                  NUMERIC(12,2) NOT NULL,
+      student_name            TEXT,
+      raw_description         TEXT,
+      detail_key              BIGINT        NOT NULL,
+      student_index           INTEGER       NOT NULL,
+      source_last_modified    TIMESTAMPTZ,
+      parsed_at               TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      CONSTRAINT finance_renewals_doc_key_student_unique UNIQUE (doc_no, detail_key, student_index)
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_finance_renewals_branch_date
+      ON finance_renewals (branch_code, doc_date)
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_finance_renewals_doc_date
+      ON finance_renewals (doc_date)
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS finance_renewals_refresh_log (
+      id                        SERIAL      PRIMARY KEY,
+      ran_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      source_max_last_modified  TIMESTAMPTZ,
+      rows_upserted             INTEGER,
+      rows_deleted              INTEGER,
+      duration_ms               INTEGER,
+      status                    TEXT,
+      error_message             TEXT
+    )
+  `);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_finance_renewals_refresh_log_status_ran_at
+      ON finance_renewals_refresh_log (status, ran_at DESC)
+  `);
   // eslint-disable-next-line no-console
   console.log('✅ DB migrations complete');
 }
@@ -79,6 +123,7 @@ async function start() {
     console.log(`API listening on http://0.0.0.0:${env.PORT}`);
   });
   startFinanceRefreshJob();
+  startFinanceRenewalsRefreshJob();
 }
 
 start().catch(err => {

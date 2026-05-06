@@ -26,6 +26,12 @@ const LEADS_SRC = `(
     (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd WHERE fd.value->>'name' = 'full_name' LIMIT 1) AS full_name,
     (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd WHERE fd.value->>'name' = 'email' LIMIT 1)     AS email,
     (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd WHERE fd.value->>'name' = 'phone' LIMIT 1)     AS phone_number,
+    -- Child / participant name: BM forms use 'nama_peserta', ENG forms use 'participant_name'
+    (SELECT (fd.value->'values')->>0 FROM jsonb_array_elements(ml.raw_data->'field_data') fd
+      WHERE fd.value->>'name' ILIKE 'nama_peserta' OR fd.value->>'name' ILIKE 'participant_name' LIMIT 1) AS child_name,
+    -- Meta lead webhook doesn't include campaign metadata; form_name is the closest proxy
+    -- (marketing names each form after its campaign).
+    ml.form_name AS campaign_name,
     CASE
       WHEN ml.form_id::text = ANY (ARRAY['34852175561095929','2081747062387420']) THEN 'Online'::text
       ELSE COALESCE(bm.official_name, bm2.official_name)
@@ -54,6 +60,8 @@ const LEADS_SRC = `(
     sp.raw_data->>'Name'         AS full_name,
     sp.raw_data->>'Email'        AS email,
     sp.raw_data->>'Phone number' AS phone_number,
+    NULL::text                   AS child_name,
+    sp.raw_data->>'campaign_name' AS campaign_name,
     COALESCE(bm.official_name,
       CASE
         WHEN (sp.raw_data->>'Please Select Your Preferred Day') ILIKE 'Online%' THEN 'Online'::text
@@ -85,6 +93,8 @@ const LEADS_SRC = `(
     rw.full_name,
     rw.email,
     rw.phone_number,
+    NULL::text              AS child_name,
+    NULL::text              AS campaign_name,
     bm.official_name        AS clean_branch,
     rw.raw_branch_text      AS raw_branch_text,
     NULL::text              AS region,
@@ -174,7 +184,8 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
 
     // Get filtered data — use actual columns from the table
     const dataResult = await pool.query(
-      `SELECT lead_source, full_name, phone_number, email, submitted_at, raw_branch_text, clean_branch, region
+      `SELECT lead_source, full_name, phone_number, email, child_name, campaign_name,
+              submitted_at, raw_branch_text, clean_branch, region
        FROM ${LEADS_SRC} ${whereClause}
        ORDER BY submitted_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, Number(limit), offset]

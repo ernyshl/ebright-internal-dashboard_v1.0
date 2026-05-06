@@ -1,7 +1,176 @@
 const express = require('express');
+const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Branch Revenue & Renewals — combines per-branch revenue (view_ebright_invoices)
+// with per-branch renewal totals (finance_renewals).
+const BRANCH_CODE_TO_FULL_NAME = {
+  AMP:  'Ebright Ampang',
+  BBB:  'Ebright Bandar Baru Bangi',
+  BSP:  'Ebright Bandar Seri Putra',
+  BTHO: 'Ebright Bandar Tun Hussein Onn',
+  CJY:  'Ebright Cyberjaya',
+  DA:   'Ebright Denai Alam',
+  DK:   'Ebright Danau Kota',
+  DPU:  'Ebright Dataran Puchong Utama',
+  EGR:  'Ebright Eco Grandeur',
+  KD:   'Ebright Kota Damansara',
+  KLG:  'Ebright Klang',
+  KTG:  'Ebright Kajang TTDI Groove',
+  KW:   'Ebright Kota Warisan',
+  ONL:  'Ebright Online',
+  PJY:  'Ebright Putrajaya',
+  RBY:  'Ebright Rimbayu',
+  SA:   'Ebright Setia Alam',
+  SHA:  'Ebright Shah Alam',
+  SP:   'Ebright Sri Petaling',
+  ST:   'Ebright Subang Taipan',
+  TSG:  'Ebright Taman Sri Gombak',
+};
+
+router.get(
+  '/branch-revenue-renewals',
+  requireAuth,
+  requireRole(['super_admin', 'ceo', 'finance', 'od', 'rm', 'tv', 'academy']),
+  async (req, res, next) => {
+    try {
+      const { date_from, date_to, branch } = req.query;
+
+      const dateConditions = [];
+      const params = [];
+      let idx = 1;
+
+      if (date_from) {
+        dateConditions.push(`DATE(doc_date + INTERVAL '8 hours') >= $${idx++}`);
+        params.push(date_from);
+      }
+      if (date_to) {
+        dateConditions.push(`DATE(doc_date + INTERVAL '8 hours') <= $${idx++}`);
+        params.push(date_to);
+      }
+      if (branch) {
+        dateConditions.push(`branches = $${idx++}`);
+        params.push(branch);
+      }
+
+      const dateWhere = dateConditions.length
+        ? `AND ${dateConditions.join(' AND ')}`
+        : '';
+
+      const revenuePromise = pool.query(`
+        WITH all_branches AS (
+          SELECT branches
+          FROM view_ebright_invoices
+          WHERE branches IS NOT NULL
+            AND branches != ''
+            AND branches != 'HQ / Others'
+            AND total_amount IS NOT NULL
+          GROUP BY branches
+          ORDER BY SUM(total_amount) DESC
+          LIMIT 20
+        ),
+        filtered AS (
+          SELECT branches, SUM(total_amount) AS total_revenue, COUNT(*) AS invoice_count
+          FROM view_ebright_invoices
+          WHERE branches IS NOT NULL
+            AND branches != ''
+            AND branches != 'HQ / Others'
+            AND total_amount IS NOT NULL
+            ${dateWhere}
+          GROUP BY branches
+        )
+        SELECT
+          ab.branches,
+          COALESCE(f.total_revenue, 0) AS total_revenue,
+          COALESCE(f.invoice_count, 0) AS invoice_count
+        FROM all_branches ab
+        LEFT JOIN filtered f ON f.branches = ab.branches
+        ORDER BY total_revenue DESC, ab.branches ASC
+      `, params);
+
+      let renewalBranchCode = null;
+      if (branch) {
+        for (const [code, fullName] of Object.entries(BRANCH_CODE_TO_FULL_NAME)) {
+          if (fullName === branch) {
+            renewalBranchCode = code;
+            break;
+          }
+        }
+      }
+
+      const renewalConditions = [];
+      const renewalParams = [];
+      let rIdx = 1;
+      if (date_from) {
+        renewalConditions.push(`doc_date >= $${rIdx++}`);
+        renewalParams.push(date_from);
+      }
+      if (date_to) {
+        renewalConditions.push(`doc_date <= $${rIdx++}`);
+        renewalParams.push(date_to);
+      }
+      if (renewalBranchCode) {
+        renewalConditions.push(`branch_code = $${rIdx++}`);
+        renewalParams.push(renewalBranchCode);
+      }
+      const renewalWhere = renewalConditions.length
+        ? `WHERE ${renewalConditions.join(' AND ')}`
+        : '';
+
+      const renewalsPromise = pool.query(`
+        SELECT branch_code, SUM(amount) AS renewal_total
+        FROM finance_renewals
+        ${renewalWhere}
+        GROUP BY branch_code
+      `, renewalParams);
+
+      const branchListPromise = pool.query(`
+        SELECT DISTINCT branches
+        FROM view_ebright_invoices
+        WHERE branches IS NOT NULL
+          AND branches != ''
+          AND branches != 'HQ / Others'
+        ORDER BY branches
+      `);
+
+      const [revenueResult, renewalsResult, branchListResult] = await Promise.all([
+        revenuePromise,
+        renewalsPromise,
+        branchListPromise,
+      ]);
+
+      const renewalByFullName = {};
+      for (const row of renewalsResult.rows) {
+        const fullName = BRANCH_CODE_TO_FULL_NAME[row.branch_code];
+        if (fullName) {
+          renewalByFullName[fullName] = parseFloat(row.renewal_total) || 0;
+        }
+      }
+
+      const branches = revenueResult.rows.map(r => ({
+        branch:  r.branches,
+        total:   parseFloat(r.total_revenue || 0),
+        renewal: renewalByFullName[r.branches] || 0,
+        count:   parseInt(r.invoice_count, 10),
+      }));
+
+      const grandTotal = branches.reduce((sum, b) => sum + b.total, 0);
+      const grandRenewalTotal = branches.reduce((sum, b) => sum + b.renewal, 0);
+
+      return res.json({
+        branches,
+        grandTotal,
+        grandRenewalTotal,
+        branchList: branchListResult.rows.map(r => r.branches),
+      });
+    } catch (err) {
+      console.error('[academy/branch-revenue-renewals] Error:', err.message);
+      return next(err);
+    }
+  }
+);
 
 // Academy dashboard stats endpoint
 // This can be extended to fetch data from GHL API or your database

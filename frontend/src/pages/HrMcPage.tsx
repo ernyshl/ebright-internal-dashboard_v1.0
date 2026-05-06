@@ -6,7 +6,7 @@ import { apiFetch } from '../lib/api';
 const PAGE_SIZE = 50;
 
 const POSITION_OPTIONS = ['HOD','Executive','Full-Time Branch Manager','Full-Time Coach','Full-Time','Part-Time','Intern'];
-const DEPARTMENT_OPTIONS = ['Academy','Operation','Finance','Marketing','Industrial Organisation Psychology','Human Resource','Optimisation','Ampang','Bandar Baru Bangi','Bandar Rimbayu','Bandar Seri Putra','Bandar Tun Hussein Onn','Cyberjaya','Danau Kota','Denai Alam','Eco Grandeur','Kajang TTDI Grove','Klang','Kota Damansara','Kota Warisan','Putrajaya','Setia Alam','Shah Alam','Sri Petaling','Subang Taipan','Taman Sri Gombak'];
+const DEPARTMENT_OPTIONS = ['Academy','Operation','Finance','Marketing','Industrial Organisation Psychology','Human Resource','Optimisation','Ampang','Bandar Baru Bangi','Bandar Rimbayu','Bandar Seri Putra','Bandar Tun Hussein Onn','Cyberjaya','Danau Kota','Denai Alam','Eco Grandeur','Kajang TTDI Grove','Klang','Kota Damansara','Kota Warisan','Online','Putrajaya','Setia Alam','Shah Alam','Sri Petaling','Subang Taipan','Taman Sri Gombak'];
 
 const EMPTY_FORM = { name: '', position: '', department_branch: '', mc_date: '', reason: '' };
 

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { DAYS } from '../../lib/okr/constants';
-import { n } from '../../lib/okr/utils';
+import { n, weekRange } from '../../lib/okr/utils';
+import { AllBranchesStudentModal } from './AllBranchesStudentModal';
 
 interface Props {
   weekRecords: any[];
   prevWeekRecords: any[];
+  dashWeek?: string;
 }
 
 const DAY_LABEL: Record<string, string> = {
@@ -19,8 +21,9 @@ function sumDayCategory(records: any[], day: string, cats: string[]): number {
   return cats.reduce((s, c) => s + sumField(records, `${day}_${c}`), 0);
 }
 
-export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
+export function WeeklyKpiCards({ weekRecords, prevWeekRecords, dashWeek }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [openStatus, setOpenStatus] = useState<null | 'frozen' | 'replaced' | 'absent' | 'attended'>(null);
 
   // Total Active Students
   const totalActive = sumField(weekRecords, 'active_students');
@@ -129,7 +132,11 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
             onClick={e => e.stopPropagation()}
             style={{ marginTop: 16, paddingTop: 16, borderTop: '1.5px dashed var(--border)' }}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+            {/* Row 1: Daily Attendance Wed→Sun (5 fixed columns, matching Absent layout below) */}
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              📅 Daily Attendance
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 }}>
               {DAYS.map(d => {
                 const dayTotal = dailyTotal[d.key];
                 return (
@@ -143,39 +150,75 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
                   </div>
                 );
               })}
+            </div>
 
-              <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Replaced
+            {/* Row 2: Absent Wed→Sun (matches the Daily Attendance row above) */}
+            <div style={{ marginTop: 14, fontSize: '0.7rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              ⛔ Absent (Daily Breakdown)
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 }}>
+              {DAYS.map(d => {
+                const dayAbsent = sumField(weekRecords, `${d.key}_absent`);
+                return (
+                  <div key={d.key} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {DAY_LABEL[d.key]} Absent
+                    </div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#991b1b', marginTop: 4 }}>
+                      {dayAbsent.toLocaleString()}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Row 3: Replaced + Frozen + Total Weekly Attendance (3 wide tiles) */}
+            <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+              <div
+                onClick={(e) => { e.stopPropagation(); setOpenStatus('replaced'); }}
+                style={{
+                  background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 14px',
+                  cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(146,64,14,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    🔁 Replaced
+                  </div>
+                  <span style={{ fontSize: '0.62rem', color: '#92400e', fontWeight: 600 }}>👥 click</span>
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#92400e', marginTop: 4 }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#92400e', marginTop: 4 }}>
                   {totalReplaced.toLocaleString()}
                 </div>
               </div>
 
-              <div style={{ background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Frozen
+              <div
+                onClick={(e) => { e.stopPropagation(); setOpenStatus('frozen'); }}
+                style={{
+                  background: '#dbeafe', border: '1px solid #93c5fd', borderRadius: 8, padding: '10px 14px',
+                  cursor: 'pointer', transition: 'transform 0.12s, box-shadow 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 10px rgba(30,64,175,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    ❄️ Frozen
+                  </div>
+                  <span style={{ fontSize: '0.62rem', color: '#1e40af', fontWeight: 600 }}>👥 click</span>
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e40af', marginTop: 4 }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e40af', marginTop: 4 }}>
                   {totalFrozen.toLocaleString()}
                 </div>
               </div>
 
-              <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Absent
-                </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#991b1b', marginTop: 4 }}>
-                  {totalAbsent.toLocaleString()}
-                </div>
-              </div>
-
-              <div style={{ background: '#dcfce7', border: '1.5px solid #86efac', borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ background: '#dcfce7', border: '1.5px solid #86efac', borderRadius: 8, padding: '10px 14px' }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Total Weekly Attendance
+                  ✅ Total Weekly Attendance
                 </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#15803d', marginTop: 4 }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#15803d', marginTop: 4 }}>
                   {totalAttendance.toLocaleString()}
                 </div>
               </div>
@@ -184,6 +227,13 @@ export function WeeklyKpiCards({ weekRecords, prevWeekRecords }: Props) {
         )}
       </div>
 
+      <AllBranchesStudentModal
+        open={openStatus !== null}
+        onClose={() => setOpenStatus(null)}
+        status={openStatus ?? 'frozen'}
+        weekRangeLabel={dashWeek ? weekRange(dashWeek) : ''}
+        weekRecords={weekRecords}
+      />
     </div>
   );
 }

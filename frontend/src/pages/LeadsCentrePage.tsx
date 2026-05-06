@@ -356,9 +356,11 @@ export function LeadsCentrePage() {
                 <thead>
                   <tr>
                     <th className="sticky-col">Name</th>
+                    <th>Child Name</th>
                     <th>Email</th>
                     <th>Phone</th>
                     <th>Source</th>
+                    <th>Campaign</th>
                     <th>Region</th>
                     <th>Branch</th>
                     <th>Submitted</th>
@@ -377,6 +379,7 @@ export function LeadsCentrePage() {
                           </div>
                         )}
                       </td>
+                      <td>{lead.child_name || ''}</td>
                       <td>
                         <a href={`mailto:${lead.email}`} className="leadEmail">
                           {lead.email || '-'}
@@ -393,6 +396,9 @@ export function LeadsCentrePage() {
                         <span className={`badge badgeSource ${lead.lead_source?.toLowerCase().replace(/\s+/g, '-')}`}>
                           {lead.lead_source || '-'}
                         </span>
+                      </td>
+                      <td style={{ fontSize: 12, maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={lead.campaign_name || ''}>
+                        {lead.campaign_name || ''}
                       </td>
                       <td>
                         <span className="regionBadge">
