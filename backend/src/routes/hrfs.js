@@ -205,11 +205,16 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
-    // BranchStaff sometimes contains stub rows for the same person where
-    // only nickname/branch/role are populated and name (plus NRIC, email,
-    // phone) are NULL. Fall back to the latest non-empty name we have for
-    // that nickname so the dashboard shows the person rather than a blank
-    // row. Same pattern used by /api/hrfs/leave-transactions.
+    // Two-layer name handling for stub rows in BranchStaff:
+    //   1. Fall back to latest non-empty name for the same nickname — same
+    //      pattern as /api/hrfs/leave-transactions, rescues legitimate
+    //      same-person rows where only some entries got the name written.
+    //   2. Filter out any row where neither bs.name nor the fallback has a
+    //      value. Those are typically duplicate stubs created with a
+    //      misspelled nickname (e.g. canonical row "FUDLA" + stubs
+    //      "FUDHLA") that the fallback can't link. HR edits via
+    //      portal.ebright.my, not this dashboard, so unrescuable stubs
+    //      are display noise with no in-app remediation path.
     const nameLookupCte = `
       WITH name_lookup AS (
         SELECT DISTINCT ON ("nickname") "nickname", "name"
@@ -219,9 +224,20 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
         ORDER BY "nickname", "createdAt" DESC
       )
     `;
+    const resolvableNameFilter = `COALESCE(NULLIF(TRIM(bs."name"), ''), nl."name") IS NOT NULL`;
+    const fullWhere = where
+      ? `${where} AND ${resolvableNameFilter}`
+      : `WHERE ${resolvableNameFilter}`;
 
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."BranchStaff" bs ${where}`, params),
+      pool.query(
+        `${nameLookupCte}
+         SELECT COUNT(*)
+         FROM hrfs."BranchStaff" bs
+         LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
+         ${fullWhere}`,
+        params
+      ),
       pool.query(
         `${nameLookupCte}
          SELECT bs.id,
@@ -236,7 +252,7 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
                 bs."contract", bs."createdAt", bs."updatedAt"
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
-         ${where}
+         ${fullWhere}
          ORDER BY bs."createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
       ),
