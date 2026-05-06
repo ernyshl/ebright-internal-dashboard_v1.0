@@ -217,7 +217,7 @@ export default function App() {
             <RequirePermission dashboard="student_db"><StudentAttendancePage /></RequirePermission>
           } />
           <Route path="/okr-attendance" element={
-            <RequirePermission dashboard="operations"><OkrAttendancePage /></RequirePermission>
+            <RequirePermission dashboards={["academy", "operations"]}><OkrAttendancePage /></RequirePermission>
           } />
         </Route>
       </Route>
