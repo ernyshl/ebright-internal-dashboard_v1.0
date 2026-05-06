@@ -180,29 +180,49 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
-      conditions.push(`("name" ILIKE $${idx} OR "nickname" ILIKE $${idx} OR "nric" ILIKE $${idx} OR "email" ILIKE $${idx})`);
+      conditions.push(`(bs."name" ILIKE $${idx} OR bs."nickname" ILIKE $${idx} OR bs."nric" ILIKE $${idx} OR bs."email" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
-    if (status) { conditions.push(`"status" = $${idx++}`); params.push(status); }
-    if (department) { conditions.push(`"department" ILIKE $${idx++}`); params.push(`%${department}%`); }
-    if (position) { conditions.push(`"position" ILIKE $${idx++}`); params.push(`%${position}%`); }
+    if (status) { conditions.push(`bs."status" = $${idx++}`); params.push(status); }
+    if (department) { conditions.push(`bs."department" ILIKE $${idx++}`); params.push(`%${department}%`); }
+    if (position) { conditions.push(`bs."position" ILIKE $${idx++}`); params.push(`%${position}%`); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
 
+    // BranchStaff sometimes contains stub rows for the same person where
+    // only nickname/branch/role are populated and name (plus NRIC, email,
+    // phone) are NULL. Fall back to the latest non-empty name we have for
+    // that nickname so the dashboard shows the person rather than a blank
+    // row. Same pattern used by /api/hrfs/leave-transactions.
+    const nameLookupCte = `
+      WITH name_lookup AS (
+        SELECT DISTINCT ON ("nickname") "nickname", "name"
+        FROM hrfs."BranchStaff"
+        WHERE "name" IS NOT NULL AND TRIM("name") <> ''
+          AND "nickname" IS NOT NULL AND TRIM("nickname") <> ''
+        ORDER BY "nickname", "createdAt" DESC
+      )
+    `;
+
     const [countResult, dataResult] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM hrfs."BranchStaff" ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM hrfs."BranchStaff" bs ${where}`, params),
       pool.query(
-        `SELECT id, "name", "nickname", "nric", "email", "phone", "role",
-                "branch", "department", "position", "status", employment_type,
-                start_date, "endDate", "dob", "age", "gender", "nationality",
-                home_address, "residential", "location", "university",
-                emergency_name, emergency_phone, emergency_relation,
-                signed_date, "probation", "rate", "employeeId",
-                "accessStatus", "bank", bank_name, bank_account,
-                "contract", "createdAt", "updatedAt"
-         FROM hrfs."BranchStaff" ${where}
-         ORDER BY "createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+        `${nameLookupCte}
+         SELECT bs.id,
+                COALESCE(NULLIF(TRIM(bs."name"), ''), nl."name") AS name,
+                bs."nickname", bs."nric", bs."email", bs."phone", bs."role",
+                bs."branch", bs."department", bs."position", bs."status", bs.employment_type,
+                bs.start_date, bs."endDate", bs."dob", bs."age", bs."gender", bs."nationality",
+                bs.home_address, bs."residential", bs."location", bs."university",
+                bs.emergency_name, bs.emergency_phone, bs.emergency_relation,
+                bs.signed_date, bs."probation", bs."rate", bs."employeeId",
+                bs."accessStatus", bs."bank", bs.bank_name, bs.bank_account,
+                bs."contract", bs."createdAt", bs."updatedAt"
+         FROM hrfs."BranchStaff" bs
+         LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
+         ${where}
+         ORDER BY bs."createdAt" DESC LIMIT $${idx} OFFSET $${idx + 1}`,
         [...params, Number(limit), offset]
       ),
     ]);
