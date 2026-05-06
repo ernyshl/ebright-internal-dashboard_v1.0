@@ -73,6 +73,75 @@ export function calcMetrics(r) {
   };
 }
 
+// Parse an AOne attendance export Excel file into both:
+//   1. per-day counts (absent / attended / frozen / replaced) for each weekday
+//   2. per-status student name lists (newline-separated)
+//
+// Detects columns by header name (case-insensitive substring match) so it
+// tolerates variations like "Student Name" / "Name" / "student_name".
+// Resolves with { counts, names, totalRows } or rejects with a useful error.
+export async function parseAoneExportFull(file: File): Promise<{
+  counts: Record<string, { absent: number; attended: number; frozen: number; replaced: number }>;
+  names: { attended: string[]; absent: string[]; frozen: string[]; replaced: string[] };
+  totalRows: number;
+}> {
+  // Lazy-import xlsx to keep the bundle small for users who never use this
+  const XLSX = await import('xlsx');
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target!.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!raw.length) { reject(new Error('File is empty')); return; }
+
+        const keys = Object.keys(raw[0]);
+        const lower = (s: string) => s.toLowerCase();
+        const colStatus = keys.find(k => lower(k).includes('attendance status') || lower(k) === 'status');
+        const colDay    = keys.find(k => lower(k) === 'day');
+        const colName   = keys.find(k => lower(k).includes('student name') || lower(k) === 'name');
+
+        if (!colStatus || !colDay) {
+          reject(new Error('Cannot find "Attendance Status" or "Day" column — make sure this is an AOne attendance export'));
+          return;
+        }
+
+        const DAY_MAP: Record<string, string> = {
+          wednesday: 'wed', wed: 'wed',
+          thursday:  'thu', thu: 'thu',
+          friday:    'fri', fri: 'fri',
+          saturday:  'sat', sat: 'sat',
+          sunday:    'sun', sun: 'sun',
+        };
+        const STATUSES = new Set(['attended', 'absent', 'frozen', 'replaced']);
+        const DAY_KEYS = ['wed', 'thu', 'fri', 'sat', 'sun'];
+
+        const counts: Record<string, any> = Object.fromEntries(
+          DAY_KEYS.map(k => [k, { absent: 0, attended: 0, frozen: 0, replaced: 0 }])
+        );
+        const names = { attended: [] as string[], absent: [] as string[], frozen: [] as string[], replaced: [] as string[] };
+
+        raw.forEach(row => {
+          const status = String(row[colStatus] ?? '').toLowerCase().trim();
+          const dayKey = DAY_MAP[String(row[colDay] ?? '').toLowerCase().trim()];
+          const name   = colName ? String(row[colName] ?? '').trim() : '';
+
+          if (dayKey && STATUSES.has(status)) {
+            counts[dayKey][status]++;
+            if (name) (names as any)[status].push(name);
+          }
+        });
+
+        resolve({ counts, names, totalRows: raw.length });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('File read error'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 // Parse a pasted Excel roster into per-status newline-separated name lists.
 // Tolerates a leading row-number column (e.g. "1\tEnzo Leong\tattended"),
 // skips header rows, and recognises status by prefix:
