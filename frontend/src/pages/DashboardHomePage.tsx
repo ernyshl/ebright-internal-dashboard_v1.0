@@ -40,7 +40,8 @@ export function DashboardHomePage() {
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
         { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' },
-        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' }
+        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' },
+        { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' }
       ]
     },
     {
@@ -70,8 +71,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
         { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' },
-        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' },
-        { label: 'Branch Revenue & Renewals', path: '/finance/branch-revenue-renewals', dashboard: 'finance' }
+        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' }
       ]
     },
     {
