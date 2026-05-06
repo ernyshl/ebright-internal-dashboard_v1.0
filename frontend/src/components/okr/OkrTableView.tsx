@@ -21,16 +21,19 @@ function lastWeekMonday(): string {
 }
 
 type SortDir = 'asc' | 'desc';
+type SortKey = 'rank' | 'branch' | 'attended' | 'absent' | 'frozen' | 'replaced' | 'total' | 'active' | 'rate' | 'rateFreeze'
+             | 'notEnrolled' | 'outstandingInv' | 'expiredPkg' | 'newlyEnrolled';
 
 interface Props {
-  /** Click on branch row → switch to Dashboard → Weekly View at that branch + week */
+  /** Click on branch row → open the dedicated branch detail page for that branch + week */
   onSelect: (opts: { branch: string; week: string }) => void;
 }
 
 export function OkrTableView({ onSelect }: Props) {
   const [weekDate, setWeekDate]             = useState<string>(() => lastWeekMonday());
   const [selectedBranch, setSelectedBranch] = useState<string>('ALL');
-  const [rateSortDir, setRateSortDir]       = useState<SortDir>('desc');
+  const [sortKey, setSortKey]               = useState<SortKey>('rate');
+  const [sortDir, setSortDir]               = useState<SortDir>('desc');
 
   const dw = new Date((weekDate || thisWeekMonday()) + 'T00:00:00');
   const selectedYear  = dw.getFullYear();
@@ -74,6 +77,11 @@ export function OkrTableView({ onSelect }: Props) {
         rate:     m.attendanceRate,
         rateFreeze: m.attendanceRateWithFreeze,
         active: Number(r.active_students ?? 0),
+        // Discrepancy categories (matches the BranchDetailCard 1a-1d layout)
+        notEnrolled:    Number(r.not_enrolled ?? 0),
+        outstandingInv: Number(r.outstanding_invoice_disc ?? 0),
+        expiredPkg:     Number(r.expired_package ?? 0),
+        newlyEnrolled:  Number(r.newly_enrolled ?? 0),
       };
     });
   }, [records]);
@@ -90,9 +98,36 @@ export function OkrTableView({ onSelect }: Props) {
 
   const filteredRows = useMemo(() => {
     let out = selectedBranch === 'ALL' ? allRows : allRows.filter(r => r.branch === selectedBranch);
-    out = [...out].sort((a, b) => rateSortDir === 'asc' ? a.rate - b.rate : b.rate - a.rate);
+    out = [...out].sort((a, b) => {
+      let av: number | string;
+      let bv: number | string;
+      if (sortKey === 'rank') {
+        av = rankByRate.get(a.branch) ?? 999;
+        bv = rankByRate.get(b.branch) ?? 999;
+      } else if (sortKey === 'branch') {
+        av = a.branch.toLowerCase();
+        bv = b.branch.toLowerCase();
+      } else {
+        av = (a as any)[sortKey] ?? 0;
+        bv = (b as any)[sortKey] ?? 0;
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
     return out;
-  }, [allRows, selectedBranch, rateSortDir]);
+  }, [allRows, selectedBranch, sortKey, sortDir, rankByRate]);
+
+  const handleSort = (k: SortKey) => {
+    if (sortKey === k) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(k);
+      // Numeric metrics default to desc (highest first), branch name defaults to asc
+      setSortDir(k === 'branch' || k === 'rank' ? 'asc' : 'desc');
+    }
+  };
+  const arrow = (k: SortKey) => sortKey !== k ? ' ↕' : (sortDir === 'asc' ? ' ▲' : ' ▼');
 
   const totals = useMemo(() => {
     return filteredRows.reduce((acc, r) => ({
@@ -102,11 +137,18 @@ export function OkrTableView({ onSelect }: Props) {
       replaced: acc.replaced + r.replaced,
       total:    acc.total    + r.total,
       active:   acc.active   + r.active,
-    }), { attended: 0, absent: 0, frozen: 0, replaced: 0, total: 0, active: 0 });
+      notEnrolled:    acc.notEnrolled    + r.notEnrolled,
+      outstandingInv: acc.outstandingInv + r.outstandingInv,
+      expiredPkg:     acc.expiredPkg     + r.expiredPkg,
+      newlyEnrolled:  acc.newlyEnrolled  + r.newlyEnrolled,
+    }), { attended: 0, absent: 0, frozen: 0, replaced: 0, total: 0, active: 0,
+          notEnrolled: 0, outstandingInv: 0, expiredPkg: 0, newlyEnrolled: 0 });
   }, [filteredRows]);
 
   const isThisWeek = weekDate === thisWeekMonday();
   const isLastWeek = weekDate === lastWeekMonday();
+
+  const hStyle = (): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none' });
 
   return (
     <div className="branchRankingPage">
@@ -191,23 +233,20 @@ export function OkrTableView({ onSelect }: Props) {
           <table className="brRankBarTable w-full text-left border-collapse">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 border font-semibold text-center">Rank</th>
-                <th className="p-3 border font-semibold">Branch</th>
-                <th className="p-3 border font-semibold text-center">Attended</th>
-                <th className="p-3 border font-semibold text-center">Absent</th>
-                <th className="p-3 border font-semibold text-center">Frozen</th>
-                <th className="p-3 border font-semibold text-center">Replaced</th>
-                <th className="p-3 border font-bold text-center bg-gray-200">Total Attendance</th>
-                <th className="p-3 border font-semibold text-center">Active</th>
-                <th
-                  className="p-3 border font-bold text-center bg-gray-200"
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  onClick={() => setRateSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                  title="Click to flip sort order"
-                >
-                  Attendance Rate {rateSortDir === 'desc' ? '▼' : '▲'}
-                </th>
-                <th className="p-3 border font-semibold text-right">Rate w/ Freeze</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('rank')}     title="Sort by rank">Rank{arrow('rank')}</th>
+                <th className="p-3 border font-semibold"             style={hStyle()} onClick={() => handleSort('branch')}   title="Sort by branch name">Branch{arrow('branch')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('attended')} title="Sort by attended">Attended{arrow('attended')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('absent')}   title="Sort by absent">Absent{arrow('absent')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('frozen')}   title="Sort by frozen">Frozen{arrow('frozen')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('replaced')} title="Sort by replaced">Replaced{arrow('replaced')}</th>
+                <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('total')} title="Sort by total attendance">Total Attendance{arrow('total')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('active')}   title="Sort by active students">Active{arrow('active')}</th>
+                <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('rate')} title="Sort by attendance rate">Attendance Rate{arrow('rate')}</th>
+                <th className="p-3 border font-semibold text-right" style={hStyle()} onClick={() => handleSort('rateFreeze')} title="Sort by rate w/ freeze">Rate w/ Freeze{arrow('rateFreeze')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('notEnrolled')}    title="1a) Not Enrolled to Any Lesson">1a) Not Enrolled{arrow('notEnrolled')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('outstandingInv')} title="1b) With Outstanding Invoice">1b) Outstanding Inv.{arrow('outstandingInv')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('expiredPkg')}     title="1c) Expired Package">1c) Expired Pkg.{arrow('expiredPkg')}</th>
+                <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('newlyEnrolled')}  title="1d) Newly Enrolled Student">1d) Newly Enrolled{arrow('newlyEnrolled')}</th>
               </tr>
             </thead>
             <tbody>
@@ -254,11 +293,15 @@ export function OkrTableView({ onSelect }: Props) {
                     <td className="p-3 border text-center">{r.active}</td>
                     <td className="p-3 border text-center font-bold bg-gray-50" style={{ color: getRateColor(r.rate) }}>{r.rate.toFixed(2)}%</td>
                     <td className="p-3 border text-right" style={{ color: getRateColor(r.rateFreeze) }}>{r.rateFreeze.toFixed(2)}%</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.notEnrolled}</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.outstandingInv}</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.expiredPkg}</td>
+                    <td className="p-3 border text-center" style={{ color: '#1f2937' }}>{r.newlyEnrolled}</td>
                   </tr>
                 );
               }) : (
                 <tr>
-                  <td colSpan={10} className="p-10 text-center text-gray-500">No OKR records found for this week.</td>
+                  <td colSpan={14} className="p-10 text-center text-gray-500">No OKR records found for this week.</td>
                 </tr>
               )}
             </tbody>
@@ -275,6 +318,10 @@ export function OkrTableView({ onSelect }: Props) {
                   <td className="p-3 border text-center">{totals.active}</td>
                   <td className="p-3 border text-center">—</td>
                   <td className="p-3 border text-right">—</td>
+                  <td className="p-3 border text-center">{totals.notEnrolled}</td>
+                  <td className="p-3 border text-center">{totals.outstandingInv}</td>
+                  <td className="p-3 border text-center">{totals.expiredPkg}</td>
+                  <td className="p-3 border text-center">{totals.newlyEnrolled}</td>
                 </tr>
               </tfoot>
             )}

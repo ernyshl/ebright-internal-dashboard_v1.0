@@ -21,7 +21,7 @@ import { EventDashboardPage } from './pages/EventDashboardPage';
 import { EventEntryPage } from './pages/EventEntryPage';
 import { ExecutiveSummaryPage } from './pages/ExecutiveSummaryPage';
 import { BranchRankingPage } from './pages/BranchRankingPage';
-import { FinanceBranchRevenueRenewalsPage } from './pages/FinanceBranchRevenueRenewalsPage';
+import { AcademyBranchRevenueRenewalsPage } from './pages/AcademyBranchRevenueRenewalsPage';
 import { TvPage } from './pages/TvPage';
 import { DeviceManagerPage } from './pages/DeviceManagerPage';
 import { LeadsDashboardPage } from './pages/LeadsDashboardPage';
@@ -103,8 +103,11 @@ export default function App() {
           <Route path="/finance/renewal-by-branch" element={
             <RequirePermission dashboard="finance"><FinanceRenewalByBranchPage /></RequirePermission>
           } />
+          <Route path="/academy/branch-revenue-renewals" element={
+            <RequirePermission dashboard="academy"><AcademyBranchRevenueRenewalsPage /></RequirePermission>
+          } />
           <Route path="/finance/branch-revenue-renewals" element={
-            <RequirePermission dashboard="finance"><FinanceBranchRevenueRenewalsPage /></RequirePermission>
+            <Navigate to="/academy/branch-revenue-renewals" replace />
           } />
           <Route path="/department" element={
             <RequirePermission dashboard="department"><DepartmentDashboardPage /></RequirePermission>
@@ -221,7 +224,7 @@ export default function App() {
             <RequirePermission dashboard="student_db"><StudentAttendancePage /></RequirePermission>
           } />
           <Route path="/okr-attendance" element={
-            <RequirePermission dashboard="operations"><OkrAttendancePage /></RequirePermission>
+            <RequirePermission dashboards={["academy", "operations"]}><OkrAttendancePage /></RequirePermission>
           } />
         </Route>
       </Route>

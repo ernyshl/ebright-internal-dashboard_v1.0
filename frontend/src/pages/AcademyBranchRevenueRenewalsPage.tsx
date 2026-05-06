@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, type ChangeEvent } from 'react';
 import { toPng } from 'html-to-image';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
 const JACKPOT = 80000;
-const RENEWAL_COLOR = '#fbbf24'; // gold
+const RENEWAL_COLOR = '#3b82f6'; // blue
 
 const TIER_DEFS = [
   { label: 'Tier A', emoji: '🥇', reward: 'RM500', color: '#22c55e', size: 7 },
@@ -16,12 +16,19 @@ const TIER_DEFS = [
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function formatRM(val) {
+type Branch = {
+  branch: string;
+  total: number;
+  renewal: number;
+  count: number;
+};
+
+function formatRM(val: number | null | undefined): string {
   if (val === null || val === undefined) return '—';
   return `RM${Number(val).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function getBarColor(rank, total) {
+function getBarColor(rank: number, total: number): string {
   const t = total <= 1 ? 0 : rank / (total - 1);
   const hue = Math.round(142 * (1 - t));
   const sat = Math.round(71 + 13 * t);
@@ -29,7 +36,7 @@ function getBarColor(rank, total) {
   return `hsl(${hue}, ${sat}%, ${lig}%)`;
 }
 
-function monthYearToDates(month, year) {
+function monthYearToDates(month: number, year: number) {
   const mm = String(month).padStart(2, '0');
   const lastDay = new Date(year, month, 0).getDate();
   return {
@@ -45,16 +52,16 @@ function getYears() {
   return arr;
 }
 
-export function FinanceBranchRevenueRenewalsPage() {
+export function AcademyBranchRevenueRenewalsPage() {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [branch, setBranch] = useState('');
-  const [activePreset, setActivePreset] = useState('this_month');
-  const [toast, setToast] = useState(null);
-  const captureRef = useRef(null);
+  const [activePreset, setActivePreset] = useState<string | null>('this_month');
+  const [toast, setToast] = useState<string | null>(null);
+  const captureRef = useRef<HTMLDivElement>(null);
 
-  const showToast = (msg) => {
+  const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   };
@@ -74,7 +81,8 @@ export function FinanceBranchRevenueRenewalsPage() {
         filter: (node) => !node?.dataset?.noCapture,
       });
     } catch (err) {
-      showToast(`⚠️ Render failed: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      showToast(`⚠️ Render failed: ${message}`);
       return;
     }
 
@@ -99,7 +107,7 @@ export function FinanceBranchRevenueRenewalsPage() {
     showToast('📥 Downloaded!');
   }, [selectedMonth, selectedYear]);
 
-  const applyPreset = (preset) => {
+  const applyPreset = (preset: string) => {
     if (preset === 'this_month') {
       setSelectedMonth(now.getMonth() + 1);
       setSelectedYear(now.getFullYear());
@@ -111,12 +119,12 @@ export function FinanceBranchRevenueRenewalsPage() {
     setActivePreset(preset);
   };
 
-  const handleMonthChange = (e) => {
+  const handleMonthChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedMonth(Number(e.target.value));
     setActivePreset(null);
   };
 
-  const handleYearChange = (e) => {
+  const handleYearChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedYear(Number(e.target.value));
     setActivePreset(null);
   };
@@ -127,7 +135,7 @@ export function FinanceBranchRevenueRenewalsPage() {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['branch-revenue-renewals', date_from, date_to, branch],
-    queryFn: () => apiFetch(`/api/finance/branch-revenue-renewals?${params}`),
+    queryFn: () => apiFetch(`/api/academy/branch-revenue-renewals?${params}`),
     staleTime: 60_000,
   });
 
@@ -141,7 +149,8 @@ export function FinanceBranchRevenueRenewalsPage() {
     : JACKPOT * 1.05;
   const jackpotPct = Math.min((JACKPOT / maxTotal) * 100, 97);
 
-  const tierRows = [];
+  type TierRow = { tier: typeof TIER_DEFS[number]; branches: Branch[]; startIdx: number };
+  const tierRows: TierRow[] = [];
   let idx = 0;
   for (const tier of TIER_DEFS) {
     const tierBranches = branches.slice(idx, idx + tier.size);
@@ -185,9 +194,9 @@ export function FinanceBranchRevenueRenewalsPage() {
         </div>
         <div className="brRankFilterGroup">
           <label className="brRankLabel">Branch</label>
-          <select className="filterSelect" value={branch} onChange={e => setBranch(e.target.value)}>
+          <select className="filterSelect" value={branch} onChange={(e: ChangeEvent<HTMLSelectElement>) => setBranch(e.target.value)}>
             <option value="">All Branches</option>
-            {branchList.map(b => <option key={b} value={b}>{b}</option>)}
+            {branchList.map((b: string) => <option key={b} value={b}>{b}</option>)}
           </select>
         </div>
         <div className="brRankFilterGroup">
@@ -213,7 +222,7 @@ export function FinanceBranchRevenueRenewalsPage() {
         </div>
         <div className="brRankFilterGroup brRankTotalInline">
           <label className="brRankLabel">Total Renewals</label>
-          <div className="brRankTotalValue">
+          <div className="brRankTotalValue" style={{ color: '#2563eb' }}>
             {isLoading ? '—' : formatRM(grandRenewalTotal)}
           </div>
         </div>
@@ -263,7 +272,7 @@ export function FinanceBranchRevenueRenewalsPage() {
           <table className="brRankBarTable">
             <tbody>
               {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
-                tierBranches.map((b, i) => {
+                tierBranches.map((b: Branch, i: number) => {
                   const rank = startIdx + i;
                   const totalPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
                   const renewalPct = b.total > 0 ? (b.renewal / maxTotal) * 100 : 0;
@@ -321,7 +330,7 @@ export function FinanceBranchRevenueRenewalsPage() {
                         whiteSpace: 'nowrap',
                         fontWeight: 700,
                         fontSize: '0.95em',
-                        color: b.renewal > 0 ? '#d97706' : 'var(--textSecondary, #94a3b8)',
+                        color: b.renewal > 0 ? '#2563eb' : 'var(--textSecondary, #94a3b8)',
                       }}>
                         {b.renewal > 0 ? formatRM(b.renewal) : '—'}
                       </td>
