@@ -16,6 +16,7 @@ import { YearlyDashboardView } from '../components/okr/YearlyDashboardView';
 import { YearlyBulkEntry } from '../components/okr/YearlyBulkEntry';
 import { WeeklyKpiCards } from '../components/okr/WeeklyKpiCards';
 import { OkrTableView } from '../components/okr/OkrTableView';
+import { OkrBranchDetailPanel } from '../components/okr/OkrBranchDetailPanel';
 import { OkrRegionView } from '../components/okr/OkrRegionView';
 import { WeeklyRankingTable } from '../components/okr/WeeklyRankingTable';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
@@ -55,6 +56,10 @@ export function OkrAttendancePage() {
   const aoneFileRef      = useRef<HTMLInputElement | null>(null);
   const [aoneStatus, setAoneStatus]   = useState<null | { kind: 'ok' | 'error'; msg: string }>(null);
   const [isUploadingAone, setIsUploadingAone] = useState(false);
+  // In-page detail view state for the Table tab — when set, the tab swaps from
+  // the table list to the BranchDetailPanel (with sidebar of all branches).
+  const [tableDetailBranch, setTableDetailBranch] = useState<string | null>(null);
+  const [tableDetailWeek,   setTableDetailWeek]   = useState<string>('');
 
   // ── All data fetching in one hook ──
   const {
@@ -870,18 +875,27 @@ export function OkrAttendancePage() {
       })()}
 
       {/* ══════════════════════════════════════
-          TABLE TAB — Renewal-style ranking table
+          TABLE TAB — Renewal-style ranking table OR in-page branch detail
       ══════════════════════════════════════ */}
       {activeTab === 'table' && (
-        <OkrTableView
-          onSelect={({ branch, week }) => {
-            setDashWeek(week);
-            setDashBranch(branch);
-            setDashView('weekly');
-            setActiveTab('dashboard');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
+        tableDetailBranch ? (
+          <OkrBranchDetailPanel
+            branch={tableDetailBranch}
+            week={tableDetailWeek}
+            onBack={() => setTableDetailBranch(null)}
+            onPickBranch={(b) => setTableDetailBranch(b)}
+            onPickWeek={(w) => setTableDetailWeek(w)}
+          />
+        ) : (
+          <OkrTableView
+            onSelect={({ branch, week }) => {
+              // Stay on the Table tab — switch into the in-page detail panel
+              setTableDetailWeek(week);
+              setTableDetailBranch(branch);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )
       )}
 
       {/* ══════════════════════════════════════
