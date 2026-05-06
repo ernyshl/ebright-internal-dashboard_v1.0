@@ -1,11 +1,12 @@
 import { apiFetch } from '../lib/api';
 
 export type PreviewResponse = {
-  summary: { new: number; restore: number; matched: number; archive: number };
+  summary: { new: number; restore: number; matched: number; guardianFill: number; archive: number };
   details: {
     newNames: string[];
     restoreNames: string[];
     matchedNames: string[];
+    guardianFillNames: string[];
     archiveNames: string[];
   };
   payload: any;
@@ -16,6 +17,7 @@ export type ConfirmResponse = {
   added: number;
   restored: number;
   skipped: number;
+  guardianFilled: number;
   archived: number;
 };
 

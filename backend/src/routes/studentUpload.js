@@ -37,23 +37,39 @@ function namesOf(arr, picker) {
 
 // ── POST /api/student-upload/preview-upload ─────────────────────────────────
 
+function isBlank(v) {
+  return v === null || v === undefined || String(v).trim() === '';
+}
+
 router.post('/preview-upload', async (req, res, next) => {
   try {
     const { rows, branch } = previewSchema.parse(req.body);
     const categorized = await categorizeUpload(rows, branch);
 
+    // From the matched bucket, count how many would actually get guardian fields filled.
+    const guardianFillNames = [];
+    for (const item of categorized.matched) {
+      const e = item?.excel || {};
+      const d = item?.db    || {};
+      const needsName   = isBlank(d.guardian_name)   && !isBlank(e.guardianName);
+      const needsMobile = isBlank(d.guardian_mobile) && !isBlank(e.guardianMobile);
+      if (needsName || needsMobile) guardianFillNames.push(e.name);
+    }
+
     return res.json({
       summary: {
-        new:     categorized.new.length,
-        restore: categorized.restore.length,
-        matched: categorized.matched.length,
-        archive: categorized.archive.length,
+        new:            categorized.new.length,
+        restore:        categorized.restore.length,
+        matched:        categorized.matched.length,
+        guardianFill:   guardianFillNames.length,
+        archive:        categorized.archive.length,
       },
       details: {
-        newNames:      namesOf(categorized.new,     r => r?.name),
-        restoreNames:  namesOf(categorized.restore, r => r?.excel?.name),
-        matchedNames:  namesOf(categorized.matched, r => r?.excel?.name),
-        archiveNames:  namesOf(categorized.archive, r => r?.name),
+        newNames:           namesOf(categorized.new,     r => r?.name),
+        restoreNames:       namesOf(categorized.restore, r => r?.excel?.name),
+        matchedNames:       namesOf(categorized.matched, r => r?.excel?.name),
+        guardianFillNames,
+        archiveNames:       namesOf(categorized.archive, r => r?.name),
       },
       payload: categorized,
     });

@@ -10,7 +10,6 @@ import AddStudentModal from '../components/StudentDB/AddStudentModal';
 import EditStudentModal from '../components/StudentDB/EditStudentModal';
 import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
 import ArchiveConfirmModal from '../components/StudentDB/ArchiveConfirmModal';
-import BackfillGuardianModal from '../components/StudentDB/BackfillGuardianModal';
 
 function toIsoDate(val: string): string {
   if (!val) return '';
@@ -36,7 +35,6 @@ export function StudentDatabasePage() {
   const [editStudent, setEditStudent] = useState<any>(null);
   const [deleteStudent, setDeleteStudent] = useState<any>(null);
   const [archiveStudent, setArchiveStudent] = useState<any>(null);
-  const [showBackfill, setShowBackfill] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
@@ -93,22 +91,14 @@ export function StudentDatabasePage() {
     }
   }, [setStudents]);
 
-  // ── After guardian backfill — refresh list so updated guardian fields show ──
-  const handleBackfillSuccess = useCallback(async () => {
-    try {
-      const res = await apiFetch('/api/student-records');
-      if (res.data) setStudents(res.data);
-    } catch { /* keep local state if refetch fails */ }
-  }, [setStudents]);
-
   // ── After smart bulk upload completes — refresh list & show summary ──────
-  const handleBulkUploadComplete = useCallback(async (counts: { added: number; restored: number; skipped: number; archived: number }) => {
+  const handleBulkUploadComplete = useCallback(async (counts: { added: number; restored: number; skipped: number; guardianFilled: number; archived: number }) => {
     try {
       const res = await apiFetch('/api/student-records');
       if (res.data) setStudents(res.data);
     } catch { /* keep local state if refetch fails */ }
-    setSuccessMsg(`✅ Upload complete — Added ${counts.added}, Restored ${counts.restored}, Skipped ${counts.skipped}, Archived ${counts.archived}.`);
-    setTimeout(() => setSuccessMsg(''), 6000);
+    setSuccessMsg(`✅ Upload complete — Added ${counts.added}, Restored ${counts.restored}, Guardian filled ${counts.guardianFilled ?? 0}, Skipped ${counts.skipped}, Archived ${counts.archived}.`);
+    setTimeout(() => setSuccessMsg(''), 7000);
   }, [setStudents]);
 
   // ── Update student ────────────────────────────────────────────────────────
@@ -247,7 +237,6 @@ export function StudentDatabasePage() {
             <button onClick={() => navigate('/archived-students')} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:'pointer', fontWeight:500 }}>🗂 Archived Students</button>
             <button onClick={exportToExcel} disabled={displayed.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'none', background:'#10b981', color:'#fff', cursor:'pointer', fontWeight:600, opacity:displayed.length?1:0.4 }}>⬇ Export</button>
             <button onClick={() => setShowAdd(true)} style={{ fontSize:13, padding:'8px 20px', borderRadius:8, border:'none', background:'#4f46e5', color:'#fff', cursor:'pointer', fontWeight:600 }}>+ Add Students</button>
-            <button onClick={() => setShowBackfill(true)} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:'pointer', fontWeight:500 }}>🔧 Backfill Guardian Info</button>
             <button onClick={() => { setDeleteAllBranch(branchFilter); setShowDeleteAll(true); }} disabled={students.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid #dc2626', background:'rgba(239,68,68,0.08)', color:'#dc2626', cursor:'pointer', fontWeight:600, opacity:students.length?1:0.4 }}>🗑 Delete All</button>
           </div>
         </div>
@@ -319,14 +308,14 @@ export function StudentDatabasePage() {
           <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                {['No.','Name','Gender','Branch','Enrollment Date','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Guardian Name','Guardian Mobile','Actions'].map(h => (
+                {['No.','Name','Gender','Branch','Coach Name','Enrollment Date','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Guardian Name','Guardian Mobile','Actions'].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {displayed.length === 0 ? (
-                <tr><td colSpan={13} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                <tr><td colSpan={14} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                     <span style={{ fontSize:36 }}>{q ? '🔍' : '🎓'}</span>
                     <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
@@ -351,6 +340,7 @@ export function StudentDatabasePage() {
                     </td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.gender}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{student.branch}</span></td>
+                    <td style={{ ...td, whiteSpace:'nowrap', color: student.coachName ? 'var(--text)' : 'var(--muted)', fontStyle: student.coachName ? 'normal' : 'italic' }}>{student.coachName || '—'}</td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.enrollmentDate||'—'}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'4px 8px', borderRadius:6, fontWeight:600, background:'rgba(139,92,246,0.1)', color:'#7c3aed', whiteSpace:'nowrap' }}>{student.grade} — {student.chapter}</span></td>
 
@@ -453,7 +443,6 @@ export function StudentDatabasePage() {
       {editStudent && <EditStudentModal   student={editStudent} onClose={() => setEditStudent(null)}   onSave={updateStudent} />}
       {deleteStudent && <DeleteConfirmModal student={deleteStudent} onClose={() => setDeleteStudent(null)} onConfirm={() => deleteStudentById(deleteStudent.id)} />}
       {archiveStudent && <ArchiveConfirmModal student={archiveStudent} onClose={() => setArchiveStudent(null)} onConfirm={() => archiveStudentById(archiveStudent)} />}
-      {showBackfill && <BackfillGuardianModal onClose={() => setShowBackfill(false)} onSuccess={handleBackfillSuccess} />}
 
       {/* Delete All Confirmation Modal */}
       {showDeleteAll && (

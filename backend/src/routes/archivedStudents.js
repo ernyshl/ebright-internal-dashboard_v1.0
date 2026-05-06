@@ -35,6 +35,7 @@ function rowToStudent(r) {
     guardianName:   r.guardian_name   || '',
     guardianMobile: r.guardian_mobile || '',
     guardianEmail:  r.guardian_email  || '',
+    coachName:      r.coach_name      || '',
   };
 }
 
@@ -88,15 +89,15 @@ router.post('/', async (req, res, next) => {
     const result = await pool.query(
       `INSERT INTO ${tbl}
          (student_id, name, gender, branch, enrollment_date, date_of_birth,
-          created_on, archived_on, guardian_name, guardian_mobile, guardian_email)
-       VALUES ($1,$2,$3,$4,$5::date,$6::date,$7::date,$8::date,$9,$10,$11)
+          created_on, archived_on, guardian_name, guardian_mobile, guardian_email, coach_name)
+       VALUES ($1,$2,$3,$4,$5::date,$6::date,$7::date,$8::date,$9,$10,$11,$12)
        ON CONFLICT (student_id) DO UPDATE SET
          name=$2, gender=$3, branch=$4,
          enrollment_date=COALESCE($5::date, ${tbl}.enrollment_date),
          date_of_birth=COALESCE($6::date, ${tbl}.date_of_birth),
          created_on=COALESCE($7::date, ${tbl}.created_on),
          archived_on=COALESCE($8::date, ${tbl}.archived_on),
-         guardian_name=$9, guardian_mobile=$10, guardian_email=$11
+         guardian_name=$9, guardian_mobile=$10, guardian_email=$11, coach_name=$12
        RETURNING *`,
       [
         s.studentId    || null,
@@ -110,6 +111,7 @@ router.post('/', async (req, res, next) => {
         s.guardianName   || '',
         s.guardianMobile || '',
         s.guardianEmail  || '',
+        s.coachName      || '',
       ]
     );
     return res.json({ ok: true, data: rowToStudent(result.rows[0]) });
@@ -131,8 +133,8 @@ router.post('/import', async (req, res, next) => {
       await pool.query(
         `INSERT INTO ${tbl}
            (student_id, name, gender, branch, enrollment_date, date_of_birth,
-            created_on, archived_on, guardian_name, guardian_mobile, guardian_email)
-         VALUES ($1,$2,$3,$4,$5::date,$6::date,$7::date,$8::date,$9,$10,$11)
+            created_on, archived_on, guardian_name, guardian_mobile, guardian_email, coach_name)
+         VALUES ($1,$2,$3,$4,$5::date,$6::date,$7::date,$8::date,$9,$10,$11,$12)
          ON CONFLICT (student_id) DO NOTHING`,
         [
           s.studentId    || null,
@@ -146,6 +148,7 @@ router.post('/import', async (req, res, next) => {
           s.guardianName   || '',
           s.guardianMobile || '',
           s.guardianEmail  || '',
+          s.coachName      || '',
         ]
       );
     }
@@ -170,8 +173,8 @@ router.put('/:student_id', async (req, res, next) => {
          date_of_birth   = COALESCE($5::date, date_of_birth),
          created_on      = COALESCE($6::date, created_on),
          archived_on     = COALESCE($7::date, archived_on),
-         guardian_name=$8, guardian_mobile=$9, guardian_email=$10
-       WHERE student_id=$11`,
+         guardian_name=$8, guardian_mobile=$9, guardian_email=$10, coach_name=$11
+       WHERE student_id=$12`,
       [
         s.name,
         s.gender       || 'Male',
@@ -183,6 +186,7 @@ router.put('/:student_id', async (req, res, next) => {
         s.guardianName   || '',
         s.guardianMobile || '',
         s.guardianEmail  || '',
+        s.coachName      || '',
         student_id,
       ]
     );
@@ -226,7 +230,7 @@ router.post('/:no/restore', async (req, res, next) => {
     const sel = await client.query(
       `SELECT name, gender, branch, enrollment_date, grade_chapter,
               fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-              guardian_name, guardian_mobile
+              guardian_name, guardian_mobile, coach_name
          FROM ${archivedTbl} WHERE no = $1`,
       [no]
     );
@@ -240,8 +244,8 @@ router.post('/:no/restore', async (req, res, next) => {
       `INSERT INTO ${studentsTbl}
          (name, status, gender, branch, enrollment_date, grade_chapter,
           fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-          guardian_name, guardian_mobile)
-       VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12)`,
+          guardian_name, guardian_mobile, coach_name)
+       VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12,$13)`,
       [
         a.name,
         'Active',
@@ -255,6 +259,7 @@ router.post('/:no/restore', async (req, res, next) => {
         a.total_pcm || '0/0',
         a.guardian_name   || '',
         a.guardian_mobile || '',
+        a.coach_name      || '',
       ]
     );
 
