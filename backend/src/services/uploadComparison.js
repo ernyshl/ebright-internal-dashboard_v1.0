@@ -11,7 +11,7 @@ async function categorizeUpload(excelRows, branch) {
   const studentRes = await pool.query(
     `SELECT id, name, status, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-            guardian_name, guardian_mobile
+            guardian_name, guardian_mobile, coach_name
        FROM ${studentsTbl}
       WHERE LOWER(TRIM(branch)) = LOWER(TRIM($1))`,
     [branch]
@@ -20,7 +20,7 @@ async function categorizeUpload(excelRows, branch) {
   const archivedRes = await pool.query(
     `SELECT no, student_id, name, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-            status, date_of_birth, guardian_name, guardian_mobile, guardian_email
+            status, date_of_birth, guardian_name, guardian_mobile, guardian_email, coach_name
        FROM ${archivedTbl}
       WHERE LOWER(TRIM(branch)) = LOWER(TRIM($1))`,
     [branch]

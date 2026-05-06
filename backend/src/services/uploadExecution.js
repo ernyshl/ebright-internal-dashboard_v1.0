@@ -15,6 +15,10 @@ function jsonbStringOf(value) {
   return JSON.stringify(value);
 }
 
+function isBlank(v) {
+  return v === null || v === undefined || String(v).trim() === '';
+}
+
 async function executeUpload(categorized, branch) {
   const { students: studentsTbl, archived: archivedTbl } = getTableNames();
 
@@ -22,6 +26,8 @@ async function executeUpload(categorized, branch) {
   const restoreRows = Array.isArray(categorized?.restore) ? categorized.restore : [];
   const archiveRows = Array.isArray(categorized?.archive) ? categorized.archive : [];
   const matchedRows = Array.isArray(categorized?.matched) ? categorized.matched : [];
+
+  let guardianFilled = 0;
 
   const client = await pool.connect();
   try {
@@ -57,8 +63,8 @@ async function executeUpload(categorized, branch) {
         `INSERT INTO ${studentsTbl}
            (name, status, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-            guardian_name, guardian_mobile)
-         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12)`,
+            guardian_name, guardian_mobile, coach_name)
+         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12,$13)`,
         [
           a.name,
           'Active',
@@ -72,6 +78,7 @@ async function executeUpload(categorized, branch) {
           a.total_pcm || '0/0',
           a.guardian_name   || '',
           a.guardian_mobile || '',
+          a.coach_name      || '',
         ]
       );
       await client.query(
@@ -86,10 +93,10 @@ async function executeUpload(categorized, branch) {
         `INSERT INTO ${archivedTbl}
            (student_id, name, gender, branch, enrollment_date, date_of_birth,
             archived_on, guardian_name, guardian_mobile, guardian_email,
-            grade_chapter, fa_progress_json, total_fa, pcm_progress_json, total_pcm, status)
+            grade_chapter, fa_progress_json, total_fa, pcm_progress_json, total_pcm, status, coach_name)
          VALUES ($1,$2,$3,$4,$5::date,$6::date,
                  NOW(),$7,$8,$9,
-                 $10,$11::jsonb,$12,$13::jsonb,$14,$15)`,
+                 $10,$11::jsonb,$12,$13::jsonb,$14,$15,$16)`,
         [
           '—',
           s.name,
@@ -106,6 +113,7 @@ async function executeUpload(categorized, branch) {
           jsonbStringOf(s.pcm_progress_json),
           s.total_pcm || '0/0',
           newStatus,
+          s.coach_name || '',
         ]
       );
       await client.query(
@@ -114,13 +122,42 @@ async function executeUpload(categorized, branch) {
       );
     }
 
+    // MATCH path: only fill empty guardian fields. Never touch name/branch/grade/FA/PCM/etc.
+    for (const item of matchedRows) {
+      const e = item.excel || {};
+      const d = item.db    || {};
+      const excelName   = isBlank(e.guardianName)   ? '' : String(e.guardianName).trim();
+      const excelMobile = isBlank(e.guardianMobile) ? '' : String(e.guardianMobile).trim();
+      const needsName   = isBlank(d.guardian_name)   && !!excelName;
+      const needsMobile = isBlank(d.guardian_mobile) && !!excelMobile;
+      if (!needsName && !needsMobile) continue;
+      if (needsName && needsMobile) {
+        await client.query(
+          `UPDATE ${studentsTbl} SET guardian_name = $1, guardian_mobile = $2 WHERE id = $3`,
+          [excelName, excelMobile, d.id]
+        );
+      } else if (needsName) {
+        await client.query(
+          `UPDATE ${studentsTbl} SET guardian_name = $1 WHERE id = $2`,
+          [excelName, d.id]
+        );
+      } else {
+        await client.query(
+          `UPDATE ${studentsTbl} SET guardian_mobile = $1 WHERE id = $2`,
+          [excelMobile, d.id]
+        );
+      }
+      guardianFilled++;
+    }
+
     await client.query('COMMIT');
 
     return {
       success: true,
       added: newRows.length,
       restored: restoreRows.length,
-      skipped: matchedRows.length,
+      skipped: matchedRows.length - guardianFilled,
+      guardianFilled,
       archived: archiveRows.length,
     };
   } catch (err) {

@@ -22,6 +22,7 @@ function rowToStudent(r) {
     pcmAttended:    Array.isArray(r.pcm_progress_json) ? r.pcm_progress_json : [],
     guardianName:   r.guardian_name   || '',
     guardianMobile: r.guardian_mobile || '',
+    coachName:      r.coach_name      || '',
   };
 }
 
@@ -62,8 +63,8 @@ router.post('/bulk', async (req, res, next) => {
         `INSERT INTO ${tbl}
            (name, status, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-            guardian_name, guardian_mobile)
-         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12)`,
+            guardian_name, guardian_mobile, coach_name)
+         VALUES ($1,$2,$3,$4,$5::date,$6,$7::jsonb,$8,$9::jsonb,$10,$11,$12,$13)`,
         s.name,
         s.status || 'Active',
         s.gender || 'Male',
@@ -76,6 +77,7 @@ router.post('/bulk', async (req, res, next) => {
         toTotalStr(s.pcmAttended),
         s.guardianName   || '',
         s.guardianMobile || '',
+        s.coachName      || '',
       );
     }
     const rows = await prisma.$queryRawUnsafe(`SELECT * FROM ${tbl} ORDER BY name ASC`);
@@ -102,8 +104,8 @@ router.put('/:id', async (req, res, next) => {
          enrollment_date = COALESCE($5::date, enrollment_date),
          grade_chapter=$6, fa_progress_json=$7::jsonb, total_fa=$8,
          pcm_progress_json=$9::jsonb, total_pcm=$10,
-         guardian_name=$11, guardian_mobile=$12
-       WHERE id=$13`,
+         guardian_name=$11, guardian_mobile=$12, coach_name=$13
+       WHERE id=$14`,
       s.name,
       s.status,
       s.gender,
@@ -116,6 +118,7 @@ router.put('/:id', async (req, res, next) => {
       toTotalStr(s.pcmAttended),
       s.guardianName   ?? '',
       s.guardianMobile ?? '',
+      s.coachName      ?? '',
       id,
     );
     const rows = await prisma.$queryRawUnsafe(`SELECT * FROM ${tbl} WHERE id=$1`, id);
@@ -141,7 +144,7 @@ router.post('/:id/archive', async (req, res, next) => {
     const sel = await client.query(
       `SELECT name, status, gender, branch, enrollment_date, grade_chapter,
               fa_progress_json, total_fa, pcm_progress_json, total_pcm,
-              guardian_name, guardian_mobile
+              guardian_name, guardian_mobile, coach_name
          FROM ${studentsTbl} WHERE id = $1`,
       [id]
     );
@@ -155,10 +158,10 @@ router.post('/:id/archive', async (req, res, next) => {
       `INSERT INTO ${archivedTbl}
          (student_id, name, gender, branch, enrollment_date, date_of_birth,
           archived_on, guardian_name, guardian_mobile, guardian_email,
-          grade_chapter, fa_progress_json, total_fa, pcm_progress_json, total_pcm, status)
+          grade_chapter, fa_progress_json, total_fa, pcm_progress_json, total_pcm, status, coach_name)
        VALUES ($1,$2,$3,$4,$5::date,$6::date,
                NOW(),$7,$8,$9,
-               $10,$11::jsonb,$12,$13::jsonb,$14,$15)`,
+               $10,$11::jsonb,$12,$13::jsonb,$14,$15,$16)`,
       [
         '—',
         s.name,
@@ -175,6 +178,7 @@ router.post('/:id/archive', async (req, res, next) => {
         JSON.stringify(Array.isArray(s.pcm_progress_json) ? s.pcm_progress_json : []),
         s.total_pcm || '0/0',
         s.status === 'Active' ? 'Inactive' : (s.status || 'Inactive'),
+        s.coach_name || '',
       ]
     );
 

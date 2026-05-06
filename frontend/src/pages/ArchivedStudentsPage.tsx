@@ -57,6 +57,10 @@ function EditArchivedModal({ student, onClose, onSave }: { student: any; onClose
               </select>
             </div>
             <div style={fieldWrap}>
+              <label style={labelStyle}>Coach Name</label>
+              <input type="text" placeholder="e.g., Coach Lim" value={form.coachName||''} onChange={e => set('coachName', e.target.value)} style={inp} />
+            </div>
+            <div style={fieldWrap}>
               <label style={labelStyle}>Enrollment Date</label>
               <input type="date" value={form.enrollmentDate||''} onChange={e => set('enrollmentDate', e.target.value)} style={inp} />
             </div>
@@ -289,16 +293,16 @@ export function ArchivedStudentsPage() {
           <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-                {['No.','Student ID','Name','Gender','Branch','Enrollment Date','Date of Birth','Created On','Archived On','Guardian Name','Guardian Mobile','Guardian Email','Actions'].map(h => (
+                {['No.','Student ID','Name','Gender','Branch','Coach Name','Enrollment Date','Date of Birth','Created On','Archived On','Guardian Name','Guardian Mobile','Guardian Email','Actions'].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={13} style={{ ...td, textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Loading archived students…</td></tr>
+                <tr><td colSpan={14} style={{ ...td, textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Loading archived students…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={13} style={{ ...td, textAlign: 'center', padding: 48, color: 'var(--muted)' }}>
+                <tr><td colSpan={14} style={{ ...td, textAlign: 'center', padding: 48, color: 'var(--muted)' }}>
                   {search || branch !== 'All' ? `No results for "${search}"${branch !== 'All' ? ` in ${branch}` : ''}.` : 'No archived students yet. '}
                   {!search && branch === 'All' && <button onClick={() => setShowImport(true)} style={{ color: '#4f46e5', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 12 }}>Import from Excel</button>}
                 </td></tr>
@@ -311,6 +315,7 @@ export function ArchivedStudentsPage() {
                     <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: s.gender === 'Male' ? 'rgba(37,99,235,0.12)' : 'rgba(219,39,119,0.12)', color: s.gender === 'Male' ? '#2563eb' : '#db2777' }}>{s.gender}</span>
                   </td>
                   <td style={td}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: 'rgba(99,102,241,0.12)', color: '#6366f1' }}>{s.branch}</span></td>
+                  <td style={{ ...td, whiteSpace: 'nowrap', color: s.coachName ? 'var(--text)' : 'var(--muted)', fontStyle: s.coachName ? 'normal' : 'italic' }}>{s.coachName || '—'}</td>
                   <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{s.enrollmentDate || '—'}</td>
                   <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{s.dateOfBirth || '—'}</td>
                   <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{s.createdOn || '—'}</td>

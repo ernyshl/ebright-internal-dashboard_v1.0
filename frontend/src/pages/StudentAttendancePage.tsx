@@ -337,7 +337,7 @@ function ManualEntryTab({ onSubmitted }: { onSubmitted: (data: StoredRow[], summ
   const [form, setForm] = useState({
     studentName: '',
     branch: 'ONL',
-    attendanceStatus: 'attended' as 'attended' | 'absent',
+    attendanceStatus: 'attended' as 'attended' | 'absent' | 'replaced',
     lessonName: '',
     lessonTeachers: '',
     lessonDate: '',
@@ -440,10 +440,10 @@ function ManualEntryTab({ onSubmitted }: { onSubmitted: (data: StoredRow[], summ
         <div>
           <label style={lblStyle}>Status</label>
           <div style={{ display: 'flex', gap: 8 }}>
-            {(['attended', 'absent'] as const).map(s => (
+            {(['attended', 'absent', 'replaced'] as const).map(s => (
               <label key={s} style={{ flex: 1, border: `1px solid ${form.attendanceStatus === s ? '#4f46e5' : 'var(--border)'}`, background: form.attendanceStatus === s ? 'rgba(79,70,229,0.08)' : 'var(--bg)', borderRadius: 8, padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.attendanceStatus === s ? '#4f46e5' : 'var(--text)' }}>
                 <input type="radio" name="me-status" value={s} checked={form.attendanceStatus === s} onChange={() => set('attendanceStatus', s)} />
-                {s === 'attended' ? 'Attended' : 'Absent'}
+                {s === 'attended' ? 'Attended' : s === 'absent' ? 'Absent' : 'Replaced'}
               </label>
             ))}
           </div>

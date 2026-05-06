@@ -68,6 +68,16 @@ export default function EditStudentModal({ student, onClose, onSave }) {
             </select>
           </div>
           <div>
+            <label style={lbl}>Coach Name</label>
+            <input
+              type="text"
+              style={inp}
+              placeholder="e.g., Coach Lim"
+              value={form.coachName || ''}
+              onChange={e => set('coachName', e.target.value)}
+            />
+          </div>
+          <div>
             <label style={lbl}>Enrollment Date</label>
             <input type="date" style={inp} value={form.enrollmentDate} onChange={e => set('enrollmentDate', e.target.value)} />
           </div>

@@ -8,7 +8,7 @@ type Props = {
   isLoading: boolean;
 };
 
-type SectionKey = 'new' | 'restore' | 'matched' | 'archive';
+type SectionKey = 'new' | 'restore' | 'guardianFill' | 'matched' | 'archive';
 
 const SECTIONS: Array<{
   key: SectionKey;
@@ -17,26 +17,37 @@ const SECTIONS: Array<{
   color: string;
   bg: string;
 }> = [
-  { key: 'new',     title: n => `${n} student${n === 1 ? '' : 's'} will be added (new)`,                          hint: 'Inserted as fresh records with empty progress.',                  color: '#16a34a', bg: 'rgba(34,197,94,0.10)' },
-  { key: 'restore', title: n => `${n} student${n === 1 ? '' : 's'} will be restored from Archive`,                hint: 'Existing FA / PCM history will be preserved.',                    color: '#2563eb', bg: 'rgba(59,130,246,0.10)' },
-  { key: 'matched', title: n => `${n} student${n === 1 ? '' : 's'} will be skipped (already exist — no changes)`, hint: 'These names already exist in the active database.',               color: '#64748b', bg: 'rgba(100,116,139,0.10)' },
-  { key: 'archive', title: n => `${n} student${n === 1 ? '' : 's'} will be moved to Archive`,                     hint: 'These students are not in the new file. Their progress is kept.', color: '#d97706', bg: 'rgba(245,158,11,0.10)' },
+  { key: 'new',          title: n => `${n} student${n === 1 ? '' : 's'} will be added (new)`,                                   hint: 'Inserted as fresh records with empty progress.',                                            color: '#16a34a', bg: 'rgba(34,197,94,0.10)'   },
+  { key: 'restore',      title: n => `${n} student${n === 1 ? '' : 's'} will be restored from Archive`,                         hint: 'Existing FA / PCM history will be preserved.',                                              color: '#2563eb', bg: 'rgba(59,130,246,0.10)'  },
+  { key: 'guardianFill', title: n => `${n} student${n === 1 ? '' : 's'} will have guardian info filled`,                        hint: 'Only empty guardian_name / guardian_mobile fields. Grade, FA, PCM, etc. NOT touched.',      color: '#7c3aed', bg: 'rgba(124,58,237,0.10)'  },
+  { key: 'matched',      title: n => `${n} student${n === 1 ? '' : 's'} will be skipped (already complete)`,                    hint: 'Name + guardian info already on file. No changes.',                                          color: '#64748b', bg: 'rgba(100,116,139,0.10)' },
+  { key: 'archive',      title: n => `${n} student${n === 1 ? '' : 's'} will be moved to Archive`,                              hint: 'These students are not in the new file. Their progress is kept.',                          color: '#d97706', bg: 'rgba(245,158,11,0.10)'  },
 ];
 
 export default function UploadConfirmationModal({ preview, onConfirm, onCancel, isLoading }: Props) {
-  const [open, setOpen] = useState<Record<SectionKey, boolean>>({ new: false, restore: false, matched: false, archive: false });
+  const [open, setOpen] = useState<Record<SectionKey, boolean>>({ new: false, restore: false, guardianFill: false, matched: false, archive: false });
 
   if (!preview) return null;
 
   const summary = preview.summary;
+  const matchedSkipCount = Math.max(0, summary.matched - summary.guardianFill);
   const counts: Record<SectionKey, number> = {
-    new: summary.new, restore: summary.restore, matched: summary.matched, archive: summary.archive,
+    new: summary.new,
+    restore: summary.restore,
+    guardianFill: summary.guardianFill,
+    matched: matchedSkipCount,
+    archive: summary.archive,
   };
+  // Visible "matched" should exclude rows that fall into guardianFill so we don't double-count
+  const matchedNamesVisible = preview.details.matchedNames.filter(
+    n => !preview.details.guardianFillNames.includes(n)
+  );
   const names: Record<SectionKey, string[]> = {
-    new:     preview.details.newNames,
-    restore: preview.details.restoreNames,
-    matched: preview.details.matchedNames,
-    archive: preview.details.archiveNames,
+    new:          preview.details.newNames,
+    restore:      preview.details.restoreNames,
+    guardianFill: preview.details.guardianFillNames,
+    matched:      matchedNamesVisible,
+    archive:      preview.details.archiveNames,
   };
 
   function toggle(key: SectionKey) {

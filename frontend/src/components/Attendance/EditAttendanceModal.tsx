@@ -61,8 +61,8 @@ export default function EditAttendanceModal({ row, onClose, onSaved }: Props) {
     if (!form.branch.trim())       return setError('Branch is required.');
     if (!form.lessonName.trim())   return setError('Lesson name is required.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.lessonDate)) return setError('Lesson date must be YYYY-MM-DD.');
-    if (form.attendanceStatus !== 'attended' && form.attendanceStatus !== 'absent') {
-      return setError('Status must be attended or absent.');
+    if (form.attendanceStatus !== 'attended' && form.attendanceStatus !== 'absent' && form.attendanceStatus !== 'replaced') {
+      return setError('Status must be attended, absent, or replaced.');
     }
     if (!row.id) return setError('Missing row id.');
 
@@ -116,7 +116,7 @@ export default function EditAttendanceModal({ row, onClose, onSaved }: Props) {
             </div>
           ) : (
             <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#4338ca' }}>
-              Editing other fields (lesson, date, teacher, etc.) won't change the student's grade — only flipping <strong>attended ↔ absent</strong> triggers an auto-adjust.
+              Editing other fields (lesson, date, teacher, etc.) won't change the student's grade — only flipping between <strong>attended</strong> and <strong>absent / replaced</strong> triggers an auto-adjust.
             </div>
           )}
 
@@ -135,10 +135,10 @@ export default function EditAttendanceModal({ row, onClose, onSaved }: Props) {
             <div>
               <label style={lbl}>Status</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                {(['attended', 'absent'] as const).map(s => (
+                {(['attended', 'absent', 'replaced'] as const).map(s => (
                   <label key={s} style={{ flex: 1, border: `1px solid ${form.attendanceStatus === s ? '#4f46e5' : 'var(--border)'}`, background: form.attendanceStatus === s ? 'rgba(79,70,229,0.08)' : 'var(--bg)', borderRadius: 8, padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.attendanceStatus === s ? '#4f46e5' : 'var(--text)' }}>
                     <input type="radio" name="status" value={s} checked={form.attendanceStatus === s} onChange={() => set('attendanceStatus', s)} />
-                    {s === 'attended' ? 'Attended' : 'Absent'}
+                    {s === 'attended' ? 'Attended' : s === 'absent' ? 'Absent' : 'Replaced'}
                   </label>
                 ))}
               </div>
