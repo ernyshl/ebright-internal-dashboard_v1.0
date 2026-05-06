@@ -164,28 +164,43 @@ router.get('/attendance-dashboard', requireAuth, requireRole(ALLOWED_ROLES), asy
       };
     };
 
-    const [today, yesterday] = await Promise.all([
-      fetchDay(`(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date`),
-      fetchDay(`(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1`),
+    // "Last Saturday" / "Last Sunday" = most recent Sat/Sun strictly in the
+    // past. If today IS Sat/Sun, jump back a full week so the user sees a
+    // distinct prior day rather than today's data twice.
+    const todayMyt = `(NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date`;
+    const lastSatExpr = `(${todayMyt} - (CASE WHEN EXTRACT(DOW FROM ${todayMyt})::int = 6 THEN 7 ELSE EXTRACT(DOW FROM ${todayMyt})::int + 1 END))`;
+    const lastSunExpr = `(${todayMyt} - (CASE WHEN EXTRACT(DOW FROM ${todayMyt})::int = 0 THEN 7 ELSE EXTRACT(DOW FROM ${todayMyt})::int END))`;
+
+    const [today, yesterday, last_sat, last_sun] = await Promise.all([
+      fetchDay(todayMyt),
+      fetchDay(`${todayMyt} - 1`),
+      fetchDay(lastSatExpr),
+      fetchDay(lastSunExpr),
     ]);
 
-    return res.json({ today, yesterday, branches });
+    return res.json({ today, yesterday, last_sat, last_sun, branches });
   } catch (err) { return next(err); }
 });
 
 // GET /api/hrfs/branch-staff
 router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
-    const { search = '', status = '', department = '', position = '', page = 1, limit = 50 } = req.query;
+    const {
+      search = '', status = '', department = '', position = '',
+      branch = '', employment_type = '',
+      page = 1, limit = 50,
+    } = req.query;
     const conditions = []; const params = []; let idx = 1;
 
     if (search) {
       conditions.push(`(bs."name" ILIKE $${idx} OR bs."nickname" ILIKE $${idx} OR bs."nric" ILIKE $${idx} OR bs."email" ILIKE $${idx})`);
       params.push(`%${search}%`); idx++;
     }
-    if (status) { conditions.push(`bs."status" = $${idx++}`); params.push(status); }
-    if (department) { conditions.push(`bs."department" ILIKE $${idx++}`); params.push(`%${department}%`); }
-    if (position) { conditions.push(`bs."position" ILIKE $${idx++}`); params.push(`%${position}%`); }
+    if (status)          { conditions.push(`bs."status" = $${idx++}`);          params.push(status); }
+    if (department)      { conditions.push(`bs."department" = $${idx++}`);      params.push(department); }
+    if (position)        { conditions.push(`bs."position" = $${idx++}`);        params.push(position); }
+    if (branch)          { conditions.push(`bs."branch" = $${idx++}`);          params.push(branch); }
+    if (employment_type) { conditions.push(`bs.employment_type = $${idx++}`);   params.push(employment_type); }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const offset = (Number(page) - 1) * Number(limit);
@@ -232,6 +247,40 @@ router.get('/branch-staff', requireAuth, requireRole(ALLOWED_ROLES), async (req,
       total: parseInt(countResult.rows[0].count, 10),
       page: Number(page),
       totalPages: Math.ceil(parseInt(countResult.rows[0].count, 10) / Number(limit)),
+    });
+  } catch (err) { return next(err); }
+});
+
+// GET /api/hrfs/branch-staff/options — distinct values for the 5 dropdown filters.
+// Returns { branches, departments, positions, statuses, employment_types }, each
+// alphabetised with blanks filtered out.
+router.get('/branch-staff/options', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
+  try {
+    const distinctSql = (col) => `
+      SELECT DISTINCT TRIM("${col}") AS v
+      FROM hrfs."BranchStaff"
+      WHERE "${col}" IS NOT NULL AND TRIM("${col}") <> ''
+      ORDER BY 1
+    `;
+    const empTypeSql = `
+      SELECT DISTINCT TRIM(employment_type) AS v
+      FROM hrfs."BranchStaff"
+      WHERE employment_type IS NOT NULL AND TRIM(employment_type) <> ''
+      ORDER BY 1
+    `;
+    const [branches, departments, positions, statuses, employment_types] = await Promise.all([
+      pool.query(distinctSql('branch')),
+      pool.query(distinctSql('department')),
+      pool.query(distinctSql('position')),
+      pool.query(distinctSql('status')),
+      pool.query(empTypeSql),
+    ]);
+    return res.json({
+      branches:         branches.rows.map(r => r.v),
+      departments:      departments.rows.map(r => r.v),
+      positions:        positions.rows.map(r => r.v),
+      statuses:         statuses.rows.map(r => r.v),
+      employment_types: employment_types.rows.map(r => r.v),
     });
   } catch (err) { return next(err); }
 });

@@ -289,7 +289,7 @@ export function OkrRegionView() {
       ) : (
         <>
           {/* ── 3 region cards (whole-number summary) ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginBottom: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 18 }}>
             {REGIONS.map(r => {
               const cur = perRegion[r];
               const prev = perRegionPrev[r];

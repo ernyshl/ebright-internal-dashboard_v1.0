@@ -39,7 +39,8 @@ export function DashboardHomePage() {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' },
+        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' }
       ]
     },
     {
@@ -80,8 +81,7 @@ export function DashboardHomePage() {
       color: '#3b82f6',
       links: [
         { label: 'GHL Dashboard', path: '/dashboard', dashboard: 'operations' },
-        { label: 'Branch Distribution', path: '/branch-distribution', dashboard: 'operations' },
-        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'operations' }
+        { label: 'Branch Distribution', path: '/branch-distribution', dashboard: 'operations' }
       ]
     },
     {
