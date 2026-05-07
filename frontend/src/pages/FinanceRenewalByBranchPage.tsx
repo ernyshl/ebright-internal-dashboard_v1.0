@@ -331,21 +331,26 @@ export default function FinanceRenewalByBranchPage() {
   </div>
 </div>
 
-        {/* Empty flex spacer pushes the totals tiles to the right edge of the
-            filter bar — using marginLeft:auto on the tile itself caused them
-            to overflow the html-to-image bounding rect. The spacer is just
-            free space; both tiles render as normal flex items inside it. */}
-        <div style={{ flex: '1 1 auto' }} />
-        <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
-          <div className="brRankLabel">TOTAL PACKS</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-            {totals.total_renewals}
-          </div>
-        </div>
-        <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
-          <div className="brRankLabel">TOTAL RENEWALS</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-            {formatRM(totals.grand_total)}
+        {/* Single .brRankFilterGroup with the .brRankTotalInline class
+            (margin-left:auto + text-align:right). Putting both label/value
+            pairs INSIDE one tile means they move as one flex item — earlier
+            attempts with two separate tiles had the second one overflow the
+            html-to-image bounding rect even though it rendered fine on the
+            live page. Mirrors BranchRankingPage's working pattern. */}
+        <div className="brRankFilterGroup brRankTotalInline">
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-end' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div className="brRankLabel">TOTAL PACKS</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                {totals.total_renewals}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="brRankLabel">TOTAL RENEWALS</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                {formatRM(totals.grand_total)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
