@@ -6,6 +6,7 @@ import { BackButton } from '../components/BackButton';
 // --- Types ---
 type RenewalData = {
   branch_code: string;
+  branch_name: string;
   count_3m: number; count_6m: number; count_9m: number; count_12m: number;
   total_3m: number; total_6m: number; total_9m: number; total_12m: number;
   total_renewals: number;
