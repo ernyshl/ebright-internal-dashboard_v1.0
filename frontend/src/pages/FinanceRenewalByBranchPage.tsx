@@ -331,17 +331,23 @@ export default function FinanceRenewalByBranchPage() {
   </div>
 </div>
 
-        {/* TOTAL RENEWALS + TOTAL REVENUE summary tiles, mirroring BranchRankingPage. */}
-        <div className="brRankFilterGroup" style={{ marginLeft: 'auto', textAlign: 'right' }}>
-          <div className="brRankLabel">TOTAL PACKS</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-            {totals.total_renewals}
+        {/* TOTAL PACKS + TOTAL RENEWALS summary tiles. Wrap both in a single
+            flex container with the marginLeft:auto so they stay together as
+            one unit pushed to the right edge — separate marginLeft:auto on
+            the first tile alone caused the second to overflow the captured
+            bounding rect in html-to-image. */}
+        <div style={{ display: 'flex', gap: '20px', marginLeft: 'auto', alignItems: 'center' }}>
+          <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
+            <div className="brRankLabel">TOTAL PACKS</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+              {totals.total_renewals}
+            </div>
           </div>
-        </div>
-        <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
-          <div className="brRankLabel">TOTAL RENEWALS</div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--brand)', fontVariantNumeric: 'tabular-nums' }}>
-            {formatRM(totals.grand_total)}
+          <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
+            <div className="brRankLabel">TOTAL RENEWALS</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+              {formatRM(totals.grand_total)}
+            </div>
           </div>
         </div>
       </div>
