@@ -324,7 +324,7 @@ export default function FinanceRenewalByBranchPage() {
       className="btn btnSmall btnSecondary"
       onClick={() => setViewMode(viewMode === 'table' ? 'graph' : 'table')}
       style={{ marginLeft: '4px' }}
-      data-no-capture
+      data-no-capture="true"
     >
       {viewMode === 'table' ? '📊 Graph' : '📋 Table'}
     </button>
@@ -417,7 +417,7 @@ export default function FinanceRenewalByBranchPage() {
         ) : (
           <div className="card" style={{ padding: '20px' }}>
             <div className="renewalGraphHeader">
-              <div className="renewalGraphMetricToggle" data-no-capture>
+              <div className="renewalGraphMetricToggle" data-no-capture="true">
                 <button
                   className={graphMetric === 'revenue' ? 'active' : ''}
                   onClick={() => setGraphMetric('revenue')}
@@ -434,7 +434,7 @@ export default function FinanceRenewalByBranchPage() {
               <button
                 className="btn btnSmall"
                 onClick={captureGraph}
-                data-no-capture
+                data-no-capture="true"
               >
                 📷 Capture
               </button>

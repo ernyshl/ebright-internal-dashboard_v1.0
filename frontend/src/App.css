@@ -2782,9 +2782,10 @@
   background: var(--borderLight);
   color: var(--text);
 }
+/* Flex with explicit widths — CSS Grid 1fr collapses to 0 inside the
+   html-to-image clone, which made captured PNGs blank below the filter bar. */
 .renewalGraphRow {
-  display: grid;
-  grid-template-columns: 48px 220px 1fr 140px;
+  display: flex;
   align-items: center;
   gap: 12px;
   padding: 6px 8px;
@@ -2794,12 +2795,16 @@
   opacity: 0.55;
 }
 .renewalGraphRank {
+  width: 48px;
+  flex-shrink: 0;
   font-size: 13px;
   font-weight: 700;
   color: var(--textSecondary);
   text-align: right;
 }
 .renewalGraphName {
+  width: 220px;
+  flex-shrink: 0;
   font-size: 13px;
   color: var(--text);
   white-space: nowrap;
@@ -2807,6 +2812,8 @@
   text-overflow: ellipsis;
 }
 .renewalGraphTrack {
+  flex: 1 1 auto;
+  min-width: 120px;
   position: relative;
   height: 22px;
   background: var(--borderLight);
@@ -2819,6 +2826,8 @@
   transition: width 0.35s ease;
 }
 .renewalGraphValue {
+  width: 140px;
+  flex-shrink: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
