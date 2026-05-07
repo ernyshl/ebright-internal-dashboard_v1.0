@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { toPng } from 'html-to-image';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
@@ -34,6 +35,14 @@ const getRelativeTime = (dateString?: string) => {
   return rtf.format(Math.round(diffInSeconds / 86400), 'day');
 };
 
+const getBarColor = (rank: number, total: number) => {
+  const t = total <= 1 ? 0 : rank / (total - 1);
+  const hue = Math.round(142 * (1 - t));
+  const sat = Math.round(71 + 13 * t);
+  const lig = Math.round(45 + 10 * t);
+  return `hsl(${hue}, ${sat}%, ${lig}%)`;
+};
+
 export default function FinanceRenewalByBranchPage() {
   // 1. State for Filters
   const now = new Date();
@@ -42,6 +51,8 @@ export default function FinanceRenewalByBranchPage() {
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const [sortBy, setSortBy] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const graphCaptureRef = useRef<HTMLDivElement | null>(null);
+  const [captureToast, setCaptureToast] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
   const [graphMetric, setGraphMetric] = useState<'revenue' | 'count'>('revenue');
 
@@ -96,6 +107,54 @@ export default function FinanceRenewalByBranchPage() {
     setSelectedYear(y);
   };
 
+  const showCaptureToast = (msg: string) => {
+    setCaptureToast(msg);
+    setTimeout(() => setCaptureToast(null), 2500);
+  };
+
+  const captureGraph = useCallback(async () => {
+    if (!graphCaptureRef.current) {
+      showCaptureToast('⚠️ Chart not ready');
+      return;
+    }
+    showCaptureToast('⏳ Capturing…');
+
+    let dataUrl: string;
+    try {
+      dataUrl = await toPng(graphCaptureRef.current, {
+        backgroundColor:
+          document.documentElement.getAttribute('data-theme') === 'dark'
+            ? '#161b2b'
+            : '#ffffff',
+        pixelRatio: 2,
+        filter: (node: HTMLElement) => !(node as HTMLElement)?.dataset?.noCapture,
+      });
+    } catch (err) {
+      showCaptureToast(`⚠️ Render failed: ${(err as Error).message}`);
+      return;
+    }
+
+    const filename = `renewal-ranking-${selectedYear}-${String(selectedMonth).padStart(2, '0')}.png`;
+
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      try {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showCaptureToast('📋 Copied to clipboard!');
+        return;
+      } catch {
+        // fall through to download
+      }
+    }
+
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    a.click();
+    showCaptureToast('📥 Downloaded!');
+  }, [selectedMonth, selectedYear]);
+
   // 4. Filtering Logic
   const allRows: RenewalData[] = mainData?.data || [];
   
@@ -122,6 +181,23 @@ export default function FinanceRenewalByBranchPage() {
     });
   }, [rows, sortBy, sortDir]);
 
+  // Rank rows for the graph view by the active metric, descending. Ties broken
+  // by branch name asc so the ordering is stable for screenshots.
+  const graphRows = useMemo(() => {
+    const key = graphMetric === 'revenue' ? 'grand_total' : 'total_renewals';
+    return [...rows].sort((a, b) => {
+      const av = Number(a[key]);
+      const bv = Number(b[key]);
+      if (av === bv) return a.branch_name.localeCompare(b.branch_name);
+      return bv - av;
+    });
+  }, [rows, graphMetric]);
+
+  const graphMax = useMemo(() => {
+    const key = graphMetric === 'revenue' ? 'grand_total' : 'total_renewals';
+    return graphRows.reduce((m, r) => Math.max(m, Number(r[key])), 0);
+  }, [graphRows, graphMetric]);
+
   // 5. Calculate Totals
   const totals = useMemo(() => {
     return rows.reduce((acc, row) => ({
@@ -143,7 +219,10 @@ export default function FinanceRenewalByBranchPage() {
   }, [rows]);
 
   return (
-    <div className="branchRankingPage"> 
+    <div className="branchRankingPage">
+      {captureToast && (
+        <div className="renewalGraphCaptureToast">{captureToast}</div>
+      )}
       <div className="pageHeader">
         <div className="backButtonContainer">
           <BackButton to="/" label="Back to Home" />
@@ -255,6 +334,7 @@ export default function FinanceRenewalByBranchPage() {
       ) : isError ? (
         <div className="errorText">Failed to load renewal data. {(error as Error)?.message}</div>
       ) : (
+        viewMode === 'table' ? (
         <div className="card overflow-x-auto">
           <table className="brRankBarTable renewalBranchTable w-full text-left border-collapse">
              <thead>
@@ -317,6 +397,68 @@ export default function FinanceRenewalByBranchPage() {
             </tbody>
           </table>
         </div>
+        ) : (
+          <div className="card" style={{ padding: '20px' }} ref={graphCaptureRef}>
+            <div className="renewalGraphHeader">
+              <div className="renewalGraphMetricToggle" data-no-capture>
+                <button
+                  className={graphMetric === 'revenue' ? 'active' : ''}
+                  onClick={() => setGraphMetric('revenue')}
+                >
+                  💰 Revenue (RM)
+                </button>
+                <button
+                  className={graphMetric === 'count' ? 'active' : ''}
+                  onClick={() => setGraphMetric('count')}
+                >
+                  🔢 Renewal Count
+                </button>
+              </div>
+              <button
+                className="btn btnSmall"
+                onClick={captureGraph}
+                data-no-capture
+              >
+                📷 Capture
+              </button>
+            </div>
+            <div className="renewalGraph">
+              {graphRows.map((row, i) => {
+                const value = graphMetric === 'revenue'
+                  ? Number(row.grand_total)
+                  : Number(row.total_renewals);
+                const isZero = value === 0;
+                const widthPct = graphMax > 0 ? (value / graphMax) * 100 : 0;
+                const display = graphMetric === 'revenue'
+                  ? formatRM(value)
+                  : `${value} renewal${value === 1 ? '' : 's'}`;
+                return (
+                  <div
+                    key={row.branch_code}
+                    className={`renewalGraphRow${isZero ? ' zeroRow' : ''}`}
+                  >
+                    <div className="renewalGraphRank">#{i + 1}</div>
+                    <div className="renewalGraphName" title={row.branch_name}>
+                      {row.branch_name || row.branch_code}
+                    </div>
+                    <div className="renewalGraphTrack">
+                      <div
+                        className="renewalGraphFill"
+                        style={{
+                          width: `${widthPct}%`,
+                          background: isZero
+                            ? 'transparent'
+                            : getBarColor(i, graphRows.length),
+                        }}
+                      />
+                    </div>
+                    <div className="renewalGraphValue">{display}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )
       )}
     </div>
   );
