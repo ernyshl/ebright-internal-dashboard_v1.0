@@ -2802,8 +2802,13 @@
   border-bottom: 1px solid var(--borderLight);
   vertical-align: middle;
 }
-.renewalGraphTable tr.zeroRow td {
-  opacity: 0.55;
+/* Mute zero-renewal rows via explicit muted colors instead of opacity —
+   html-to-image doesn't reliably render opacity on <tr>, which made
+   zero rows disappear from captured PNGs. Full-opacity colors render
+   in both the live view and the capture. */
+.renewalGraphTable tr.zeroRow td.renewalGraphRank,
+.renewalGraphTable tr.zeroRow td.renewalGraphName {
+  color: var(--muted);
 }
 .renewalGraphTable td.renewalGraphRank {
   width: 48px;
