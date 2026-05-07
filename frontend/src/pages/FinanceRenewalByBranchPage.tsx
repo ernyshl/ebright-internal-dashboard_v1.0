@@ -42,6 +42,8 @@ export default function FinanceRenewalByBranchPage() {
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const [sortBy, setSortBy] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
+  const [graphMetric, setGraphMetric] = useState<'revenue' | 'count'>('revenue');
 
   const handleSort = (key: SortKey) => {
     if (sortBy !== key) {
@@ -235,6 +237,14 @@ export default function FinanceRenewalByBranchPage() {
       }}
     >
       Last Month
+    </button>
+    {/* TABLE / GRAPH TOGGLE */}
+    <button
+      className="btn btnSmall btnSecondary"
+      onClick={() => setViewMode(viewMode === 'table' ? 'graph' : 'table')}
+      style={{ marginLeft: '4px' }}
+    >
+      {viewMode === 'table' ? '📊 Graph' : '📋 Table'}
     </button>
   </div>
 </div>
