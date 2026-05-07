@@ -240,8 +240,11 @@ export default function FinanceRenewalByBranchPage() {
 
       {/* Capture region: filter bar + chart, mirroring BranchRankingPage. */}
       <div ref={graphCaptureRef}>
-      {/* --- HORIZONTAL FILTER BAR --- */}
-      <div className="card brRankFilters" style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'center', marginBottom: '20px', padding: '15px 20px' }}>
+      {/* --- HORIZONTAL FILTER BAR ---
+          Plain .brRankFilters (no .card) to match BranchRankingPage. The .card
+          class's backdrop-filter + translucent bg made html-to-image clip the
+          right-edge content (totals tile) from the captured PNG. */}
+      <div className="brRankFilters" style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'center', marginBottom: '20px', padding: '15px 20px' }}>
         <div className="brRankFilterGroup">
           <label className="brRankLabel">MONTH</label>
           <select 
@@ -353,6 +356,19 @@ export default function FinanceRenewalByBranchPage() {
             </div>
           </div>
         </div>
+
+        {/* Capture button — only shown in graph view, filtered out of PNG via
+            data-no-capture. Sits next to the totals like BranchRankingPage. */}
+        {viewMode === 'graph' && (
+          <button
+            className="btn btnSmall"
+            onClick={captureGraph}
+            title="Save chart as image"
+            data-no-capture="true"
+          >
+            📷 Capture
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -425,27 +441,20 @@ export default function FinanceRenewalByBranchPage() {
         </div>
         ) : (
           <div className="renewalGraphCard">
-            <div className="renewalGraphHeader">
-              <div className="renewalGraphMetricToggle" data-no-capture="true">
-                <button
-                  className={graphMetric === 'revenue' ? 'active' : ''}
-                  onClick={() => setGraphMetric('revenue')}
-                >
-                  💰 Revenue (RM)
-                </button>
-                <button
-                  className={graphMetric === 'count' ? 'active' : ''}
-                  onClick={() => setGraphMetric('count')}
-                >
-                  🔢 Renewal Count
-                </button>
-              </div>
+            {/* Metric toggle (Revenue / Count). Capture button moved to the
+                filter bar so it sits next to the totals, like BranchRankingPage. */}
+            <div className="renewalGraphMetricToggle" data-no-capture="true">
               <button
-                className="btn btnSmall"
-                onClick={captureGraph}
-                data-no-capture="true"
+                className={graphMetric === 'revenue' ? 'active' : ''}
+                onClick={() => setGraphMetric('revenue')}
               >
-                📷 Capture
+                💰 Revenue (RM)
+              </button>
+              <button
+                className={graphMetric === 'count' ? 'active' : ''}
+                onClick={() => setGraphMetric('count')}
+              >
+                🔢 Renewal Count
               </button>
             </div>
             <table className="renewalGraphTable">
