@@ -415,7 +415,7 @@ export default function FinanceRenewalByBranchPage() {
           </table>
         </div>
         ) : (
-          <div className="card" style={{ padding: '20px' }}>
+          <div className="renewalGraphCard">
             <div className="renewalGraphHeader">
               <div className="renewalGraphMetricToggle" data-no-capture="true">
                 <button

@@ -2782,6 +2782,19 @@
   background: var(--borderLight);
   color: var(--text);
 }
+/* Solid-bg replacement for .card — .card uses backdrop-filter:blur which
+   html-to-image silently drops, leaving the captured chart area opaque
+   over its own children. Use this class for the graph container instead. */
+.renewalGraphCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
 /* Flex with explicit widths — CSS Grid 1fr collapses to 0 inside the
    html-to-image clone, which made captured PNGs blank below the filter bar. */
 .renewalGraphRow {
