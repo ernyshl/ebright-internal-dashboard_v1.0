@@ -100,23 +100,31 @@ financeRouter.get('/renewal-by-branch', async (req, res, next) => {
     const startDate = `${year}-${month}-01`;
     const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
+    // Drive off branch_map_autocount so every branch that can appear in
+    // AutoCount-sourced renewals shows up, even with zero rows for the month.
+    // Using branch_master would skip branches that aren't in it (e.g. KTG).
+    // Date filter must stay in the JOIN ON — moving it to WHERE would
+    // convert the LEFT JOIN back into an inner join.
     const result = await pool.query(`
       SELECT
-        branch_code,
-        COUNT(*) FILTER (WHERE package = '3M')                  AS count_3m,
-        COUNT(*) FILTER (WHERE package = '6M')                  AS count_6m,
-        COUNT(*) FILTER (WHERE package = '9M')                  AS count_9m,
-        COUNT(*) FILTER (WHERE package = '12M')                 AS count_12m,
-        COUNT(*)                                                 AS total_renewals,
-        COALESCE(SUM(amount) FILTER (WHERE package = '3M'),  0) AS total_3m,
-        COALESCE(SUM(amount) FILTER (WHERE package = '6M'),  0) AS total_6m,
-        COALESCE(SUM(amount) FILTER (WHERE package = '9M'),  0) AS total_9m,
-        COALESCE(SUM(amount) FILTER (WHERE package = '12M'), 0) AS total_12m,
-        COALESCE(SUM(amount), 0)                                 AS grand_total
-      FROM finance_renewals
-      WHERE doc_date >= $1 AND doc_date <= $2
-      GROUP BY branch_code
-      ORDER BY branch_code
+        bm.branch_code,
+        COUNT(*) FILTER (WHERE fr.package = '3M')                     AS count_3m,
+        COUNT(*) FILTER (WHERE fr.package = '6M')                     AS count_6m,
+        COUNT(*) FILTER (WHERE fr.package = '9M')                     AS count_9m,
+        COUNT(*) FILTER (WHERE fr.package = '12M')                    AS count_12m,
+        COUNT(fr.id)                                                  AS total_renewals,
+        COALESCE(SUM(fr.amount) FILTER (WHERE fr.package = '3M'),  0) AS total_3m,
+        COALESCE(SUM(fr.amount) FILTER (WHERE fr.package = '6M'),  0) AS total_6m,
+        COALESCE(SUM(fr.amount) FILTER (WHERE fr.package = '9M'),  0) AS total_9m,
+        COALESCE(SUM(fr.amount) FILTER (WHERE fr.package = '12M'), 0) AS total_12m,
+        COALESCE(SUM(fr.amount), 0)                                   AS grand_total
+      FROM branch_map_autocount bm
+      LEFT JOIN finance_renewals fr
+        ON fr.branch_code = bm.branch_code
+        AND fr.doc_date >= $1
+        AND fr.doc_date <= $2
+      GROUP BY bm.branch_code
+      ORDER BY bm.branch_code
     `, [startDate, endDate]);
 
     // Cast numerics to JS numbers for the existing frontend contract.

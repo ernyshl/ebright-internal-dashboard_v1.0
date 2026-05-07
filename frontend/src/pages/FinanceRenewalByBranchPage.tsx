@@ -12,6 +12,11 @@ type RenewalData = {
   grand_total: number;
 };
 
+type SortKey =
+  | 'count_3m' | 'count_6m' | 'count_9m' | 'count_12m'
+  | 'total_3m' | 'total_6m' | 'total_9m' | 'total_12m'
+  | 'total_renewals' | 'grand_total';
+
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // --- Helper Functions ---
@@ -34,6 +39,26 @@ export default function FinanceRenewalByBranchPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedBranch, setSelectedBranch] = useState('ALL');
+  const [sortBy, setSortBy] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (key: SortKey) => {
+    if (sortBy !== key) {
+      setSortBy(key);
+      setSortDir('desc');
+      return;
+    }
+    if (sortDir === 'desc') {
+      setSortDir('asc');
+    } else {
+      // Third click resets to default (alphabetical by branch_code)
+      setSortBy(null);
+      setSortDir('desc');
+    }
+  };
+
+  const sortIndicator = (key: SortKey) =>
+    sortBy === key ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
 
   // 2. Data Query
   const { 
@@ -80,6 +105,19 @@ export default function FinanceRenewalByBranchPage() {
     if (selectedBranch === 'ALL') return allRows;
     return allRows.filter(r => r.branch_code === selectedBranch);
   }, [allRows, selectedBranch]);
+
+  // Apply column sort on top of branch-filtered rows. Default (sortBy === null)
+  // preserves the API's alphabetical-by-branch ordering.
+  const sortedRows = useMemo(() => {
+    if (!sortBy) return rows;
+    const dirMul = sortDir === 'desc' ? -1 : 1;
+    return [...rows].sort((a, b) => {
+      const av = Number(a[sortBy]);
+      const bv = Number(b[sortBy]);
+      if (av === bv) return a.branch_code.localeCompare(b.branch_code);
+      return (av - bv) * dirMul;
+    });
+  }, [rows, sortBy, sortDir]);
 
   // 5. Calculate Totals
   const totals = useMemo(() => {
@@ -207,60 +245,65 @@ export default function FinanceRenewalByBranchPage() {
         <div className="errorText">Failed to load renewal data. {(error as Error)?.message}</div>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="brRankBarTable w-full text-left border-collapse">
-             <thead className="bg-gray-100">
+          <table className="brRankBarTable renewalBranchTable w-full text-left border-collapse">
+             <thead>
               <tr>
-                <th className="p-3 border font-semibold">Branch</th>
-                <th className="p-3 border font-semibold text-center">3M</th>
-                <th className="p-3 border font-semibold text-center">6M</th>
-                <th className="p-3 border font-semibold text-center">9M</th>
-                <th className="p-3 border font-semibold text-center">12M</th>
-                <th className="p-3 border font-bold text-center bg-gray-200">Total Renewals</th>
-                <th className="p-3 border font-semibold text-right">3M (RM)</th>
-                <th className="p-3 border font-semibold text-right">6M (RM)</th>
-                <th className="p-3 border font-semibold text-right">9M (RM)</th>
-                <th className="p-3 border font-semibold text-right">12M (RM)</th>
-                <th className="p-3 border font-bold text-right bg-gray-200">Grand Total (RM)</th>
+                <th className="p-3 border font-semibold text-center" rowSpan={2}>#</th>
+                <th className="p-3 border font-semibold" rowSpan={2}>Branch</th>
+                <th className="p-3 border font-semibold text-center" colSpan={4}>Package — Renewals</th>
+                <th className="p-3 border font-bold text-center accentCol sortable" rowSpan={2} onClick={() => handleSort('total_renewals')}>Total Renewals{sortIndicator('total_renewals')}</th>
+                <th className="p-3 border font-semibold text-center" colSpan={4}>Package — Renewals (RM)</th>
+                <th className="p-3 border font-bold text-right accentCol sortable" rowSpan={2} onClick={() => handleSort('grand_total')}>Grand Total (RM){sortIndicator('grand_total')}</th>
+              </tr>
+              <tr>
+                <th className="p-3 border font-semibold text-center sortable" onClick={() => handleSort('count_3m')}>3M{sortIndicator('count_3m')}</th>
+                <th className="p-3 border font-semibold text-center sortable" onClick={() => handleSort('count_6m')}>6M{sortIndicator('count_6m')}</th>
+                <th className="p-3 border font-semibold text-center sortable" onClick={() => handleSort('count_9m')}>9M{sortIndicator('count_9m')}</th>
+                <th className="p-3 border font-semibold text-center sortable" onClick={() => handleSort('count_12m')}>12M{sortIndicator('count_12m')}</th>
+                <th className="p-3 border font-semibold text-right sortable" onClick={() => handleSort('total_3m')}>3M{sortIndicator('total_3m')}</th>
+                <th className="p-3 border font-semibold text-right sortable" onClick={() => handleSort('total_6m')}>6M{sortIndicator('total_6m')}</th>
+                <th className="p-3 border font-semibold text-right sortable" onClick={() => handleSort('total_9m')}>9M{sortIndicator('total_9m')}</th>
+                <th className="p-3 border font-semibold text-right sortable" onClick={() => handleSort('total_12m')}>12M{sortIndicator('total_12m')}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.length > 0 ? rows.map((row) => (
-                <tr key={row.branch_code} className="hover:bg-gray-50 border-b">
-                  <td className="p-3 border font-medium">{row.branch_code}</td>
-                  <td className="p-3 border text-center">{row.count_3m}</td>
-                  <td className="p-3 border text-center">{row.count_6m}</td>
-                  <td className="p-3 border text-center">{row.count_9m}</td>
-                  <td className="p-3 border text-center">{row.count_12m}</td>
-                  <td className="p-3 border text-center font-bold bg-gray-50">{row.total_renewals}</td>
-                  <td className="p-3 border text-right text-gray-600">{formatRM(row.total_3m)}</td>
-                  <td className="p-3 border text-right text-gray-600">{formatRM(row.total_6m)}</td>
-                  <td className="p-3 border text-right text-gray-600">{formatRM(row.total_9m)}</td>
-                  <td className="p-3 border text-right text-gray-600">{formatRM(row.total_12m)}</td>
-                  <td className="p-3 border text-right font-bold text-blue-700 bg-gray-50">{formatRM(row.grand_total)}</td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={11} className="p-10 text-center text-gray-500">No renewal records found for this period.</td>
-                </tr>
-              )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot className="font-bold text-base" style={{ backgroundColor: '#e2e8f0' }}>
-                <tr>
+              {rows.length > 0 && (
+                <tr className="font-bold text-base totalsRow">
+                  <td className="p-3 border"></td>
                   <td className="p-3 border">TOTALS</td>
                   <td className="p-3 border text-center">{totals.count_3m}</td>
                   <td className="p-3 border text-center">{totals.count_6m}</td>
                   <td className="p-3 border text-center">{totals.count_9m}</td>
                   <td className="p-3 border text-center">{totals.count_12m}</td>
-                  <td className="p-3 border text-center text-lg">{totals.total_renewals}</td>
+                  <td className="p-3 border text-center text-lg accentCol">{totals.total_renewals}</td>
                   <td className="p-3 border text-right">{formatRM(totals.total_3m)}</td>
                   <td className="p-3 border text-right">{formatRM(totals.total_6m)}</td>
                   <td className="p-3 border text-right">{formatRM(totals.total_9m)}</td>
                   <td className="p-3 border text-right">{formatRM(totals.total_12m)}</td>
-                  <td className="p-3 border text-right text-lg text-blue-800">{formatRM(totals.grand_total)}</td>
+                  <td className="p-3 border text-right text-lg accentCol grandTotalCell">{formatRM(totals.grand_total)}</td>
                 </tr>
-              </tfoot>
-            )}
+              )}
+              {sortedRows.length > 0 ? sortedRows.map((row, i) => (
+                <tr key={row.branch_code} className="border-b">
+                  <td className="p-3 border text-center rowNumCell">{i + 1}</td>
+                  <td className="p-3 border font-medium">{row.branch_code}</td>
+                  <td className="p-3 border text-center">{row.count_3m}</td>
+                  <td className="p-3 border text-center">{row.count_6m}</td>
+                  <td className="p-3 border text-center">{row.count_9m}</td>
+                  <td className="p-3 border text-center">{row.count_12m}</td>
+                  <td className="p-3 border text-center font-bold accentCol">{row.total_renewals}</td>
+                  <td className="p-3 border text-right amountCell">{formatRM(row.total_3m)}</td>
+                  <td className="p-3 border text-right amountCell">{formatRM(row.total_6m)}</td>
+                  <td className="p-3 border text-right amountCell">{formatRM(row.total_9m)}</td>
+                  <td className="p-3 border text-right amountCell">{formatRM(row.total_12m)}</td>
+                  <td className="p-3 border text-right font-bold accentCol grandTotalCell">{formatRM(row.grand_total)}</td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={12} className="p-10 text-center rowNumCell">No renewal records found for this period.</td>
+                </tr>
+              )}
+            </tbody>
           </table>
         </div>
       )}

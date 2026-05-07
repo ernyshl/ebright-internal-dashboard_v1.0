@@ -2702,6 +2702,48 @@
   border-collapse: collapse;
 }
 
+/* Theme-aware styling for Renewal by Branch table — overrides hardcoded
+   Tailwind grays so the table reads correctly in both light and dark modes. */
+.renewalBranchTable th,
+.renewalBranchTable td {
+  border-color: var(--border);
+}
+.renewalBranchTable thead {
+  background: var(--borderLight);
+}
+.renewalBranchTable thead th {
+  color: var(--text);
+}
+.renewalBranchTable .accentCol {
+  background: var(--border);
+}
+.renewalBranchTable tbody tr:hover td {
+  background: var(--tableRowHover);
+}
+.renewalBranchTable .totalsRow td {
+  background: var(--borderLight);
+  color: var(--text);
+}
+.renewalBranchTable .totalsRow .accentCol {
+  background: var(--border);
+}
+.renewalBranchTable .amountCell {
+  color: var(--textSecondary);
+}
+.renewalBranchTable .grandTotalCell {
+  color: #3b82f6;
+}
+.renewalBranchTable .rowNumCell {
+  color: var(--muted);
+}
+.renewalBranchTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.renewalBranchTable th.sortable:hover {
+  background: var(--border);
+}
+
 .brRankDataRow {
   border-bottom: 1px solid var(--border);
 }
