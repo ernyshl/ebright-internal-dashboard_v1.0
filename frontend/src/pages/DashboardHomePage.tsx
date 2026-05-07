@@ -39,18 +39,9 @@ export function DashboardHomePage() {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' },
+        { label: 'FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' },
         { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' },
         { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' }
-      ]
-    },
-    {
-      id: 'fa_testing',
-      name: 'FA Dashboard Testing',
-      icon: '🧪',
-      color: '#6366f1',
-      links: [
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'fa_testing' }
       ]
     },
     {
