@@ -108,6 +108,7 @@ financeRouter.get('/renewal-by-branch', async (req, res, next) => {
     const result = await pool.query(`
       SELECT
         bm.branch_code,
+        bm.branch_name,
         COUNT(*) FILTER (WHERE fr.package = '3M')                     AS count_3m,
         COUNT(*) FILTER (WHERE fr.package = '6M')                     AS count_6m,
         COUNT(*) FILTER (WHERE fr.package = '9M')                     AS count_9m,
@@ -123,13 +124,14 @@ financeRouter.get('/renewal-by-branch', async (req, res, next) => {
         ON fr.branch_code = bm.branch_code
         AND fr.doc_date >= $1
         AND fr.doc_date <= $2
-      GROUP BY bm.branch_code
+      GROUP BY bm.branch_code, bm.branch_name
       ORDER BY bm.branch_code
     `, [startDate, endDate]);
 
     // Cast numerics to JS numbers for the existing frontend contract.
     const data = result.rows.map(r => ({
       branch_code:    r.branch_code,
+      branch_name:    r.branch_name,
       count_3m:       Number(r.count_3m),
       count_6m:       Number(r.count_6m),
       count_9m:       Number(r.count_9m),
