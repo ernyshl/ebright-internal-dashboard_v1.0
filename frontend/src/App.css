@@ -2744,6 +2744,105 @@
   background: var(--border);
 }
 
+/* --- Renewal Ranking Graph --- */
+.renewalGraph {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.renewalGraphHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.renewalGraphMetricToggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.renewalGraphMetricToggle button {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--textSecondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.renewalGraphMetricToggle button.active {
+  background: var(--brand);
+  color: #fff;
+}
+.renewalGraphMetricToggle button:not(.active):hover {
+  background: var(--borderLight);
+  color: var(--text);
+}
+.renewalGraphRow {
+  display: grid;
+  grid-template-columns: 48px 220px 1fr 140px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--borderLight);
+}
+.renewalGraphRow.zeroRow {
+  opacity: 0.55;
+}
+.renewalGraphRank {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--textSecondary);
+  text-align: right;
+}
+.renewalGraphName {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.renewalGraphTrack {
+  position: relative;
+  height: 22px;
+  background: var(--borderLight);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.renewalGraphFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.35s ease;
+}
+.renewalGraphValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.renewalGraphRow.zeroRow .renewalGraphValue {
+  color: var(--muted);
+}
+.renewalGraphCaptureToast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+}
+
 .brRankDataRow {
   border-bottom: 1px solid var(--border);
 }
