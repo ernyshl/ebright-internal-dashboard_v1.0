@@ -358,15 +358,15 @@ export default function FinanceRenewalByBranchPage() {
         </div>
 
         {/* Capture button — only shown in graph view, filtered out of PNG via
-            data-no-capture. Sits next to the totals like BranchRankingPage. */}
+            data-no-capture. Clipboard-icon only to match BranchRankingPage. */}
         {viewMode === 'graph' && (
           <button
-            className="btn btnSmall"
+            className="brRankPresetBtn"
             onClick={captureGraph}
             title="Save chart as image"
             data-no-capture="true"
           >
-            📷 Capture
+            📋
           </button>
         )}
       </div>
