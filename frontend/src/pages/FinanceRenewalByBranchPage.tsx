@@ -21,6 +21,24 @@ type SortKey =
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+// Region groupings — kept in the frontend so we can include not-yet-opened
+// branches (e.g. DPU) as zero-rows without needing a DB migration first.
+type Region = 'A' | 'B' | 'C';
+const BRANCH_REGIONS: Record<string, Region> = {
+  // Region A
+  RBY: 'A', KLG: 'A', SHA: 'A', SA: 'A', DA: 'A', EGR: 'A', ST: 'A',
+  // Region B
+  DK: 'B', KD: 'B', AMP: 'B', SP: 'B', BTHO: 'B', KTG: 'B', TSG: 'B',
+  // Region C
+  PJY: 'C', KW: 'C', BBB: 'C', CJY: 'C', BSP: 'C', DPU: 'C', ONL: 'C',
+};
+
+// Display names for branches that aren't (yet) returned by the API. Used to
+// render zero-row placeholders so the page reflects the full 21-branch roster.
+const BRANCH_NAME_FALLBACK: Record<string, string> = {
+  DPU: 'Ebright Dataran Puchong Utama',
+};
+
 // --- Helper Functions ---
 const formatRM = (val: number) => 
   new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(val);
@@ -49,6 +67,7 @@ export default function FinanceRenewalByBranchPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedBranch, setSelectedBranch] = useState('ALL');
+  const [selectedRegion, setSelectedRegion] = useState<'ALL' | Region>('ALL');
   const [sortBy, setSortBy] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const graphCaptureRef = useRef<HTMLDivElement | null>(null);
@@ -156,17 +175,38 @@ export default function FinanceRenewalByBranchPage() {
   }, [selectedMonth, selectedYear]);
 
   // 4. Filtering Logic
-  const allRows: RenewalData[] = mainData?.data || [];
-  
+  // Pad the API response with zero-rows for any branch in BRANCH_REGIONS that
+  // the backend didn't return — keeps not-yet-opened branches (e.g. DPU)
+  // visible in the table and graph as RM 0.00 placeholders.
+  const allRows: RenewalData[] = useMemo(() => {
+    const apiRows: RenewalData[] = mainData?.data || [];
+    const seen = new Set(apiRows.map(r => r.branch_code));
+    const padded: RenewalData[] = [...apiRows];
+    for (const code of Object.keys(BRANCH_REGIONS)) {
+      if (seen.has(code)) continue;
+      padded.push({
+        branch_code: code,
+        branch_name: BRANCH_NAME_FALLBACK[code] || code,
+        count_3m: 0, count_6m: 0, count_9m: 0, count_12m: 0,
+        total_3m: 0, total_6m: 0, total_9m: 0, total_12m: 0,
+        total_renewals: 0, grand_total: 0,
+      });
+    }
+    return padded.sort((a, b) => a.branch_code.localeCompare(b.branch_code));
+  }, [mainData]);
+
   const branchList = useMemo(() => {
     const branches = Array.from(new Set(allRows.map(r => r.branch_code)));
     return branches.sort();
   }, [allRows]);
 
   const rows = useMemo(() => {
-    if (selectedBranch === 'ALL') return allRows;
-    return allRows.filter(r => r.branch_code === selectedBranch);
-  }, [allRows, selectedBranch]);
+    return allRows.filter(r => {
+      if (selectedBranch !== 'ALL' && r.branch_code !== selectedBranch) return false;
+      if (selectedRegion !== 'ALL' && BRANCH_REGIONS[r.branch_code] !== selectedRegion) return false;
+      return true;
+    });
+  }, [allRows, selectedBranch, selectedRegion]);
 
   // Apply column sort on top of branch-filtered rows. Default (sortBy === null)
   // preserves the API's alphabetical-by-branch ordering.
@@ -273,9 +313,9 @@ export default function FinanceRenewalByBranchPage() {
 
         <div className="brRankFilterGroup">
           <label className="brRankLabel">BRANCH</label>
-          <select 
-            className="filterSelect" 
-            value={selectedBranch} 
+          <select
+            className="filterSelect"
+            value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
             style={{ minWidth: '180px' }}
           >
@@ -283,6 +323,21 @@ export default function FinanceRenewalByBranchPage() {
             {branchList.map(b => (
               <option key={b} value={b}>{b}</option>
             ))}
+          </select>
+        </div>
+
+        <div className="brRankFilterGroup">
+          <label className="brRankLabel">REGION</label>
+          <select
+            className="filterSelect"
+            value={selectedRegion}
+            onChange={(e) => setSelectedRegion(e.target.value as 'ALL' | Region)}
+            style={{ minWidth: '140px' }}
+          >
+            <option value="ALL">All Regions</option>
+            <option value="A">Region A</option>
+            <option value="B">Region B</option>
+            <option value="C">Region C</option>
           </select>
         </div>
 
@@ -365,6 +420,7 @@ export default function FinanceRenewalByBranchPage() {
             onClick={captureGraph}
             title="Save chart as image"
             data-no-capture="true"
+            style={{ fontSize: '20px', lineHeight: 1 }}
           >
             📋
           </button>
