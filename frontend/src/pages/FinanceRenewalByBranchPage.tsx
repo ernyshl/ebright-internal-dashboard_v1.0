@@ -238,6 +238,8 @@ export default function FinanceRenewalByBranchPage() {
         </div>
       </div>
 
+      {/* Capture region: filter bar + chart, mirroring BranchRankingPage. */}
+      <div ref={graphCaptureRef}>
       {/* --- HORIZONTAL FILTER BAR --- */}
       <div className="card brRankFilters" style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'center', marginBottom: '20px', padding: '15px 20px' }}>
         <div className="brRankFilterGroup">
@@ -322,11 +324,26 @@ export default function FinanceRenewalByBranchPage() {
       className="btn btnSmall btnSecondary"
       onClick={() => setViewMode(viewMode === 'table' ? 'graph' : 'table')}
       style={{ marginLeft: '4px' }}
+      data-no-capture
     >
       {viewMode === 'table' ? '📊 Graph' : '📋 Table'}
     </button>
   </div>
 </div>
+
+        {/* TOTAL RENEWALS + TOTAL REVENUE summary tiles, mirroring BranchRankingPage. */}
+        <div className="brRankFilterGroup" style={{ marginLeft: 'auto', textAlign: 'right' }}>
+          <div className="brRankLabel">TOTAL RENEWALS</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+            {totals.total_renewals}
+          </div>
+        </div>
+        <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
+          <div className="brRankLabel">TOTAL REVENUE</div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--brand)', fontVariantNumeric: 'tabular-nums' }}>
+            {formatRM(totals.grand_total)}
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -398,7 +415,7 @@ export default function FinanceRenewalByBranchPage() {
           </table>
         </div>
         ) : (
-          <div className="card" style={{ padding: '20px' }} ref={graphCaptureRef}>
+          <div className="card" style={{ padding: '20px' }}>
             <div className="renewalGraphHeader">
               <div className="renewalGraphMetricToggle" data-no-capture>
                 <button
@@ -460,6 +477,7 @@ export default function FinanceRenewalByBranchPage() {
           </div>
         )
       )}
+      </div>
     </div>
   );
 }
