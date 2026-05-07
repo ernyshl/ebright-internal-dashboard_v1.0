@@ -439,41 +439,42 @@ export default function FinanceRenewalByBranchPage() {
                 📷 Capture
               </button>
             </div>
-            <div className="renewalGraph">
-              {graphRows.map((row, i) => {
-                const value = graphMetric === 'revenue'
-                  ? Number(row.grand_total)
-                  : Number(row.total_renewals);
-                const isZero = value === 0;
-                const widthPct = graphMax > 0 ? (value / graphMax) * 100 : 0;
-                const display = graphMetric === 'revenue'
-                  ? formatRM(value)
-                  : `${value} renewal${value === 1 ? '' : 's'}`;
-                return (
-                  <div
-                    key={row.branch_code}
-                    className={`renewalGraphRow${isZero ? ' zeroRow' : ''}`}
-                  >
-                    <div className="renewalGraphRank">#{i + 1}</div>
-                    <div className="renewalGraphName" title={row.branch_name}>
-                      {row.branch_name || row.branch_code}
-                    </div>
-                    <div className="renewalGraphTrack">
-                      <div
-                        className="renewalGraphFill"
-                        style={{
-                          width: `${widthPct}%`,
-                          background: isZero
-                            ? 'transparent'
-                            : getBarColor(i, graphRows.length),
-                        }}
-                      />
-                    </div>
-                    <div className="renewalGraphValue">{display}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <table className="renewalGraphTable">
+              <tbody>
+                {graphRows.map((row, i) => {
+                  const value = graphMetric === 'revenue'
+                    ? Number(row.grand_total)
+                    : Number(row.total_renewals);
+                  const isZero = value === 0;
+                  const widthPct = graphMax > 0 ? (value / graphMax) * 100 : 0;
+                  const display = graphMetric === 'revenue'
+                    ? formatRM(value)
+                    : `${value} renewal${value === 1 ? '' : 's'}`;
+                  return (
+                    <tr key={row.branch_code} className={isZero ? 'zeroRow' : ''}>
+                      <td className="renewalGraphRank">#{i + 1}</td>
+                      <td className="renewalGraphName" title={row.branch_name}>
+                        {row.branch_name || row.branch_code}
+                      </td>
+                      <td className="renewalGraphBarCell">
+                        <div className="renewalGraphTrack">
+                          <div
+                            className="renewalGraphFill"
+                            style={{
+                              width: `${widthPct}%`,
+                              background: isZero
+                                ? 'transparent'
+                                : getBarColor(i, graphRows.length),
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td className="renewalGraphValue">{display}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )
       )}

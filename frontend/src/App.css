@@ -2745,11 +2745,6 @@
 }
 
 /* --- Renewal Ranking Graph --- */
-.renewalGraph {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 .renewalGraphHeader {
   display: flex;
   justify-content: space-between;
@@ -2795,39 +2790,43 @@
   padding: 20px;
 }
 
-/* Flex with explicit widths — CSS Grid 1fr collapses to 0 inside the
-   html-to-image clone, which made captured PNGs blank below the filter bar. */
-.renewalGraphRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* Use HTML table for the bar list — flexbox/grid had unreliable widths
+   during html-to-image cloning (track collapsed to 0). Tables compute
+   layout deterministically and match BranchRankingPage's proven pattern. */
+.renewalGraphTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.renewalGraphTable td {
   padding: 6px 8px;
   border-bottom: 1px solid var(--borderLight);
+  vertical-align: middle;
 }
-.renewalGraphRow.zeroRow {
+.renewalGraphTable tr.zeroRow td {
   opacity: 0.55;
 }
-.renewalGraphRank {
+.renewalGraphTable td.renewalGraphRank {
   width: 48px;
-  flex-shrink: 0;
   font-size: 13px;
   font-weight: 700;
   color: var(--textSecondary);
   text-align: right;
+  white-space: nowrap;
 }
-.renewalGraphName {
+.renewalGraphTable td.renewalGraphName {
   width: 220px;
-  flex-shrink: 0;
+  max-width: 220px;
   font-size: 13px;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.renewalGraphTable td.renewalGraphBarCell {
+  /* width: auto — takes the remaining space in the table layout */
+}
 .renewalGraphTrack {
-  flex: 1 1 auto;
-  min-width: 120px;
-  position: relative;
+  width: 100%;
   height: 22px;
   background: var(--borderLight);
   border-radius: 4px;
@@ -2836,18 +2835,17 @@
 .renewalGraphFill {
   height: 100%;
   border-radius: 4px;
-  transition: width 0.35s ease;
 }
-.renewalGraphValue {
+.renewalGraphTable td.renewalGraphValue {
   width: 140px;
-  flex-shrink: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.renewalGraphRow.zeroRow .renewalGraphValue {
+.renewalGraphTable tr.zeroRow td.renewalGraphValue {
   color: var(--muted);
 }
 .renewalGraphCaptureToast {
