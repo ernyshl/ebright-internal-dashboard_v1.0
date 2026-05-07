@@ -33,7 +33,10 @@ financeRouter.get('/branch-ranking', async (req, res, next) => {
       ? `AND ${dateConditions.join(' AND ')}`
       : '';
 
-    // Get all 20 branches (by all-time revenue), LEFT JOIN filtered period
+    // Get all 20 branches (by all-time revenue), LEFT JOIN filtered period.
+    // Also compute lifetime_max — each branch's highest single-month revenue
+    // since 2026-01-01 — used by the frontend to permanently color the branch
+    // name based on the highest jackpot tier the branch has ever hit.
     const result = await pool.query(`
       WITH all_branches AS (
         SELECT branches
@@ -55,13 +58,33 @@ financeRouter.get('/branch-ranking', async (req, res, next) => {
           AND total_amount IS NOT NULL
           ${dateWhere}
         GROUP BY branches
+      ),
+      monthly AS (
+        SELECT
+          branches,
+          DATE_TRUNC('month', DATE(doc_date + INTERVAL '8 hours')) AS month,
+          SUM(total_amount) AS month_total
+        FROM view_ebright_invoices
+        WHERE branches IS NOT NULL
+          AND branches != ''
+          AND branches != 'HQ / Others'
+          AND total_amount IS NOT NULL
+          AND DATE(doc_date + INTERVAL '8 hours') >= '2026-01-01'
+        GROUP BY branches, month
+      ),
+      lifetime AS (
+        SELECT branches, MAX(month_total) AS lifetime_max
+        FROM monthly
+        GROUP BY branches
       )
       SELECT
         ab.branches,
         COALESCE(f.total_revenue, 0) AS total_revenue,
-        COALESCE(f.invoice_count, 0) AS invoice_count
+        COALESCE(f.invoice_count, 0) AS invoice_count,
+        COALESCE(l.lifetime_max, 0)  AS lifetime_max
       FROM all_branches ab
       LEFT JOIN filtered f ON f.branches = ab.branches
+      LEFT JOIN lifetime l ON l.branches = ab.branches
       ORDER BY total_revenue DESC, ab.branches ASC
     `, params);
 
@@ -81,6 +104,7 @@ financeRouter.get('/branch-ranking', async (req, res, next) => {
         branch: r.branches,
         total: parseFloat(r.total_revenue || 0),
         count: parseInt(r.invoice_count, 10),
+        lifetime_max: parseFloat(r.lifetime_max || 0),
       })),
       grandTotal,
       branchList: branchList.rows.map(r => r.branches),

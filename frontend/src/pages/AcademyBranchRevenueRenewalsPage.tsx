@@ -4,13 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
-const JACKPOT = 80000;
-const RENEWAL_COLOR = '#3b82f6'; // blue
+const RENEWAL_COLOR = '#9333ea'; // purple
+
+// Two jackpot thresholds — mirror BranchRankingPage so both pages tell the
+// same story.
+const JACKPOT_TIERS = [
+  { amount: 80000,  color: '#16a34a', label: 'RM80K' },   // green
+  { amount: 120000, color: '#2563eb', label: 'RM120K' },  // blue
+];
+const MAX_JACKPOT = Math.max(...JACKPOT_TIERS.map(t => t.amount));
 
 const TIER_DEFS = [
-  { label: 'Tier A', emoji: '🥇', reward: 'RM500', color: '#22c55e', size: 7 },
-  { label: 'Tier B', emoji: '🥈', reward: 'RM300', color: '#f59e0b', size: 7 },
-  { label: 'Tier C', emoji: '🥉', reward: 'RM100', color: '#f97316', size: 6 },
+  { label: 'Tier A', emoji: '🥇',  reward: 'RM600', color: '#22c55e', size: 5 },
+  { label: 'Tier B', emoji: '🥈',  reward: 'RM500', color: '#f59e0b', size: 5 },
+  { label: 'Tier C', emoji: '🥉',  reward: 'RM300', color: '#f97316', size: 5 },
+  { label: 'Tier D', emoji: '🎖️', reward: 'RM100', color: '#64748b', size: 5 },
 ];
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -21,6 +29,7 @@ type Branch = {
   total: number;
   renewal: number;
   count: number;
+  lifetime_max?: number;
 };
 
 function formatRM(val: number | null | undefined): string {
@@ -145,9 +154,14 @@ export function AcademyBranchRevenueRenewalsPage() {
   const branchList = data?.branchList || [];
 
   const maxTotal = branches.length > 0
-    ? Math.max(branches[0]?.total || 0, JACKPOT * 1.05)
-    : JACKPOT * 1.05;
-  const jackpotPct = Math.min((JACKPOT / maxTotal) * 100, 97);
+    ? Math.max(branches[0]?.total || 0, MAX_JACKPOT * 1.05)
+    : MAX_JACKPOT * 1.05;
+
+  const jackpotWinners = JACKPOT_TIERS.map(t => ({
+    ...t,
+    pct: Math.min((t.amount / maxTotal) * 100, 99),
+    winners: branches.filter((b: Branch) => b.total >= t.amount),
+  }));
 
   type TierRow = { tier: typeof TIER_DEFS[number]; branches: Branch[]; startIdx: number };
   const tierRows: TierRow[] = [];
@@ -222,7 +236,7 @@ export function AcademyBranchRevenueRenewalsPage() {
         </div>
         <div className="brRankFilterGroup brRankTotalInline">
           <label className="brRankLabel">Total Renewals</label>
-          <div className="brRankTotalValue" style={{ color: '#2563eb' }}>
+          <div className="brRankTotalValue" style={{ color: RENEWAL_COLOR }}>
             {isLoading ? '—' : formatRM(grandRenewalTotal)}
           </div>
         </div>
@@ -238,6 +252,26 @@ export function AcademyBranchRevenueRenewalsPage() {
       </div>
 
       {toast && <div className="brRankToast">{toast}</div>}
+
+      {/* Jackpot Winners Summary — sits between filter bar and chart so it's
+          included in the captureRef PNG. */}
+      {!isLoading && !isError && (
+        <div className="card brRankWinnersCard">
+          {jackpotWinners.map(t => (
+            <div key={t.amount} className="brRankWinnersRow">
+              <span className="brRankWinnersDot" style={{ background: t.color }} />
+              <span className="brRankWinnersLabel">
+                🏆 {t.label} Jackpot Winners ({t.winners.length}):
+              </span>
+              <span className="brRankWinnersList">
+                {t.winners.length > 0
+                  ? t.winners.map((w: Branch) => w.branch).join(', ')
+                  : 'none yet'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="card"><div className="loadingCard"><div className="loadingDots"><span /><span /><span /></div> Loading…</div></div>
@@ -264,10 +298,6 @@ export function AcademyBranchRevenueRenewalsPage() {
               <span style={{ width: 14, height: 14, background: 'linear-gradient(90deg, hsl(142,71%,45%), hsl(28,84%,55%))', borderRadius: 3, display: 'inline-block' }} />
               Total Revenue
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 2, height: 14, background: '#f97316', display: 'inline-block' }} />
-              Jackpot threshold (RM80,000)
-            </span>
           </div>
           <table className="brRankBarTable">
             <tbody>
@@ -277,6 +307,16 @@ export function AcademyBranchRevenueRenewalsPage() {
                   const totalPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
                   const renewalPct = b.total > 0 ? (b.renewal / maxTotal) * 100 : 0;
                   const restPct = Math.max(totalPct - renewalPct, 0);
+                  // Highest jackpot the branch hit this period — drives the
+                  // bold/colored revenue label.
+                  const highestJackpot = [...JACKPOT_TIERS]
+                    .reverse()
+                    .find(t => b.total >= t.amount);
+                  // Highest jackpot the branch ever hit since 2026-01-01 —
+                  // drives the permanent branch-name color.
+                  const lifetimeJackpot = [...JACKPOT_TIERS]
+                    .reverse()
+                    .find(t => (b.lifetime_max ?? 0) >= t.amount);
                   const isTierFirst = i === 0 && tIdx > 0;
                   return (
                     <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
@@ -285,9 +325,14 @@ export function AcademyBranchRevenueRenewalsPage() {
                           #{rank + 1}
                         </span>
                       </td>
-                      <td className="brRankNameCell">{b.branch}</td>
-                      <td className="brRankBarCell">
-                        <div className="brRankBarWrap" style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                      <td
+                        className="brRankNameCell"
+                        style={lifetimeJackpot ? { color: lifetimeJackpot.color, fontWeight: 700 } : undefined}
+                      >
+                        {b.branch}
+                      </td>
+                      <td className="brRankBarCell" style={{ width: '100%' }}>
+                        <div className="brRankBarWrap" style={{ display: 'flex', alignItems: 'center', position: 'relative', marginRight: 0 }}>
                           {b.renewal > 0 && (
                             <div
                               style={{
@@ -315,22 +360,51 @@ export function AcademyBranchRevenueRenewalsPage() {
                               }}
                             />
                           )}
-                          <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
-                          <span
-                            className={`brRankRevenueLabel${b.total === 0 ? ' brRankZeroVal' : ''}`}
-                            style={{ left: `calc(${totalPct}% + 6px)` }}
-                          >
-                            {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
-                          </span>
+                          {jackpotWinners.map(t => (
+                            <div
+                              key={t.amount}
+                              className="brRankJackpotLine"
+                              style={{ left: `${t.pct}%`, background: t.color }}
+                            />
+                          ))}
+                          {(() => {
+                            // When the bar fills more than ~70% of the cell, render
+                            // the revenue label INSIDE the bar (right-anchored, white)
+                            // so it never overflows into the renewal column on the
+                            // right. Below 70%, label sits to the right of the bar.
+                            const labelInsideBar = b.total > 0 && totalPct > 70;
+                            const labelStyle = labelInsideBar
+                              ? {
+                                  right: `calc(100% - ${totalPct}% + 6px)`,
+                                  left: 'auto' as const,
+                                  color: '#ffffff',
+                                  fontWeight: 800,
+                                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                }
+                              : {
+                                  left: `calc(${totalPct}% + 6px)`,
+                                  color: highestJackpot?.color,
+                                  fontWeight: highestJackpot ? 800 : undefined,
+                                };
+                            return (
+                              <span
+                                className={`brRankRevenueLabel${b.total === 0 ? ' brRankZeroVal' : ''}`}
+                                style={labelStyle}
+                              >
+                                {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
                       <td style={{
                         textAlign: 'right',
-                        paddingRight: 14,
+                        paddingLeft: 4,
+                        paddingRight: 8,
                         whiteSpace: 'nowrap',
                         fontWeight: 700,
                         fontSize: '0.95em',
-                        color: b.renewal > 0 ? '#2563eb' : 'var(--textSecondary, #94a3b8)',
+                        color: b.renewal > 0 ? RENEWAL_COLOR : 'var(--textSecondary, #94a3b8)',
                       }}>
                         {b.renewal > 0 ? formatRM(b.renewal) : '—'}
                       </td>
