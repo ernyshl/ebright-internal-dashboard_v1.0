@@ -41,7 +41,8 @@ export function DashboardHomePage() {
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
         { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' },
         { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' },
-        { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' }
+        { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' },
+        { label: 'Renewal by Branch', path: '/academy/renewal-by-branch', dashboard: 'academy' }
       ]
     },
     {
@@ -70,8 +71,7 @@ export function DashboardHomePage() {
       color: '#10b981',
       links: [
         { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
-        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' },
-        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' }
+        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
       ]
     },
     {

@@ -100,8 +100,11 @@ export default function App() {
           <Route path="/finance" element={
             <RequirePermission dashboard="finance"><FinanceDashboardPage /></RequirePermission>
           } />
+          <Route path="/academy/renewal-by-branch" element={
+            <RequirePermission dashboard="academy"><FinanceRenewalByBranchPage /></RequirePermission>
+          } />
           <Route path="/finance/renewal-by-branch" element={
-            <RequirePermission dashboard="finance"><FinanceRenewalByBranchPage /></RequirePermission>
+            <Navigate to="/academy/renewal-by-branch" replace />
           } />
           <Route path="/academy/branch-revenue-renewals" element={
             <RequirePermission dashboard="academy"><AcademyBranchRevenueRenewalsPage /></RequirePermission>

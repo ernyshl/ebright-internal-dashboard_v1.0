@@ -331,11 +331,11 @@ export default function FinanceRenewalByBranchPage() {
   </div>
 </div>
 
-        {/* TOTAL PACKS + TOTAL RENEWALS summary tiles. No marginLeft:auto —
-            html-to-image's bounding-rect calculation drops elements that sit
-            past the auto-pushed margin in the cloned DOM. Letting the tiles
-            flow naturally after QUICK SELECT keeps them inside the captured
-            region. */}
+        {/* Empty flex spacer pushes the totals tiles to the right edge of the
+            filter bar — using marginLeft:auto on the tile itself caused them
+            to overflow the html-to-image bounding rect. The spacer is just
+            free space; both tiles render as normal flex items inside it. */}
+        <div style={{ flex: '1 1 auto' }} />
         <div className="brRankFilterGroup" style={{ textAlign: 'right' }}>
           <div className="brRankLabel">TOTAL PACKS</div>
           <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>

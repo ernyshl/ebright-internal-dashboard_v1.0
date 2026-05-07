@@ -101,10 +101,10 @@ export const TV_VIEWS = [
     path: '/branch-ranking',
   },
   {
-    key: 'finance-renewal-by-branch',
+    key: 'academy-renewal-by-branch',
     label: 'Renewal by Branch',
     type: 'internal',
-    path: '/finance/renewal-by-branch',
+    path: '/academy/renewal-by-branch',
   },
 
   // ─── Department ──────────────────────────────────────────────────────────
