@@ -6,7 +6,21 @@ const financeRouter = express.Router();
 
 // Keep your middleware lines here
 financeRouter.use(requireAuth);
-financeRouter.use(requireRole(['super_admin', 'ceo', 'finance', 'od', 'rm', 'tv']));
+
+// Path-aware role gate: /renewal-by-branch (and its freshness sub-route)
+// also allow the 'academy' role because the page is now displayed under the
+// Academy section in the dashboard. All OTHER finance endpoints (Branch
+// Ranking, etc.) keep the original strict role list — academy users
+// shouldn't be able to call them via direct API.
+financeRouter.use((req, res, next) => {
+  const isRenewalByBranch =
+    req.path === '/renewal-by-branch' ||
+    req.path === '/renewal-by-branch/freshness';
+  const allowed = isRenewalByBranch
+    ? ['super_admin', 'ceo', 'finance', 'od', 'rm', 'tv', 'academy']
+    : ['super_admin', 'ceo', 'finance', 'od', 'rm', 'tv'];
+  return requireRole(allowed)(req, res, next);
+});
 // Branch Ranking — always returns top 20 branches (RM0 for those with no data in period)
 financeRouter.get('/branch-ranking', async (req, res, next) => {
   try {
