@@ -10,7 +10,6 @@ import { LeadsBreakdownPage } from './pages/LeadsBreakdownPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { LookerDashboardPage } from './pages/LookerDashboardPage';
-import { FinanceDashboardPage } from './pages/FinanceDashboardPage';
 import { DepartmentDashboardPage } from './pages/DepartmentDashboardPage';
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { LeadsCentrePage } from './pages/LeadsCentrePage';
@@ -96,9 +95,6 @@ export default function App() {
           } />
           <Route path="/dashboard" element={
             <RequirePermission dashboard="operations"><LookerDashboardPage /></RequirePermission>
-          } />
-          <Route path="/finance" element={
-            <RequirePermission dashboard="finance"><FinanceDashboardPage /></RequirePermission>
           } />
           <Route path="/academy/renewal-by-branch" element={
             <RequirePermission dashboard="academy"><FinanceRenewalByBranchPage /></RequirePermission>

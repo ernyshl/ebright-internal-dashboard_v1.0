@@ -70,7 +70,6 @@ export function DashboardHomePage() {
       icon: '💰',
       color: '#10b981',
       links: [
-        { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
         { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
       ]
     },
