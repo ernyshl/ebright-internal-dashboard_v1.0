@@ -2,7 +2,6 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
-import { DevBypassBanner } from '../components/DevBypassBanner';
 import { apiFetch, ApiError } from '../lib/api';
 import { clearToken } from '../lib/auth';
 import { getRoleLabel } from '../lib/roles';
@@ -93,7 +92,6 @@ export function AppLayout() {
       </button>
 
       <div className="content">
-        <DevBypassBanner />
         <header className="topbar">
           <div className="topbarLeft">
             <button

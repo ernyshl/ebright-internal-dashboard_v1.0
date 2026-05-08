@@ -122,9 +122,28 @@ async function runMigrations() {
   const sqlDir = path.join(__dirname, '..', 'sql');
   if (fs.existsSync(sqlDir)) {
     const files = fs.readdirSync(sqlDir).filter(f => f.endsWith('.sql')).sort();
+    const failed = [];
     for (const file of files) {
       const sql = fs.readFileSync(path.join(sqlDir, file), 'utf8');
-      await pool.query(sql);
+      try {
+        await pool.query(sql);
+      } catch (err) {
+        // Don't crash startup on a single file. The migrations are cumulative
+        // history; on a DB whose state has drifted from prod (e.g. duplicate
+        // rows preventing a unique-index step) the app is still useful even
+        // if one migration step couldn't apply. Log each failure loudly and
+        // emit a summary at the end so it's obvious the DB needs attention.
+        // eslint-disable-next-line no-console
+        console.warn(`[migrations] ⚠️  ${file} FAILED: ${err.message}`);
+        failed.push({ file, message: err.message });
+      }
+    }
+    if (failed.length) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[migrations] ⚠️  ${failed.length}/${files.length} migration file(s) failed — DB state has drifted. ` +
+        `Run a deduplication / cleanup pass and re-deploy. Failed: ${failed.map(f => f.file).join(', ')}`
+      );
     }
   }
 

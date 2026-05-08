@@ -24,10 +24,6 @@ const EnvSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('8h'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
-  // DEV-ONLY: when NODE_ENV=development AND this is '1', /api/auth/dev-bypass is exposed.
-  // REMOVE THIS AND THE ASSOCIATED ROUTE BEFORE DEPLOYING TO PRODUCTION.
-  DEV_AUTH_BYPASS: z.string().optional(),
-
   // Google Ads API Configuration
   GOOGLE_DEVELOPER_TOKEN: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
