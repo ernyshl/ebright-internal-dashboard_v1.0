@@ -81,7 +81,7 @@ PowerShell variant:
 psql $env:DATABASE_URL -f backend/sql/016_create_coach_program_enrollment.sql
 ```
 
-Expected: `CREATE TABLE` then `CREATE INDEX` (or both as `NOTICE: relation already exists, skipping` on a re-run — `IF NOT EXISTS` makes it idempotent).
+Expected: `CREATE TABLE` (or `NOTICE: relation already exists, skipping` on a re-run — `IF NOT EXISTS` makes it idempotent).
 
 - [ ] **Step 3: Verify the table exists**
 
