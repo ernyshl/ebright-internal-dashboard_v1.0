@@ -3054,6 +3054,100 @@
   color: var(--text);
 }
 
+/* ─── Diverging mode (Branch Revenue & Renewals) ────────────────────────── */
+
+.brRankDivergingRow {
+  /* Replaces the .brRankBarCell width/padding behaviour. The row uses a fixed
+     12-column subgrid via inline flex so it lines up across rows. */
+}
+
+.brRankDivLeftRm,
+.brRankDivRightRm {
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.95em;
+  padding: 0 8px;
+}
+
+.brRankDivLeftRm {
+  text-align: right;
+  color: #9333ea; /* renewal purple */
+}
+
+.brRankDivLeftRm.zero {
+  color: var(--textSecondary, #94a3b8);
+  font-weight: 500;
+}
+
+.brRankDivRightRm {
+  text-align: left;
+}
+
+.brRankDivBarWrap {
+  position: relative;
+  height: 22px;
+  background: var(--border);
+  border-radius: 4px;
+  display: flex;
+  width: 100%;
+  overflow: visible;
+}
+
+.brRankDivBarLeft,
+.brRankDivBarRight {
+  position: relative;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+.brRankDivBarLeft {
+  justify-content: flex-end;
+  border-right: 1px solid var(--textSecondary, #94a3b8);
+}
+
+.brRankDivBarRight {
+  justify-content: flex-start;
+}
+
+.brRankDivBarFillLeft {
+  background: #9333ea; /* renewal purple */
+  border-radius: 4px 0 0 4px;
+  transition: width 0.4s ease;
+  min-width: 0;
+}
+
+.brRankDivBarFillRight {
+  border-radius: 0 4px 4px 0;
+  transition: width 0.4s ease;
+  min-width: 0;
+}
+
+.brRankDivPctLeft,
+.brRankDivPctRight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--textPrimary);
+  pointer-events: none;
+}
+
+.brRankDivPctLeft {
+  right: calc(50% + 6px);
+}
+
+.brRankDivPctRight {
+  left: calc(50% + 6px);
+}
+
+.brRankDivPctMuted {
+  color: var(--textSecondary, #94a3b8);
+  font-weight: 500;
+}
+
 /* ===== LEADS BREAKDOWN PAGE ===== */
 .leadsBreakdownPage {
   padding: 0 32px 32px;

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, type ChangeEvent } from 'react';
 import { toPng } from 'html-to-image';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
+import { getUser } from '../lib/auth';
 import { BackButton } from '../components/BackButton';
 
 const RENEWAL_COLOR = '#9333ea'; // purple
@@ -63,11 +64,13 @@ function getYears() {
 
 export function AcademyBranchRevenueRenewalsPage() {
   const now = new Date();
+  const isSuperAdmin = getUser()?.role === 'super_admin';
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [branch, setBranch] = useState('');
   const [activePreset, setActivePreset] = useState<string | null>('this_month');
   const [toast, setToast] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'stacked' | 'diverging'>(isSuperAdmin ? 'stacked' : 'diverging');
   const captureRef = useRef<HTMLDivElement>(null);
 
   const showToast = (msg: string) => {
@@ -146,6 +149,7 @@ export function AcademyBranchRevenueRenewalsPage() {
     queryKey: ['branch-revenue-renewals', date_from, date_to, branch],
     queryFn: () => apiFetch(`/api/academy/branch-revenue-renewals?${params}`),
     staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
   });
 
   const branches = data?.branches || [];
@@ -230,6 +234,25 @@ export function AcademyBranchRevenueRenewalsPage() {
             ))}
           </div>
         </div>
+        {isSuperAdmin && (
+          <div className="brRankFilterGroup">
+            <label className="brRankLabel">View</label>
+            <div className="brRankPresets">
+              {[
+                { key: 'stacked', label: 'Stacked' },
+                { key: 'diverging', label: 'Diverging' },
+              ].map(v => (
+                <button
+                  key={v.key}
+                  className={`brRankPresetBtn${viewMode === v.key ? ' active' : ''}`}
+                  onClick={() => setViewMode(v.key as 'stacked' | 'diverging')}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="brRankFilterGroup brRankTotalInline">
           <label className="brRankLabel">Total Revenue</label>
           <div className="brRankTotalValue">{isLoading ? '—' : formatRM(grandTotal)}</div>
@@ -251,7 +274,7 @@ export function AcademyBranchRevenueRenewalsPage() {
         </button>
       </div>
 
-      {toast && <div className="brRankToast">{toast}</div>}
+      {toast && <div className="brRankToast" data-no-capture="true">{toast}</div>}
 
       {/* Jackpot Winners Summary — sits between filter bar and chart so it's
           included in the captureRef PNG. */}
@@ -318,7 +341,21 @@ export function AcademyBranchRevenueRenewalsPage() {
                     .reverse()
                     .find(t => (b.lifetime_max ?? 0) >= t.amount);
                   const isTierFirst = i === 0 && tIdx > 0;
-                  return (
+                  let renewalSharePct: number | null = b.total > 0 ? Math.round((b.renewal / b.total) * 100) : null;
+                  let nonRenewalSharePct: number | null = b.total > 0 ? Math.round(((b.total - b.renewal) / b.total) * 100) : null;
+                  // Correct rounding drift: when both sides are non-null and don't sum to 100,
+                  // the LARGER side absorbs the difference.
+                  if (renewalSharePct !== null && nonRenewalSharePct !== null && renewalSharePct + nonRenewalSharePct !== 100) {
+                    if (renewalSharePct >= nonRenewalSharePct) {
+                      renewalSharePct = 100 - nonRenewalSharePct;
+                    } else {
+                      nonRenewalSharePct = 100 - renewalSharePct;
+                    }
+                  }
+                  const nonRenewal = Math.max(b.total - b.renewal, 0);
+                  const renewalHalfPct = b.total > 0 ? (b.renewal / b.total) * 100 : 0;
+                  const nonRenewalHalfPct = b.total > 0 ? (nonRenewal / b.total) * 100 : 0;
+                  return viewMode === 'stacked' ? (
                     <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
                       <td className="brRankRankCell">
                         <span className={`brRankRankNum${rank < 3 ? ' top3' : ''}`}>
@@ -407,6 +444,71 @@ export function AcademyBranchRevenueRenewalsPage() {
                         color: b.renewal > 0 ? RENEWAL_COLOR : 'var(--textSecondary, #94a3b8)',
                       }}>
                         {b.renewal > 0 ? formatRM(b.renewal) : '—'}
+                      </td>
+                      {i === 0 && (
+                        <td
+                          rowSpan={tierBranches.length}
+                          className="brRankTierBadgeCell"
+                          style={{ '--tier-color': tier.color } as React.CSSProperties}
+                        >
+                          <div className="brRankTierBadgeInner">
+                            <div className="brRankTierBadgeEmoji">{tier.emoji}</div>
+                            <div className="brRankTierBadgeName">{tier.label}</div>
+                            <div className="brRankTierBadgeReward">{tier.reward}</div>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ) : (
+                    <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
+                      <td className="brRankRankCell">
+                        <span className={`brRankRankNum${rank < 3 ? ' top3' : ''}`}>
+                          #{rank + 1}
+                        </span>
+                      </td>
+                      <td
+                        className="brRankNameCell"
+                        style={lifetimeJackpot ? { color: lifetimeJackpot.color, fontWeight: 700 } : undefined}
+                      >
+                        {b.branch}
+                      </td>
+                      <td className={`brRankDivLeftRm${b.renewal === 0 ? ' zero' : ''}`}>
+                        {b.renewal > 0 ? formatRM(b.renewal) : '—'}
+                      </td>
+                      <td className="brRankBarCell" style={{ width: '100%' }}>
+                        <div className="brRankDivBarWrap">
+                          <div className="brRankDivBarLeft">
+                            {b.renewal > 0 && (
+                              <div
+                                className="brRankDivBarFillLeft"
+                                style={{ width: `${renewalHalfPct}%` }}
+                              />
+                            )}
+                            <span className={`brRankDivPctLeft${renewalSharePct === null || renewalSharePct === 0 ? ' brRankDivPctMuted' : ''}`}>
+                              {renewalSharePct === null || renewalSharePct === 0 ? '—' : `${renewalSharePct}%`}
+                            </span>
+                          </div>
+                          <div className="brRankDivBarRight">
+                            {nonRenewal > 0 && (
+                              <div
+                                className="brRankDivBarFillRight"
+                                style={{
+                                  width: `${nonRenewalHalfPct}%`,
+                                  background: getBarColor(rank, branches.length),
+                                }}
+                              />
+                            )}
+                            <span className={`brRankDivPctRight${nonRenewalSharePct === null || nonRenewalSharePct === 0 ? ' brRankDivPctMuted' : ''}`}>
+                              {nonRenewalSharePct === null || nonRenewalSharePct === 0 ? '—' : `${nonRenewalSharePct}%`}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td
+                        className="brRankDivRightRm"
+                        style={{ color: getBarColor(rank, branches.length) }}
+                      >
+                        {b.total > 0 ? formatRM(nonRenewal) : '—'}
                       </td>
                       {i === 0 && (
                         <td
