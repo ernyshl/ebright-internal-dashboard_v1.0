@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { BRANCHES } from '../lib/studentTypes';
 import { apiFetch } from '../lib/api';
@@ -9,6 +9,14 @@ const PAGE_SIZE = 50;
 const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
 const td = { padding:'10px 14px', fontSize:12 };
 
+const PROGRAM_COLORS: Record<string, string> = {
+  'CCP':              '#0ea5e9',
+  'Weekly Training':  '#4f46e5',
+  'Toastmasters':     '#10b981',
+  'TPRR':             '#f59e0b',
+  'ATCL Diploma':     '#8b5cf6',
+};
+
 type CoachRow = {
   id: number;
   name: string;
@@ -17,9 +25,7 @@ type CoachRow = {
   start_date: string | null;
   contract: string | null;
   status: string | null;
-  weekly_training: boolean;
-  atcl_diploma: boolean;
-  toastmasters: boolean;
+  programs: string[];
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -52,38 +58,6 @@ export function CoachBmPerformancePage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const queryClient = useQueryClient();
-
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, program, enrolled }: { id: number; program: 'weekly_training' | 'atcl_diploma' | 'toastmasters'; enrolled: boolean }) =>
-      apiFetch(`/api/coach-bm-performance/${id}/program`, {
-        method: 'PUT',
-        body: { program, enrolled },
-      }),
-    onMutate: async ({ id, program, enrolled }) => {
-      // Optimistic update: flip the row in the cached list immediately.
-      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
-      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
-      const previous = queryClient.getQueryData<any>(queryKey);
-      if (previous) {
-        queryClient.setQueryData(queryKey, {
-          ...previous,
-          records: previous.records.map((r: CoachRow) => r.id === id ? { ...r, [program]: enrolled } : r),
-        });
-      }
-      return { previous, queryKey };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous && ctx?.queryKey) {
-        queryClient.setQueryData(ctx.queryKey, ctx.previous);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
-      queryClient.invalidateQueries({ queryKey: ['coachBmPerformanceStats'] });
-    },
-  });
-
   const records: CoachRow[] = data?.records || [];
   const total: number = data?.total || 0;
   const totalPages: number = data?.totalPages || 1;
@@ -100,10 +74,12 @@ export function CoachBmPerformancePage() {
     </div>
   );
 
-  const wtCount   = stats?.weekly_training ?? 0;
-  const atclCount = stats?.atcl_diploma    ?? 0;
-  const tmCount   = stats?.toastmasters    ?? 0;
-  const statsTotal = stats?.total ?? 0;
+  const ccpCount   = stats?.ccp             ?? 0;
+  const wtCount    = stats?.weekly_training ?? 0;
+  const tmCount    = stats?.toastmasters    ?? 0;
+  const tprrCount  = stats?.tprr            ?? 0;
+  const atclCount  = stats?.atcl_diploma    ?? 0;
+  const statsTotal = stats?.total           ?? 0;
 
   return (
     <div className="dashboardPage">
@@ -125,9 +101,11 @@ export function CoachBmPerformancePage() {
       )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
+        {statCard('CCP',             ccpCount,  `/${statsTotal}`, '#0ea5e9', '📘')}
         {statCard('Weekly Training', wtCount,   `/${statsTotal}`, '#4f46e5', '🏋️')}
-        {statCard('ATCL Diploma',    atclCount, `/${statsTotal}`, '#8b5cf6', '🎓')}
         {statCard('Toastmasters',    tmCount,   `/${statsTotal}`, '#10b981', '🎤')}
+        {statCard('TPRR',            tprrCount, `/${statsTotal}`, '#f59e0b', '🗣️')}
+        {statCard('ATCL Diploma',    atclCount, `/${statsTotal}`, '#8b5cf6', '🎓')}
       </div>
 
       {/* Filters */}
@@ -199,23 +177,23 @@ export function CoachBmPerformancePage() {
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.start_date)}</td>
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>
                     <td style={td}>
-                      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                        {([
-                          { key: 'weekly_training' as const, label: 'Weekly Training', color: '#4f46e5' },
-                          { key: 'atcl_diploma'    as const, label: 'ATCL Diploma',    color: '#8b5cf6' },
-                          { key: 'toastmasters'    as const, label: 'Toastmasters',    color: '#10b981' },
-                        ]).map(p => (
-                          <label key={p.key} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:11 }}>
-                            <input
-                              type="checkbox"
-                              checked={r[p.key]}
-                              onChange={() => toggleMutation.mutate({ id: r.id, program: p.key, enrolled: !r[p.key] })}
-                              style={{ accentColor: p.color, cursor:'pointer' }}
-                            />
-                            <span style={{ color: r[p.key] ? p.color : 'var(--muted)', fontWeight: r[p.key] ? 600 : 400 }}>{p.label}</span>
-                          </label>
-                        ))}
-                      </div>
+                      {r.programs.length === 0 ? (
+                        <span style={{ color:'var(--muted)' }}>—</span>
+                      ) : (
+                        <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                          {r.programs.map(p => {
+                            const color = PROGRAM_COLORS[p] || '#6366f1';
+                            return (
+                              <span key={p} style={{
+                                fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600,
+                                background: `${color}18`,
+                                color,
+                                alignSelf:'flex-start',
+                              }}>{p}</span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </td>
                     <td style={{ ...td, color:'var(--muted)' }}>—</td>
                     <td style={{ ...td, color:'var(--muted)' }}>—</td>
