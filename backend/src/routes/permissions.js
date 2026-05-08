@@ -153,4 +153,4 @@ router.delete('/:userId/:dashboard', requireAuth, requireRole(['super_admin']), 
   }
 });
 
-module.exports = { permissionsRouter: router, DASHBOARDS, ROLE_DEFAULTS };
+module.exports = { permissionsRouter: router };
