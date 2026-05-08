@@ -149,6 +149,7 @@ export function DashboardHomePage() {
         { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
         { label: '🗂 Archived Students', path: '/archived-students', dashboard: 'student_db' },
         { label: '📋 Student Attendance', path: '/student-attendance', dashboard: 'student_db' },
+        { label: '🎯 Coach & BM Performance', path: '/coach-bm-performance', dashboard: 'student_db' },
       ]
     },
     {

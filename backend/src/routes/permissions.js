@@ -5,43 +5,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Available dashboards — one entry per CARD on the home page so admins can
-// toggle visibility per card. Card IDs match DashboardHomePage's departmentData
-// entries; the home page filters each card's links by `link.dashboard` against
-// these keys.
-const DASHBOARDS = [
-  { id: 'operations_dept', name: 'Operations Department',           icon: '⚙️' },
-  { id: 'academy',         name: 'Academy',                         icon: '🎓' },
-  { id: 'fa_testing',      name: 'FA Dashboard Testing',            icon: '🧪' },
-  { id: 'event_mkt',       name: 'Event MKT',                       icon: '🎪' },
-  { id: 'finance',         name: 'Finance',                         icon: '💰' },
-  { id: 'operations',      name: 'Optimisation',                    icon: '⚙️' },
-  { id: 'marketing',       name: 'Marketing',                       icon: '📈' },
-  { id: 'department',      name: 'Department',                      icon: '✅' },
-  { id: 'hr',              name: 'HR',                              icon: '👥' },
-  { id: 'hr_db',           name: 'HR Database',                     icon: '🗄️' },
-  { id: 'hr_crud',         name: 'CRUD HR Data',                    icon: '📋' },
-  { id: 'hr_testing',      name: 'HR Testing Data',                 icon: '🧪' },
-  { id: 'student_db',      name: 'Student Database',                icon: '📚' },
-  { id: 'admin',           name: 'Admin',                           icon: '🔧' },
-  { id: 'testing',         name: 'Testing (dnft)',                  icon: '🧪' },
-  { id: 'manjeet',         name: 'For Manjeet',                     icon: '🎯' },
-  { id: 'rm_dashboard',    name: 'For Regional Manager',            icon: '📊' },
-  { id: 'events',          name: 'Events',                          icon: '🎪' },
-];
-
-// Role-based default permissions — by card. Adjust here to grant new cards
-// to existing roles without forcing a per-user custom override.
-const ROLE_DEFAULTS = {
-  super_admin: DASHBOARDS.map(d => d.id),
-  ceo:         DASHBOARDS.map(d => d.id).filter(id => id !== 'admin'),
-  rm:          ['operations_dept', 'operations', 'academy', 'rm_dashboard'],
-  marketing:   ['marketing', 'academy', 'event_mkt'],
-  od:          ['operations_dept', 'operations', 'academy'],
-  hr:          ['department', 'hr', 'hr_db', 'hr_crud', 'hr_testing'],
-  academy:     ['academy', 'fa_testing', 'events', 'event_mkt'],
-  finance:     ['finance'],
-};
+const { DASHBOARDS, ROLE_DEFAULTS } = require('../lib/dashboardDefaults');
 
 // GET /api/permissions — get current user's permissions
 router.get('/', requireAuth, async (req, res, next) => {
@@ -189,4 +153,4 @@ router.delete('/:userId/:dashboard', requireAuth, requireRole(['super_admin']), 
   }
 });
 
-module.exports = { permissionsRouter: router, DASHBOARDS, ROLE_DEFAULTS };
+module.exports = { permissionsRouter: router };

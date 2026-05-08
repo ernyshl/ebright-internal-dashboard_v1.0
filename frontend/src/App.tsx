@@ -45,6 +45,7 @@ import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
 import { UiUxTestingPage } from './pages/UiUxTestingPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
+import { CoachBmPerformancePage } from './pages/CoachBmPerformancePage';
 import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { StudentAttendancePage } from './pages/StudentAttendancePage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
@@ -221,6 +222,9 @@ export default function App() {
           } />
           <Route path="/student-attendance" element={
             <RequirePermission dashboard="student_db"><StudentAttendancePage /></RequirePermission>
+          } />
+          <Route path="/coach-bm-performance" element={
+            <RequirePermission dashboard="student_db"><CoachBmPerformancePage /></RequirePermission>
           } />
           <Route path="/okr-attendance" element={
             <RequirePermission dashboards={["academy", "operations"]}><OkrAttendancePage /></RequirePermission>
