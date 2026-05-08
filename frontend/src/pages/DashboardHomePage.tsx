@@ -40,6 +40,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
         { label: 'FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' },
+        { label: 'PCM Dashboard', path: '/pcm-dashboard', dashboard: 'academy' },
         { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' },
         { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' },
         { label: 'Renewal by Branch', path: '/academy/renewal-by-branch', dashboard: 'academy' }
@@ -148,8 +149,8 @@ export function DashboardHomePage() {
       color: '#7c3aed',
       links: [
         { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
-        { label: '🗂 Archived Students', path: '/archived-students', dashboard: 'student_db' },
-        { label: '📋 Student Attendance', path: '/student-attendance', dashboard: 'student_db' },
+        { label: 'Archived Students', path: '/archived-students', dashboard: 'student_db' },
+        { label: 'Student Attendance', path: '/student-attendance', dashboard: 'student_db' },
       ]
     },
     {

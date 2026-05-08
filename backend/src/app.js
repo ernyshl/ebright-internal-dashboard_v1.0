@@ -24,6 +24,8 @@ const { hrAttendanceRouter } = require('./routes/hrAttendance');
 const { hrHiringRouter } = require('./routes/hrHiring');
 const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 const { faDashboardRouter } = require('./routes/faDashboard');
+const { faSnapshotsRouter } = require('./routes/faSnapshots');
+const { pcmSnapshotsRouter } = require('./routes/pcmSnapshots');
 const { hrfsRouter } = require('./routes/hrfs');
 const { okrAttendanceRouter } = require('./routes/okrAttendance');
 const { studentRecordsRouter } = require('./routes/studentRecords');
@@ -153,6 +155,8 @@ function createApp() {
   app.use('/api/hr-attendance', applyRoleBasedRateLimit, hrAttendanceRouter);
   app.use('/api/hr-hiring', applyRoleBasedRateLimit, hrHiringRouter);
   app.use('/api/fa-dashboard', applyRoleBasedRateLimit, faDashboardRouter);
+  app.use('/api/fa-snapshots', applyRoleBasedRateLimit, faSnapshotsRouter);
+  app.use('/api/pcm-snapshots', applyRoleBasedRateLimit, pcmSnapshotsRouter);
   app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
   app.use('/api/okr-attendance', applyRoleBasedRateLimit, okrAttendanceRouter);
   app.use('/api/student-records', applyRoleBasedRateLimit, studentRecordsRouter);

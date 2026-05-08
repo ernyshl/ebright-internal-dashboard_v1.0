@@ -46,12 +46,11 @@ function isValidIsoDate(s: string | null | undefined): s is string {
   return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
-// Resolves the snapshot DATE for a given comparison key.
 function comparisonDate(key: ComparisonKey, today: string, custom: string | null): string | null {
   if (key === 'today')      return null;
   if (key === 'yesterday')  return addDays(today, -1);
-  if (key === 'lastWeek')   return mondayOfISO(today);     // Monday of this week
-  if (key === 'lastMonth')  return firstOfMonthISO(today); // 1st of this month
+  if (key === 'lastWeek')   return mondayOfISO(today);
+  if (key === 'lastMonth')  return firstOfMonthISO(today);
   if (key === 'custom')     return isValidIsoDate(custom) ? custom : null;
   return null;
 }
@@ -115,7 +114,7 @@ function BranchCard({ branch, filtered, prevData }: any) {
           <span style={{ color: backlogNumColor }}>{branch.backlog}</span>
           <span style={{ color: 'var(--muted)', fontSize: 18, fontWeight: 500 }}>&nbsp;/&nbsp;{branch.active}</span>
         </div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 }}>FA Backlog Status</div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--textSecondary)', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 }}>PCM Backlog Status</div>
         <div style={{ height: 5, background: 'var(--border)', borderRadius: 99, marginTop: 8, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${Math.min(pctRounded, 100)}%`, background: progressColor, borderRadius: 99, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} />
         </div>
@@ -128,11 +127,11 @@ function BranchCard({ branch, filtered, prevData }: any) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', padding: '10px 12px', gap: 8, flex: 1 }}>
         <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', textAlign: 'center', border: '1px solid var(--border)' }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{branch.active}</div>
-          <div style={{ fontSize: 10, color: 'var(--textSecondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>FA Aone Active</div>
+          <div style={{ fontSize: 10, color: 'var(--textSecondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6 }}>PCM Aone Active</div>
         </div>
         <div style={{ background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center', padding: '5px 6px 3px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.08)' }}>
-            FA Invited
+            PCM Invited
           </div>
           <div style={{ display: 'flex', flex: 1 }}>
             <div style={{ flex: 1, textAlign: 'center', padding: '5px 4px', borderRight: '1px solid var(--border)' }}>
@@ -189,7 +188,7 @@ function CustomTooltip({ active, payload }: any) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>FA Backlog</span>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>PCM Backlog</span>
           <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.backlog}</strong>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
@@ -212,11 +211,11 @@ function CustomTooltip({ active, payload }: any) {
         )}
         <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>FA Due</span>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>PCM Due</span>
           <strong>{d.active}</strong>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>FA Attended</span>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>PCM Attended</span>
           <strong style={{ color: '#22c55e' }}>{d.invited}</strong>
         </div>
       </div>
@@ -224,7 +223,7 @@ function CustomTooltip({ active, payload }: any) {
   );
 }
 
-export function FaDashboardTestingPage() {
+export function PcmDashboardPage() {
   const navigate = useNavigate();
   const { dbStudents, setDbStudents } = useAcademy();
   const [selectedRegion, setSelectedRegion] = useState('');
@@ -256,18 +255,18 @@ export function FaDashboardTestingPage() {
     }
   }, []);
 
-  // Auto-capture today's snapshot once per day (idempotent on the backend).
+  // Auto-capture today's PCM snapshot once per day (idempotent on the backend).
   useEffect(() => {
-    const stamp = `fa_snapshot_captured_${today}`;
+    const stamp = `pcm_snapshot_captured_${today}`;
     if (localStorage.getItem(stamp)) return;
-    apiFetch('/api/fa-snapshots/capture', { method: 'POST' })
+    apiFetch('/api/pcm-snapshots/capture', { method: 'POST' })
       .then(() => { localStorage.setItem(stamp, '1'); })
       .catch(() => {});
   }, [today]);
 
   // Earliest snapshot date — used in "no comparison data" message.
   useEffect(() => {
-    apiFetch('/api/fa-snapshots/earliest')
+    apiFetch('/api/pcm-snapshots/earliest')
       .then((res: any) => setEarliestSnapshot(res?.earliest || null))
       .catch(() => setEarliestSnapshot(null));
   }, []);
@@ -279,7 +278,7 @@ export function FaDashboardTestingPage() {
       return;
     }
     setComparisonLoading(true);
-    apiFetch(`/api/fa-snapshots?date=${compareDate}`)
+    apiFetch(`/api/pcm-snapshots?date=${compareDate}`)
       .then((res: any) => {
         const map: Record<string, { backlog: number }> = {};
         (res?.data || []).forEach((r: any) => { map[r.branch] = { backlog: r.backlog }; });
@@ -291,14 +290,14 @@ export function FaDashboardTestingPage() {
 
   function onLogout() { clearToken(); navigate('/', { replace: true }); }
 
-  // Compute backlog from student records
+  // Compute PCM backlog from student records (uses pcmAttended instead of faAttended).
   const branchData = useMemo(() => {
     const map: Record<string, { code: string; active: number; invited: number; backlog: number }> = {};
     BRANCH_LIST.forEach(code => { map[code] = { code, active: 0, invited: 0, backlog: 0 }; });
     dbStudents.filter((s: any) => s.status === 'Active').forEach((s: any) => {
       if (!map[s.branch]) map[s.branch] = { code: s.branch, active: 0, invited: 0, backlog: 0 };
-      map[s.branch].active  += s.faAttended.length;
-      map[s.branch].invited += s.faAttended.filter(Boolean).length;
+      map[s.branch].active  += s.pcmAttended.length;
+      map[s.branch].invited += s.pcmAttended.filter(Boolean).length;
     });
     Object.values(map).forEach(b => { b.backlog = Math.max(0, b.active - b.invited); });
     return Object.values(map);
@@ -310,7 +309,6 @@ export function FaDashboardTestingPage() {
     return null;
   }, [selectedRegion, selectedBranch]);
 
-  // Flat { branchCode: backlog } map for BranchCard's prevData prop.
   const comparisonBacklogMap = useMemo(() => {
     if (!comparisonMap) return {} as Record<string, number>;
     const out: Record<string, number> = {};
@@ -318,8 +316,6 @@ export function FaDashboardTestingPage() {
     return out;
   }, [comparisonMap]);
 
-  // Chart always shows TODAY's live backlog. Delta arrows compare against the selected comparison snapshot.
-  // delta = comparison_backlog - today_backlog  →  positive means improvement (backlog shrunk).
   const chartData = useMemo(() =>
     [...branchData].sort((a, b) => b.backlog - a.backlog).map(b => {
       const prev  = comparisonMap?.[b.code]?.backlog ?? null;
@@ -403,10 +399,10 @@ export function FaDashboardTestingPage() {
                 background: 'linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.4))',
                 border: '1.5px solid rgba(255,255,255,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34,
-              }}>🎓</div>
+              }}>📊</div>
               <div>
                 <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>
-                  FA Dashboard
+                  PCM Dashboard
                 </h1>
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>
                   Live backlog data from Student Records · {dbStudents.length} students loaded
@@ -417,7 +413,7 @@ export function FaDashboardTestingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { label: 'Total FA Due', val: totalActive, color: '#818cf8' },
+                { label: 'Total PCM Due', val: totalActive, color: '#818cf8' },
                 { label: 'Total Backlog', val: totalBacklog, color: '#f87171' },
               ].map(p => (
                 <div key={p.label} style={{
@@ -448,7 +444,7 @@ export function FaDashboardTestingPage() {
                 borderRadius: 18, boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 padding: '24px 24px 16px', overflow: 'hidden',
               }}>
-                {/* Comparison picker — bar always shows TODAY's live backlog; pick a preset or any custom date to compare against */}
+                {/* Comparison picker */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
                   {([
                     { key: 'today',     label: 'Today' },
@@ -489,7 +485,7 @@ export function FaDashboardTestingPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
                   <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>
-                    Backlog FA to Invite by Branch
+                    Backlog PCM to Invite by Branch
                   </h3>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--textSecondary)' }}>
