@@ -7,7 +7,6 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireDashboard('student_db'));
 
-const VALID_PROGRAMS = new Set(['weekly_training', 'atcl_diploma', 'toastmasters']);
 
 // GET /api/coach-bm-performance
 //
@@ -72,12 +71,18 @@ router.get('/', async (req, res, next) => {
                 bs.start_date,
                 bs."contract",
                 bs."status",
-                COALESCE(cpe.weekly_training, FALSE) AS weekly_training,
-                COALESCE(cpe.atcl_diploma,    FALSE) AS atcl_diploma,
-                COALESCE(cpe.toastmasters,    FALSE) AS toastmasters
+                CASE
+                  WHEN bs."contract" IS NULL OR TRIM(bs."contract") = '' THEN ARRAY[]::text[]
+                  ELSE
+                    ARRAY['CCP'] ||
+                    CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
+                      WHEN 15 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR']
+                      WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
+                      ELSE ARRAY[]::text[]
+                    END
+                END AS programs
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
-         LEFT JOIN coach_program_enrollment cpe ON cpe.branch_staff_id = bs.id
          ${where}
          ORDER BY name ASC
          LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -113,77 +118,27 @@ router.get('/stats', async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `SELECT
-         COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE COALESCE(cpe.weekly_training, FALSE))::int AS weekly_training,
-         COUNT(*) FILTER (WHERE COALESCE(cpe.atcl_diploma,    FALSE))::int AS atcl_diploma,
-         COUNT(*) FILTER (WHERE COALESCE(cpe.toastmasters,    FALSE))::int AS toastmasters
-       FROM hrfs."BranchStaff" bs
-       LEFT JOIN coach_program_enrollment cpe ON cpe.branch_staff_id = bs.id
-       WHERE ${conditions.join(' AND ')}`,
+      `WITH parsed AS (
+         SELECT
+           bs.id,
+           NULLIF(regexp_replace(COALESCE(bs."contract", ''), '[^0-9]', '', 'g'), '')::int AS months,
+           bs."contract" AS raw_contract
+         FROM hrfs."BranchStaff" bs
+         WHERE ${conditions.join(' AND ')}
+       )
+       SELECT
+         COUNT(*)::int                                                                    AS total,
+         COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> '')::int AS ccp,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS weekly_training,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS toastmasters,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS tprr,
+         COUNT(*) FILTER (WHERE months = 18)::int                                         AS atcl_diploma
+       FROM parsed`,
       params
     );
     return res.json(rows[0]);
   } catch (err) { return next(err); }
 });
 
-// PUT /api/coach-bm-performance/:branchStaffId/program
-//
-// Body: { program: 'weekly_training' | 'atcl_diploma' | 'toastmasters', enrolled: boolean }
-//
-// Validates that the staff row exists, is Active, and matches the
-// coach/BM filter, then upserts the enrollment row. Existing flags on
-// the other two programs are preserved by the CASE expression in the
-// UPDATE branch — we only ever change the targeted column.
-router.put('/:branchStaffId/program', async (req, res, next) => {
-  try {
-    const branchStaffId = parseInt(req.params.branchStaffId, 10);
-    if (!Number.isInteger(branchStaffId) || branchStaffId <= 0) {
-      return res.status(400).json({ error: 'Invalid branchStaffId' });
-    }
-
-    const { program, enrolled } = req.body || {};
-    if (!VALID_PROGRAMS.has(program)) {
-      return res.status(400).json({ error: 'Invalid program' });
-    }
-    if (typeof enrolled !== 'boolean') {
-      return res.status(400).json({ error: 'enrolled must be boolean' });
-    }
-
-    // Confirm the staff row is a real, active coach/BM. Prevents writing
-    // ticks against arbitrary HR rows by guessing ids.
-    const { rows: staffRows } = await pool.query(
-      `SELECT id FROM hrfs."BranchStaff"
-       WHERE id = $1
-         AND "status" = 'Active'
-         AND ("role" ILIKE '%coach%' OR "role" = 'BM')`,
-      [branchStaffId]
-    );
-    if (!staffRows.length) {
-      return res.status(404).json({ error: 'Coach or BM not found' });
-    }
-
-    const wt   = program === 'weekly_training' ? enrolled : false;
-    const atcl = program === 'atcl_diploma'    ? enrolled : false;
-    const tm   = program === 'toastmasters'    ? enrolled : false;
-    const userId = req.user.sub;
-
-    const { rows } = await pool.query(
-      `INSERT INTO coach_program_enrollment
-         (branch_staff_id, weekly_training, atcl_diploma, toastmasters, updated_at, updated_by)
-       VALUES ($1, $2, $3, $4, NOW(), $5)
-       ON CONFLICT (branch_staff_id) DO UPDATE SET
-         weekly_training = CASE WHEN $6 = 'weekly_training' THEN EXCLUDED.weekly_training ELSE coach_program_enrollment.weekly_training END,
-         atcl_diploma    = CASE WHEN $6 = 'atcl_diploma'    THEN EXCLUDED.atcl_diploma    ELSE coach_program_enrollment.atcl_diploma    END,
-         toastmasters    = CASE WHEN $6 = 'toastmasters'    THEN EXCLUDED.toastmasters    ELSE coach_program_enrollment.toastmasters    END,
-         updated_at      = NOW(),
-         updated_by      = EXCLUDED.updated_by
-       RETURNING branch_staff_id, weekly_training, atcl_diploma, toastmasters, updated_at`,
-      [branchStaffId, wt, atcl, tm, userId, program]
-    );
-
-    return res.json({ ok: true, enrollment: rows[0] });
-  } catch (err) { return next(err); }
-});
 
 module.exports = { coachBmPerformanceRouter: router };
