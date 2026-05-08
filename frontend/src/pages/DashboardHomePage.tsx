@@ -138,7 +138,6 @@ export function DashboardHomePage() {
         { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
         { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
         { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
-        { label: 'ST Attendance Dashboard', path: '/st-attendance', dashboard: 'hr_testing' },
       ]
     },
     {
