@@ -7,11 +7,12 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireDashboard('student_db'));
 
-
 // GET /api/coach-bm-performance
 //
-// Returns active coaches and BMs from hrfs."BranchStaff" joined with the
-// dashboard-side coach_program_enrollment table.
+// Returns active coaches and BMs from hrfs."BranchStaff" with each row's
+// `programs` array derived from `BranchStaff.contract` (15M and 18M get
+// extra programs on top of the universal CCP — see migration 017 and the
+// 2026-05-08 contract-derived-programs design doc).
 //
 //   role match:  ILIKE '%coach%' OR exact 'BM'
 //   status:      Active only
