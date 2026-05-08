@@ -32,6 +32,7 @@ const { studentUploadRouter } = require('./routes/studentUpload');
 const { studentAttendanceRouter } = require('./routes/studentAttendance');
 const { guardianBackfillRouter } = require('./routes/guardianBackfill');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
+const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
 
 const jwt = require('jsonwebtoken');
 
@@ -159,6 +160,7 @@ function createApp() {
   app.use('/api/archived-students', applyRoleBasedRateLimit, archivedStudentsRouter);
   app.use('/api/student-upload', applyRoleBasedRateLimit, studentUploadRouter);
   app.use('/api/student-attendance', applyRoleBasedRateLimit, studentAttendanceRouter);
+  app.use('/api/coach-bm-performance', applyRoleBasedRateLimit, coachBmPerformanceRouter);
   app.use('/api/guardian-backfill', applyRoleBasedRateLimit, guardianBackfillRouter);
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
 
