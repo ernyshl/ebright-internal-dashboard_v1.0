@@ -62,7 +62,6 @@ export function DashboardHomePage() {
       icon: '💰',
       color: '#10b981',
       links: [
-        { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
         { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
       ]
     },
@@ -140,6 +139,7 @@ export function DashboardHomePage() {
         { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
         { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
         { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
+        { label: 'ST Attendance Dashboard', path: '/st-attendance', dashboard: 'hr_testing' },
       ]
     },
     {
@@ -151,6 +151,7 @@ export function DashboardHomePage() {
         { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
         { label: 'Archived Students', path: '/archived-students', dashboard: 'student_db' },
         { label: 'Student Attendance', path: '/student-attendance', dashboard: 'student_db' },
+        { label: 'Coach & BM Performance', path: '/coach-bm-performance', dashboard: 'student_db' },
       ]
     },
     {

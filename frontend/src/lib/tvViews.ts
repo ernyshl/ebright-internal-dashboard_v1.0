@@ -89,12 +89,6 @@ export const TV_VIEWS = [
 
   // ─── Finance ─────────────────────────────────────────────────────────────
   {
-    key: 'finance',
-    label: 'Finance Dashboard',
-    type: 'internal',
-    path: '/finance',
-  },
-  {
     key: 'branch-ranking',
     label: 'Branch Ranking',
     type: 'internal',

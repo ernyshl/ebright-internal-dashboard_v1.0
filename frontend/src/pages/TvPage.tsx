@@ -14,7 +14,6 @@ import { LeadsCentrePage } from './LeadsCentrePage';
 import { GhlDashboardPage } from './GhlDashboardPage';
 import { GhlLeadsCentrePage } from './GhlLeadsCentrePage';
 import { PlatformBreakdownPage } from './PlatformBreakdownPage';
-import { FinanceDashboardPage } from './FinanceDashboardPage';
 import { HrOnbOfbDashboardPage } from './HrOnbOfbDashboardPage';
 import { FaDashboardPage } from './FaDashboardPage';
 import { EventMktDashboardPage } from './EventMktDashboardPage';
@@ -30,7 +29,6 @@ const INTERNAL_COMPONENTS = {
   'ghl-dashboard':         GhlDashboardPage,
   'ghl-lead-centre':       GhlLeadsCentrePage,
   'platform-breakdown':    PlatformBreakdownPage,
-  'finance':               FinanceDashboardPage,
   'hr-onb-ofb':            HrOnbOfbDashboardPage,
   'fa-dashboard':          FaDashboardPage,
   'event-mkt-dashboard':   EventMktDashboardPage,

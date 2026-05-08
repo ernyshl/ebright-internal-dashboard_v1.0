@@ -10,7 +10,6 @@ import { LeadsBreakdownPage } from './pages/LeadsBreakdownPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { LookerDashboardPage } from './pages/LookerDashboardPage';
-import { FinanceDashboardPage } from './pages/FinanceDashboardPage';
 import { DepartmentDashboardPage } from './pages/DepartmentDashboardPage';
 import { DashboardHomePage } from './pages/DashboardHomePage';
 import { LeadsCentrePage } from './pages/LeadsCentrePage';
@@ -45,8 +44,10 @@ import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
+import { StAttendancePage } from './pages/StAttendancePage';
 import { UiUxTestingPage } from './pages/UiUxTestingPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
+import { CoachBmPerformancePage } from './pages/CoachBmPerformancePage';
 import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
 import { StudentAttendancePage } from './pages/StudentAttendancePage';
 import { OkrAttendancePage } from './pages/OkrAttendancePage';
@@ -98,9 +99,6 @@ export default function App() {
           } />
           <Route path="/dashboard" element={
             <RequirePermission dashboard="operations"><LookerDashboardPage /></RequirePermission>
-          } />
-          <Route path="/finance" element={
-            <RequirePermission dashboard="finance"><FinanceDashboardPage /></RequirePermission>
           } />
           <Route path="/academy/renewal-by-branch" element={
             <RequirePermission dashboard="academy"><FinanceRenewalByBranchPage /></RequirePermission>
@@ -204,6 +202,9 @@ export default function App() {
           <Route path="/hrfs-overview-v2" element={
             <RequirePermission dashboard="hr_testing"><HrfsOverviewV2Page /></RequirePermission>
           } />
+          <Route path="/st-attendance" element={
+            <RequirePermission dashboard="testing"><StAttendancePage /></RequirePermission>
+          } />
           <Route path="/ui-ux-testing" element={
             <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>
           } />
@@ -227,6 +228,9 @@ export default function App() {
           } />
           <Route path="/student-attendance" element={
             <RequirePermission dashboard="student_db"><StudentAttendancePage /></RequirePermission>
+          } />
+          <Route path="/coach-bm-performance" element={
+            <RequirePermission dashboard="student_db"><CoachBmPerformancePage /></RequirePermission>
           } />
           <Route path="/okr-attendance" element={
             <RequirePermission dashboards={["academy", "operations"]}><OkrAttendancePage /></RequirePermission>

@@ -1,33 +1,137 @@
 const express = require('express');
-const { pool } = require('../db');
+const { pool, leadsPool } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
-// GET /api/hr-staff-movements/dashboard — onboarding (-1 week → +6 months) + offboarding (-1 week → +2 months)
-router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
+// GET /api/hr-staff-movements/dashboard — dashboard view
+//
+// Source: ebrightleads_db.hrfs."BranchStaff" (HR system of record), reached
+// via leadsPool. Aliased into the shape the frontend already consumes
+// (name, position, department_branch, start_date, end_date).
+//
+// Quirks of this table:
+//   • start_date and "endDate" are TEXT, not DATE — and the casing is mixed
+//     (snake on the start side, camel on the end side) by the upstream HR
+//     system. We filter on a strict ISO regex before casting so empty strings
+//     / malformed values don't blow up the cast.
+//   • position can be NULL; role is reliably populated with values like
+//     'PT - Coach', 'INT', so we fall back to role when position is missing.
+//   • department can be sparse. We fall back to branch (always present).
+const ISO_DATE = String.raw`^\d{4}-\d{2}-\d{2}$`;
+
+const SELECT_COLS = `
+  id,
+  name,
+  COALESCE(NULLIF(TRIM(position), ''), NULLIF(TRIM(role), ''))  AS position,
+  COALESCE(NULLIF(TRIM(department), ''), branch)                 AS department_branch,
+  NULLIF(TRIM(start_date), '')  AS start_date,
+  NULLIF(TRIM("endDate"),  '')  AS end_date
+`;
+
+router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
-    const { rows: onboarding } = await pool.query(
-      `SELECT id, name, position, department_branch, start_date, end_date
-       FROM hr_staff_movements
-       WHERE start_date IS NOT NULL
-         AND start_date >= CURRENT_DATE - INTERVAL '1 week'
-         AND start_date <= CURRENT_DATE + INTERVAL '6 months'
-       ORDER BY start_date ASC`
+    // Optional ?month=YYYY-MM lets the frontend page through historical months
+    // for the "signed this month" counts. Strict regex so we can safely use
+    // a parameterized cast without surprises. Falls back to CURRENT_DATE.
+    const monthParam = String(req.query.month || '').trim();
+    const useExplicitMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam);
+    const monthExpr = useExplicitMonth ? '$1::date' : 'CURRENT_DATE';
+    const monthArgs = useExplicitMonth ? [`${monthParam}-01`] : [];
+    // Onboarding: hide resigned staff so a historical row whose start_date
+    // happens to fall in the window doesn't pollute the list.
+    const { rows: onboarding } = await leadsPool.query(
+      `SELECT ${SELECT_COLS}
+       FROM hrfs."BranchStaff"
+       WHERE start_date ~ $1
+         AND start_date::date >= CURRENT_DATE - INTERVAL '1 month'
+         AND start_date::date <= CURRENT_DATE + INTERVAL '6 months'
+         AND COALESCE(NULLIF(TRIM(status), ''), 'Active') ILIKE 'Active'
+       ORDER BY start_date::date ASC`,
+      [ISO_DATE]
     );
 
-    const { rows: offboarding } = await pool.query(
-      `SELECT id, name, position, department_branch, start_date, end_date
-       FROM hr_staff_movements
-       WHERE end_date IS NOT NULL
-         AND end_date >= CURRENT_DATE - INTERVAL '1 week'
-         AND end_date <= CURRENT_DATE + INTERVAL '2 months'
-       ORDER BY end_date ASC`
+    // Offboarding: no status filter — once someone is offboarded their status
+    // flips to Inactive, and we still want them in the past-1-week portion
+    // of the window.
+    const { rows: offboarding } = await leadsPool.query(
+      `SELECT ${SELECT_COLS}
+       FROM hrfs."BranchStaff"
+       WHERE "endDate" ~ $1
+         AND "endDate"::date >= CURRENT_DATE - INTERVAL '1 week'
+         AND "endDate"::date <= CURRENT_DATE + INTERVAL '2 months'
+       ORDER BY "endDate"::date ASC`,
+      [ISO_DATE]
     );
 
-    return res.json({ onboarding, offboarding });
+    // Active staff who signed THIS calendar month, bucketed by role for the
+    // header counts and returned as a list so the frontend can show detail
+    // when a count is clicked.
+    //
+    // signed_date is free-text and the upstream HR system writes it in three
+    // different shapes — '2025-05-08', '5-May-25', '15th November 2025' /
+    // '1ST OCTOBER 2025'. We parse each shape via to_date and COALESCE; rows
+    // whose value matches none of these are excluded. Roles map to three
+    // buckets ('PT - Coach', 'INT', 'FT EXEC', 'BM', ...).
+    const BUCKET_SQL = `
+      CASE
+        WHEN role ILIKE 'PT%' OR role ILIKE '%Part Time%'                THEN 'partTime'
+        WHEN role ILIKE 'INT%' OR role ILIKE '%Intern%'                  THEN 'intern'
+        WHEN role ILIKE 'FT%' OR role ILIKE '%Full Time%'
+          OR role IN ('BM','CEO','Executive/Coach')                       THEN 'fullTime'
+        ELSE 'other'
+      END
+    `;
+    const SIGNED_DATE_PARSED = `
+      COALESCE(
+        CASE WHEN signed_date ~ '^\\d{4}-\\d{2}-\\d{2}$'
+             THEN to_date(signed_date, 'YYYY-MM-DD') END,
+        CASE WHEN signed_date ~ '^\\d{1,2}-[A-Za-z]{3}-\\d{2}$'
+             THEN to_date(signed_date, 'FMDD-Mon-YY') END,
+        CASE WHEN signed_date ~* '^\\d{1,2}(st|nd|rd|th)?\\s+[A-Za-z]+\\s+\\d{4}$'
+             THEN to_date(regexp_replace(signed_date, '(?i)(\\d+)(st|nd|rd|th)', '\\1'),
+                          'FMDD FMMonth YYYY') END
+      )
+    `;
+    const SIGNED_IN_MONTH = `
+      date_trunc('month', ${SIGNED_DATE_PARSED}) = date_trunc('month', ${monthExpr})
+        AND COALESCE(NULLIF(TRIM(status), ''), 'Active') ILIKE 'Active'
+    `;
+
+    const { rows: bucketRows } = await leadsPool.query(
+      `SELECT ${BUCKET_SQL} AS bucket, COUNT(*)::int AS n
+       FROM hrfs."BranchStaff"
+       WHERE ${SIGNED_IN_MONTH}
+       GROUP BY 1`,
+      monthArgs
+    );
+    const signedCounts = { partTime: 0, fullTime: 0, intern: 0 };
+    for (const r of bucketRows) {
+      if (r.bucket in signedCounts) signedCounts[r.bucket] = r.n;
+    }
+
+    const { rows: signedStaff } = await leadsPool.query(
+      `SELECT id, name,
+              COALESCE(NULLIF(TRIM(position), ''), NULLIF(TRIM(role), '')) AS position,
+              COALESCE(NULLIF(TRIM(department), ''), branch)                AS department_branch,
+              ${SIGNED_DATE_PARSED}::text AS signed_date,
+              NULLIF(TRIM(start_date),  '') AS start_date,
+              ${BUCKET_SQL} AS bucket
+       FROM hrfs."BranchStaff"
+       WHERE ${SIGNED_IN_MONTH}
+       ORDER BY ${SIGNED_DATE_PARSED} DESC, name ASC`,
+      monthArgs
+    );
+
+    return res.json({
+      onboarding,
+      offboarding,
+      signedCounts,
+      signedStaff,
+      signedMonth: useExplicitMonth ? monthParam : new Date().toISOString().slice(0, 7),
+    });
   } catch (err) {
     return next(err);
   }

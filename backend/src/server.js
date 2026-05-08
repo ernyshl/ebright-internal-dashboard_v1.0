@@ -1,6 +1,10 @@
+const fs = require('fs');
+const path = require('path');
 const { env } = require('./env');
 const { createApp } = require('./app');
 const { pool } = require('./db');
+const { startStSync } = require('./services/stSync');
+const { startAmfSync } = require('./services/amfSync');
 const { getTableNames } = require('./utils/tableNames');
 const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
 const { startFinanceRenewalsRefreshJob } = require('./jobs/refreshFinanceRenewals');
@@ -111,23 +115,96 @@ async function runMigrations() {
     CREATE INDEX IF NOT EXISTS idx_finance_renewals_refresh_log_status_ran_at
       ON finance_renewals_refresh_log (status, ran_at DESC)
   `);
+
+  // Apply any standalone SQL migration files in backend/sql/ (e.g. ST merged
+  // staff view, AMF sync state). They're idempotent (CREATE OR REPLACE,
+  // CREATE IF NOT EXISTS) so safe to re-run on every boot.
+  const sqlDir = path.join(__dirname, '..', 'sql');
+  if (fs.existsSync(sqlDir)) {
+    const files = fs.readdirSync(sqlDir).filter(f => f.endsWith('.sql')).sort();
+    const failed = [];
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(sqlDir, file), 'utf8');
+      try {
+        await pool.query(sql);
+      } catch (err) {
+        // Don't crash startup on a single file. The migrations are cumulative
+        // history; on a DB whose state has drifted from prod (e.g. duplicate
+        // rows preventing a unique-index step) the app is still useful even
+        // if one migration step couldn't apply. Log each failure loudly and
+        // emit a summary at the end so it's obvious the DB needs attention.
+        // eslint-disable-next-line no-console
+        console.warn(`[migrations] ⚠️  ${file} FAILED: ${err.message}`);
+        failed.push({ file, message: err.message });
+      }
+    }
+    if (failed.length) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[migrations] ⚠️  ${failed.length}/${files.length} migration file(s) failed — DB state has drifted. ` +
+        `Run a deduplication / cleanup pass and re-deploy. Failed: ${failed.map(f => f.file).join(', ')}`
+      );
+    }
+  }
+
   // eslint-disable-next-line no-console
   console.log('✅ DB migrations complete');
 }
 
+// Cold-start the remote DB can blip on the very first connect after laptop
+// wake. Retry the migration phase a few times before giving up so a transient
+// network hiccup doesn't crash the backend and leave the dashboard dead.
+async function runMigrationsWithRetry() {
+  const attempts = 3;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await runMigrations();
+      return;
+    } catch (err) {
+      const msg = err && (err.message || err);
+      // eslint-disable-next-line no-console
+      console.error(`[startup] migrations attempt ${i}/${attempts} failed:`, msg);
+      if (i === attempts) throw err;
+      await new Promise(r => setTimeout(r, i * 3000));
+    }
+  }
+}
+
 async function start() {
-  await runMigrations();
+  await runMigrationsWithRetry();
+
+  // AMF direct-device backfill runs on a recurring interval so scans the
+  // vendor middleware missed (or that piled up while the laptop was closed)
+  // are recovered from the device's 50,000-event on-board buffer. The first
+  // tick fires immediately inside startAmfSync() — a slow/offline device
+  // can't block startup because the tick runs in the background.
+  startAmfSync();
+
   const app = createApp();
   app.listen(env.PORT, '0.0.0.0', () => {
     // eslint-disable-next-line no-console
     console.log(`API listening on http://0.0.0.0:${env.PORT}`);
   });
+  startStSync();
   startFinanceRefreshJob();
   startFinanceRenewalsRefreshJob();
 }
+
+// Don't let a transient DB blip (remote Postgres dropping an idle client, etc.)
+// crash the process. Log and carry on — pools recover on the next query.
+// Startup-time rejections are still surfaced via the start().catch below.
+process.on('unhandledRejection', (reason) => {
+  // eslint-disable-next-line no-console
+  console.error('[unhandledRejection]', reason && (reason.message || reason));
+});
+process.on('uncaughtException', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('[uncaughtException]', err && (err.message || err));
+});
 
 start().catch(err => {
   // eslint-disable-next-line no-console
   console.error('Startup failed:', err);
   process.exit(1);
 });
+

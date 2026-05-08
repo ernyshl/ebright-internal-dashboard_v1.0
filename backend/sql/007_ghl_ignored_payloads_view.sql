@@ -44,10 +44,40 @@ CREATE INDEX IF NOT EXISTS idx_ghl_webhook_log_email_stage
 -- Enforce the dedup rule at the DB level: one row per (email, last_name,
 -- stage_key). The webhook route already filters in code, but this catches
 -- regressions and makes the constraint explicit.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_ghl_stages_email_lastname_stage
-  ON ghl_stages (email, last_name, stage_key);
+--
+-- Skip if migration 009 has already replaced this index with the
+-- opportunity-name variant (uq_ghl_stages_email_oppname_stage). On databases
+-- where 009 has run, the (email, last_name, stage_key) tuple is no longer
+-- enforced as unique and existing rows may legitimately violate it.
+--
+-- If 009 hasn't run yet but the data already contains duplicates that
+-- violate this constraint (e.g. the dedup is currently enforced only by
+-- the newer opportunity-name keying in code), swallow the unique-violation
+-- and let migration 009 take over. We do NOT silently swallow other
+-- errors — those propagate.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'uq_ghl_stages_email_oppname_stage'
+  ) THEN
+    BEGIN
+      EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS uq_ghl_stages_email_lastname_stage
+               ON ghl_stages (email, last_name, stage_key)';
+    EXCEPTION
+      WHEN unique_violation OR SQLSTATE '23505' THEN
+        RAISE NOTICE
+          'Skipping uq_ghl_stages_email_lastname_stage: existing duplicates violate it. Migration 009 will replace this index.';
+    END;
+  END IF;
+END
+$$;
 
-CREATE OR REPLACE VIEW ghl_ignored_payloads AS
+-- DROP first so the column list can change between deploys. CREATE OR
+-- REPLACE only allows adding columns at the end, not removing/reordering,
+-- which trips up older databases whose view shape has drifted.
+DROP VIEW IF EXISTS ghl_ignored_payloads;
+CREATE VIEW ghl_ignored_payloads AS
 SELECT
   id,
   email,

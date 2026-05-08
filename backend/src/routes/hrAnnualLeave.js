@@ -1,14 +1,15 @@
 const express = require('express');
-const { pool } = require('../db');
+const { pool, leadsPool } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
 // GET /api/hr-annual-leave/dashboard — AL records from today to +2 weeks
+// Source: ebrightleads_db.public.hr_annual_leave (via leadsPool).
 router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
-    const { rows } = await pool.query(
+    const { rows } = await leadsPool.query(
       `SELECT id, name, position, department_branch, al_date, al_duration
        FROM hr_annual_leave
        WHERE al_date >= CURRENT_DATE

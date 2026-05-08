@@ -27,6 +27,8 @@ const { faDashboardRouter } = require('./routes/faDashboard');
 const { faSnapshotsRouter } = require('./routes/faSnapshots');
 const { pcmSnapshotsRouter } = require('./routes/pcmSnapshots');
 const { hrfsRouter } = require('./routes/hrfs');
+const { stAttendanceRouter } = require('./routes/stAttendance');
+const { stStaffRouter } = require('./routes/stStaff');
 const { okrAttendanceRouter } = require('./routes/okrAttendance');
 const { studentRecordsRouter } = require('./routes/studentRecords');
 const { archivedStudentsRouter } = require('./routes/archivedStudents');
@@ -34,6 +36,7 @@ const { studentUploadRouter } = require('./routes/studentUpload');
 const { studentAttendanceRouter } = require('./routes/studentAttendance');
 const { guardianBackfillRouter } = require('./routes/guardianBackfill');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
+const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
 
 const jwt = require('jsonwebtoken');
 
@@ -158,11 +161,14 @@ function createApp() {
   app.use('/api/fa-snapshots', applyRoleBasedRateLimit, faSnapshotsRouter);
   app.use('/api/pcm-snapshots', applyRoleBasedRateLimit, pcmSnapshotsRouter);
   app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
+  app.use('/api/st-attendance', applyRoleBasedRateLimit, stAttendanceRouter);
+  app.use('/api/st-staff', applyRoleBasedRateLimit, stStaffRouter);
   app.use('/api/okr-attendance', applyRoleBasedRateLimit, okrAttendanceRouter);
   app.use('/api/student-records', applyRoleBasedRateLimit, studentRecordsRouter);
   app.use('/api/archived-students', applyRoleBasedRateLimit, archivedStudentsRouter);
   app.use('/api/student-upload', applyRoleBasedRateLimit, studentUploadRouter);
   app.use('/api/student-attendance', applyRoleBasedRateLimit, studentAttendanceRouter);
+  app.use('/api/coach-bm-performance', applyRoleBasedRateLimit, coachBmPerformanceRouter);
   app.use('/api/guardian-backfill', applyRoleBasedRateLimit, guardianBackfillRouter);
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
 
