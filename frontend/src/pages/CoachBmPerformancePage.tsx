@@ -52,6 +52,20 @@ export function CoachBmPerformancePage() {
   const pageStart = (page - 1) * PAGE_SIZE;
   const pageEnd = Math.min(pageStart + PAGE_SIZE, pageStart + records.length);
 
+  const statCard = (label: string, val: number | string, sub: string, color: string, icon: string) => (
+    <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'var(--shadow-sm)' }}>
+      <div>
+        <p style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:0.5, margin:'0 0 4px' }}>{label}</p>
+        <p style={{ fontSize:24, fontWeight:800, color, margin:0 }}>{val}<span style={{ fontSize:14, fontWeight:500, color:'var(--muted)' }}>{sub}</span></p>
+      </div>
+      <div style={{ width:40, height:40, borderRadius:'50%', background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{icon}</div>
+    </div>
+  );
+
+  const wtCount   = records.filter(r => r.weekly_training).length;
+  const atclCount = records.filter(r => r.atcl_diploma).length;
+  const tmCount   = records.filter(r => r.toastmasters).length;
+
   return (
     <div className="dashboardPage">
       {/* Header */}
@@ -71,7 +85,11 @@ export function CoachBmPerformancePage() {
         </div>
       )}
 
-      {/* Stat cards placeholder — filled in Task 7 */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
+        {statCard('Weekly Training', wtCount,   `/${records.length}`, '#4f46e5', '🏋️')}
+        {statCard('ATCL Diploma',    atclCount, `/${records.length}`, '#8b5cf6', '🎓')}
+        {statCard('Toastmasters',    tmCount,   `/${records.length}`, '#10b981', '🎤')}
+      </div>
 
       {/* Filters */}
       <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
