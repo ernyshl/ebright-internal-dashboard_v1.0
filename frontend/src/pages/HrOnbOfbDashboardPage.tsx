@@ -32,7 +32,7 @@ function DaysLabel({ days }) {
 }
 
 /* ─── Unified Dashboard Card ─── */
-function DashCard({ title, subtitle, color, lightColor, records, dateField, mainCount, mainLabel, smallCount, smallLabel, extraField, onViewAll, maxItems }) {
+function DashCard({ title, subtitle, color, lightColor, records, dateField, mainCount, mainLabel, smallCount, smallLabel, extraField, onViewAll, maxItems, extraCounts, monthSelector }: any) {
   const displayRecords = records.slice(0, maxItems || 8);
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
@@ -43,6 +43,46 @@ function DashCard({ title, subtitle, color, lightColor, records, dateField, main
           <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{subtitle}</div>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {monthSelector && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginRight: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
+                <button
+                  onClick={monthSelector.onPrev}
+                  title="Previous month"
+                  style={{ background: 'transparent', border: 'none', padding: '2px 8px', cursor: 'pointer', fontSize: 14, color: 'var(--muted)' }}
+                >‹</button>
+                <div style={{ fontSize: 11, fontWeight: 600, padding: '2px 4px', minWidth: 90, textAlign: 'center' }}>{monthSelector.label}</div>
+                <button
+                  onClick={monthSelector.onNext}
+                  title="Next month"
+                  style={{ background: 'transparent', border: 'none', padding: '2px 8px', cursor: 'pointer', fontSize: 14, color: 'var(--muted)' }}
+                >›</button>
+              </div>
+              <div style={{ fontSize: 8, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Signed In</div>
+            </div>
+          )}
+          {extraCounts && extraCounts.map((ec, i) => {
+            const clickable = typeof ec.onClick === 'function';
+            return (
+              <div
+                key={i}
+                onClick={clickable ? ec.onClick : undefined}
+                title={clickable ? 'Click to see details' : undefined}
+                style={{
+                  textAlign: 'center',
+                  cursor: clickable ? 'pointer' : 'default',
+                  padding: clickable ? '4px 8px' : 0,
+                  borderRadius: 6,
+                  transition: 'background 120ms',
+                }}
+                onMouseEnter={clickable ? (e) => (e.currentTarget.style.background = 'var(--surfaceHover, #f3f4f6)') : undefined}
+                onMouseLeave={clickable ? (e) => (e.currentTarget.style.background = 'transparent') : undefined}
+              >
+                <div style={{ fontSize: 14, fontWeight: 700, color: clickable ? color : 'var(--text)' }}>{ec.value}</div>
+                <div style={{ fontSize: 8, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{ec.label}</div>
+              </div>
+            );
+          })}
           {smallCount !== undefined && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{smallCount}</div>
@@ -105,6 +145,43 @@ function DashCard({ title, subtitle, color, lightColor, records, dateField, main
   );
 }
 
+/* ─── Signed-this-month Detail Table (two date columns) ─── */
+function SignedDetailView({ title, color, records, onBack }) {
+  const monthLabel = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  return (
+    <div>
+      <div style={{ background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 70%, black))`, color: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
+          <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{records.length} signed in {monthLabel}</div>
+        </div>
+        <button className="btn btnSmall" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', backdropFilter: 'blur(4px)' }} onClick={onBack}>← Back</button>
+      </div>
+      <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+        <table className="dataTable">
+          <thead>
+            <tr><th>#</th><th>Name</th><th>Position</th><th>Dept / Branch</th><th>Signed Date</th><th>Start Date</th></tr>
+          </thead>
+          <tbody>
+            {records.length === 0 ? (
+              <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>No staff signed in this month for this category</td></tr>
+            ) : records.map((r, i) => (
+              <tr key={r.id}>
+                <td style={{ color: 'var(--muted)', fontSize: 11 }}>{i + 1}</td>
+                <td style={{ fontSize: 13 }}><strong>{r.name}</strong></td>
+                <td style={{ fontSize: 12 }}>{r.position || '—'}</td>
+                <td style={{ fontSize: 12 }}>{r.department_branch || '—'}</td>
+                <td style={{ whiteSpace: 'nowrap', fontSize: 12, fontWeight: 500 }}>{fmtDate(r.signed_date)}</td>
+                <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{r.start_date ? fmtDate(r.start_date) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Detail Table ─── */
 function DetailView({ title, color, lightColor, records, dateField, dateLabel, onBack }) {
   return (
@@ -148,12 +225,33 @@ function DetailView({ title, color, lightColor, records, dateField, dateLabel, o
   );
 }
 
+function currentYearMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function shiftMonth(ym, delta) {
+  const [yStr, mStr] = ym.split('-');
+  const y = Number(yStr) || 1970;
+  const m = Number(mStr) || 1;
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(ym) {
+  const [yStr, mStr] = ym.split('-');
+  const y = Number(yStr) || 1970;
+  const m = Number(mStr) || 1;
+  return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
 export function HrOnbOfbDashboardPage() {
   const [detailView, setDetailView] = useState(null);
+  const [signedMonth, setSignedMonth] = useState(currentYearMonth());
 
   const { data: staffData, isLoading: staffLoading } = useQuery({
-    queryKey: ['hrOnbOfbDashboard'],
-    queryFn: () => apiFetch('/api/hr-staff-movements/dashboard'),
+    queryKey: ['hrOnbOfbDashboard', signedMonth],
+    queryFn: () => apiFetch(`/api/hr-staff-movements/dashboard?month=${signedMonth}`),
     staleTime: 2 * 60 * 1000,
   });
 
@@ -172,8 +270,16 @@ export function HrOnbOfbDashboardPage() {
   const isLoading = staffLoading || mcLoading || alLoading;
   const onboarding = staffData?.onboarding || [];
   const offboarding = staffData?.offboarding || [];
+  const signedCounts = staffData?.signedCounts || { partTime: 0, fullTime: 0, intern: 0 };
+  const signedStaff = staffData?.signedStaff || [];
   const mcRecords = mcData?.records || [];
   const alRecords = alData?.records || [];
+
+  const SIGNED_BUCKETS = {
+    'signed-partTime': { title: 'Part Time — Signed This Month', bucket: 'partTime' },
+    'signed-fullTime': { title: 'Full Time — Signed This Month', bucket: 'fullTime' },
+    'signed-intern':   { title: 'Intern — Signed This Month',    bucket: 'intern'   },
+  };
 
   // Big number: today → +2 weeks (forward only)
   const onb2w = onboarding.filter(r => isInRange(r.start_date, 0, 14)).length;
@@ -197,6 +303,13 @@ export function HrOnbOfbDashboardPage() {
           <div className="loadingDots"><span /><span /><span /></div>
           <p style={{ marginTop: 12, color: 'var(--muted)' }}>Loading...</p>
         </div>
+      ) : detailView in SIGNED_BUCKETS ? (
+        <SignedDetailView
+          title={SIGNED_BUCKETS[detailView].title}
+          color="var(--success)"
+          records={signedStaff.filter(s => s.bucket === SIGNED_BUCKETS[detailView].bucket)}
+          onBack={() => setDetailView(null)}
+        />
       ) : detailView === 'onboarding' ? (
         <DetailView
           title="Onboarding"
@@ -230,6 +343,16 @@ export function HrOnbOfbDashboardPage() {
             mainLabel="+2 Weeks"
             smallCount={onbTotal}
             smallLabel="+6 Months"
+            monthSelector={{
+              label: formatMonthLabel(signedMonth),
+              onPrev: () => setSignedMonth(shiftMonth(signedMonth, -1)),
+              onNext: () => setSignedMonth(shiftMonth(signedMonth, +1)),
+            }}
+            extraCounts={[
+              { label: 'Part Time', value: signedCounts.partTime, onClick: () => setDetailView('signed-partTime') },
+              { label: 'Full Time', value: signedCounts.fullTime, onClick: () => setDetailView('signed-fullTime') },
+              { label: 'Intern',    value: signedCounts.intern,   onClick: () => setDetailView('signed-intern')   },
+            ]}
             onViewAll={() => setDetailView('onboarding')}
           />
           <DashCard

@@ -1,14 +1,15 @@
 const express = require('express');
-const { pool } = require('../db');
+const { pool, leadsPool } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
-// GET /api/hr-mc/dashboard — MC records from -2 weeks to today
+// GET /api/hr-mc/dashboard — MC records from -7 days to today
+// Source: ebrightleads_db.public.hr_mc (via leadsPool).
 router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
-    const { rows } = await pool.query(
+    const { rows } = await leadsPool.query(
       `SELECT id, name, position, department_branch, mc_date, reason
        FROM hr_mc
        WHERE mc_date >= CURRENT_DATE - INTERVAL '7 days'

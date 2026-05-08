@@ -42,6 +42,7 @@ import { HrfsAttendancePage } from './pages/HrfsAttendancePage';
 import { HrfsBranchStaffPage } from './pages/HrfsBranchStaffPage';
 import { HrfsLeaveTransactionPage } from './pages/HrfsLeaveTransactionPage';
 import { HrfsAttendanceDashboardPage } from './pages/HrfsAttendanceDashboardPage';
+import { StAttendancePage } from './pages/StAttendancePage';
 import { UiUxTestingPage } from './pages/UiUxTestingPage';
 import { StudentDatabasePage } from './pages/StudentDatabasePage';
 import { ArchivedStudentsPage } from './pages/ArchivedStudentsPage';
@@ -168,6 +169,9 @@ export default function App() {
           } />
           <Route path="/hrfs-attendance-dashboard" element={
             <RequirePermission dashboard="testing"><HrfsAttendanceDashboardPage /></RequirePermission>
+          } />
+          <Route path="/st-attendance" element={
+            <RequirePermission dashboard="testing"><StAttendancePage /></RequirePermission>
           } />
           <Route path="/ui-ux-testing" element={
             <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>

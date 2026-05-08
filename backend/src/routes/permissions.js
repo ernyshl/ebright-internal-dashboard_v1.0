@@ -36,6 +36,14 @@ const ROLE_DEFAULTS = {
 // GET /api/permissions — get current user's permissions
 router.get('/', requireAuth, async (req, res, next) => {
   try {
+    // DEV-ONLY: short-circuit for the dev-bypass token (see auth.js).
+    // REMOVE BEFORE PRODUCTION.
+    if (req.user.devBypass === true) {
+      const permissions = {};
+      DASHBOARDS.forEach(d => { permissions[d.id] = { allowed: true, custom: false, fromRole: true }; });
+      return res.json({ permissions, dashboards: DASHBOARDS });
+    }
+
     const userId = req.user.sub;
 
     // Get user-specific permissions

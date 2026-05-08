@@ -20,6 +20,16 @@ export function LoginPage() {
     },
   });
 
+  // DEV-ONLY: bypass login entirely. REMOVE BEFORE PRODUCTION.
+  // Gated by import.meta.env.DEV so production builds strip this.
+  const devBypass = useMutation({
+    mutationFn: () => apiFetch('/api/auth/dev-bypass', { method: 'POST', body: {} }),
+    onSuccess: (data) => {
+      setToken(data.token);
+      navigate('/', { replace: true });
+    },
+  });
+
   return (
     <div className="authShell">
       <div className="authCard">
@@ -113,6 +123,29 @@ export function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* DEV-ONLY: REMOVE BEFORE PRODUCTION */}
+        {import.meta.env.DEV && (
+          <div style={{ marginTop: 20, padding: 12, border: '2px dashed #dc2626', borderRadius: 8, background: '#fef2f2' }}>
+            <div style={{ color: '#991b1b', fontWeight: 700, fontSize: 12, marginBottom: 8, textAlign: 'center' }}>
+              ⚠️ DEV MODE — LOCAL TESTING ONLY
+            </div>
+            <button
+              type="button"
+              className="btn btnDanger btnSmall"
+              style={{ width: '100%', justifyContent: 'center' }}
+              disabled={devBypass.isPending}
+              onClick={() => devBypass.mutate()}
+            >
+              {devBypass.isPending ? 'Bypassing…' : 'Bypass Login (dev)'}
+            </button>
+            {devBypass.isError && (
+              <div className="errorText" style={{ marginTop: 8, fontSize: 12 }}>
+                {(devBypass.error as any)?.data?.error || 'Bypass failed — ensure backend has DEV_AUTH_BYPASS=1'}
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ textAlign: 'center', marginTop: 28, color: 'var(--muted)', fontSize: 12 }}>
           Ebright Sdn. Bhd. No: 202101030304 (1430604-A)<br />

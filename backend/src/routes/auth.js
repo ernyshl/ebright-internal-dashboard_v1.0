@@ -212,6 +212,60 @@ router.put('/profile', requireAuth, async (req, res, next) => {
   }
 });
 
+// ============================================================
+// DEV-ONLY BYPASS — REMOVE BEFORE PRODUCTION
+// ============================================================
+// Mints a super_admin JWT without password check so the frontend
+// can be used for UI testing when the users table isn't reachable.
+// Guarded by TWO conditions — both must hold:
+//   1. NODE_ENV === 'development'
+//   2. DEV_AUTH_BYPASS === '1' (explicit opt-in in .env)
+// If either is absent the route returns 404 so prod never hints
+// that the endpoint exists.
+//
+// TO REMOVE: delete this block and the matching LoginPage button,
+// DevBypassBanner component, DEV_AUTH_BYPASS env var, and the
+// devBypass short-circuit in permissions.js.
+router.post('/dev-bypass', (_req, res) => {
+  if (env.NODE_ENV !== 'development' || env.DEV_AUTH_BYPASS !== '1') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  // eslint-disable-next-line no-console
+  console.warn('⚠️  DEV AUTH BYPASS USED — super_admin token minted for dev@local');
+
+  const token = jwt.sign(
+    {
+      sub: 'dev-bypass',
+      email: 'dev@local',
+      role: 'super_admin',
+      fullName: 'DEV BYPASS',
+      devBypass: true,
+      iat: Math.floor(Date.now() / 1000),
+    },
+    env.JWT_SECRET,
+    {
+      expiresIn: '1h',
+      issuer: 'ebright-dashboard',
+      audience: 'ebright-users',
+    },
+  );
+
+  return res.json({
+    token,
+    user: {
+      id: 'dev-bypass',
+      email: 'dev@local',
+      fullName: 'DEV BYPASS',
+      role: 'super_admin',
+      devBypass: true,
+    },
+  });
+});
+// ============================================================
+// END DEV-ONLY BYPASS
+// ============================================================
+
 // GET /api/auth/device?key=UUID — exchange device API key for a 365-day TV JWT
 router.get('/device', async (req, res, next) => {
   try {
