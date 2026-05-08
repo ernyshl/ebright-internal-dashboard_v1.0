@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { BRANCHES } from '../lib/studentTypes';
 import { apiFetch } from '../lib/api';
@@ -44,6 +44,37 @@ export function CoachBmPerformancePage() {
     queryKey: ['coachBmPerformance', branchFilter, searchQuery, page],
     queryFn: () => apiFetch(`/api/coach-bm-performance?${params}`),
     staleTime: 2 * 60 * 1000,
+  });
+
+  const queryClient = useQueryClient();
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, program, enrolled }: { id: number; program: 'weekly_training' | 'atcl_diploma' | 'toastmasters'; enrolled: boolean }) =>
+      apiFetch(`/api/coach-bm-performance/${id}/program`, {
+        method: 'PUT',
+        body: { program, enrolled },
+      }),
+    onMutate: async ({ id, program, enrolled }) => {
+      // Optimistic update: flip the row in the cached list immediately.
+      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
+      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
+      const previous = queryClient.getQueryData<any>(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          records: previous.records.map((r: CoachRow) => r.id === id ? { ...r, [program]: enrolled } : r),
+        });
+      }
+      return { previous, queryKey };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous && ctx?.queryKey) {
+        queryClient.setQueryData(ctx.queryKey, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+    },
   });
 
   const records: CoachRow[] = data?.records || [];
@@ -159,8 +190,25 @@ export function CoachBmPerformancePage() {
                     <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{r.branch || '—'}</span></td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.start_date)}</td>
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>
-                    {/* Programs column — checkboxes added in Task 8 */}
-                    <td style={td}>—</td>
+                    <td style={td}>
+                      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                        {([
+                          { key: 'weekly_training' as const, label: 'Weekly Training', color: '#4f46e5' },
+                          { key: 'atcl_diploma'    as const, label: 'ATCL Diploma',    color: '#8b5cf6' },
+                          { key: 'toastmasters'    as const, label: 'Toastmasters',    color: '#10b981' },
+                        ]).map(p => (
+                          <label key={p.key} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:11 }}>
+                            <input
+                              type="checkbox"
+                              checked={r[p.key]}
+                              onChange={() => toggleMutation.mutate({ id: r.id, program: p.key, enrolled: !r[p.key] })}
+                              style={{ accentColor: p.color, cursor:'pointer' }}
+                            />
+                            <span style={{ color: r[p.key] ? p.color : 'var(--muted)', fontWeight: r[p.key] ? 600 : 400 }}>{p.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
                     <td style={{ ...td, color:'var(--muted)' }}>—</td>
                     <td style={{ ...td, color:'var(--muted)' }}>—</td>
                   </tr>
