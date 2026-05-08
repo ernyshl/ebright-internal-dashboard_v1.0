@@ -109,3 +109,6 @@ Desktop.ini
 
 # Local development
 .vscode/settings.json
+
+# Superpowers brainstorm workspace
+.superpowers/

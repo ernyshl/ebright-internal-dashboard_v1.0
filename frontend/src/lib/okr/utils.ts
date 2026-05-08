@@ -19,8 +19,24 @@ export function prevWeekDate(dateStr, weeksBack = 1) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() - weeksBack * 7);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+
+function localYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Snap any date to the Monday of its Mon–Sun week
+export function toMonday(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return localYMD(d);
+}
+
+// Keep alias for any legacy callers
+export const toWednesday = toMonday;
 
 export function calcMetrics(r) {
   const totalAttended = DAYS.reduce((s, d) => s + n(r[`${d.key}_attended`]), 0);
@@ -35,12 +51,10 @@ export function calcMetrics(r) {
   const attendanceRate = (totalAttended + totalAbsent) > 0
     ? (totalAttended / (totalAttended + totalAbsent)) * 100 : 0;
 
-  // Rate WITH FREEZE: (Sat attended + Sun attended) / Total Attendance
-  // Matches Excel formula: =SUM(KD567:KD568)/SUM(KD562:KD570)
-  const satAttended = n(r.sat_attended);
-  const sunAttended = n(r.sun_attended);
+  // Rate WITH FREEZE: Total Attended / Total Attendance
+  // Matches Excel formula: =SUM(KD58:KD62)/SUM(KD53:KD64) — all attended ÷ all (absent+attended+frozen+replaced)
   const attendanceRateWithFreeze = totalAttendance > 0
-    ? ((satAttended + sunAttended) / totalAttendance) * 100 : 0;
+    ? (totalAttended / totalAttendance) * 100 : 0;
 
   // Discrepancy = Active Students − Total Attendance
   const discrepancy = n(r.active_students) - totalAttendance;
@@ -56,6 +70,136 @@ export function calcMetrics(r) {
     totalAttended, totalAbsent, totalFrozen, totalReplaced,
     totalAttendance, attendanceRate, attendanceRateWithFreeze,
     discrepancy, totalDisc, remainingDisc, outstandingInvoicePct,
+  };
+}
+
+// Parse an AOne attendance export Excel file into both:
+//   1. per-day counts (absent / attended / frozen / replaced) for each weekday
+//   2. per-status student name lists (newline-separated)
+//
+// Detects columns by header name (case-insensitive substring match) so it
+// tolerates variations like "Student Name" / "Name" / "student_name".
+// Resolves with { counts, names, totalRows } or rejects with a useful error.
+export async function parseAoneExportFull(file: File): Promise<{
+  counts: Record<string, { absent: number; attended: number; frozen: number; replaced: number }>;
+  names: { attended: string[]; absent: string[]; frozen: string[]; replaced: string[] };
+  totalRows: number;
+}> {
+  // Lazy-import xlsx to keep the bundle small for users who never use this
+  const XLSX = await import('xlsx');
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target!.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!raw.length) { reject(new Error('File is empty')); return; }
+
+        const keys = Object.keys(raw[0]);
+        const lower = (s: string) => s.toLowerCase();
+        const colStatus = keys.find(k => lower(k).includes('attendance status') || lower(k) === 'status');
+        const colDay    = keys.find(k => lower(k) === 'day');
+        const colName   = keys.find(k => lower(k).includes('student name') || lower(k) === 'name');
+
+        if (!colStatus || !colDay) {
+          reject(new Error('Cannot find "Attendance Status" or "Day" column — make sure this is an AOne attendance export'));
+          return;
+        }
+
+        const DAY_MAP: Record<string, string> = {
+          wednesday: 'wed', wed: 'wed',
+          thursday:  'thu', thu: 'thu',
+          friday:    'fri', fri: 'fri',
+          saturday:  'sat', sat: 'sat',
+          sunday:    'sun', sun: 'sun',
+        };
+        const STATUSES = new Set(['attended', 'absent', 'frozen', 'replaced']);
+        const DAY_KEYS = ['wed', 'thu', 'fri', 'sat', 'sun'];
+
+        const counts: Record<string, any> = Object.fromEntries(
+          DAY_KEYS.map(k => [k, { absent: 0, attended: 0, frozen: 0, replaced: 0 }])
+        );
+        const names = { attended: [] as string[], absent: [] as string[], frozen: [] as string[], replaced: [] as string[] };
+
+        raw.forEach(row => {
+          const status = String(row[colStatus] ?? '').toLowerCase().trim();
+          const dayKey = DAY_MAP[String(row[colDay] ?? '').toLowerCase().trim()];
+          const name   = colName ? String(row[colName] ?? '').trim() : '';
+
+          if (dayKey && STATUSES.has(status)) {
+            counts[dayKey][status]++;
+            if (name) (names as any)[status].push(name);
+          }
+        });
+
+        resolve({ counts, names, totalRows: raw.length });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('File read error'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// Parse a pasted Excel roster into per-status newline-separated name lists.
+// Tolerates a leading row-number column (e.g. "1\tEnzo Leong\tattended"),
+// skips header rows, and recognises status by prefix:
+//   attended / Attended / ATTEND → attended
+//   absent / abs                 → absent
+//   frozen / fr                  → frozen
+//   replaced / rep               → replaced
+// Lines without a recognisable status fall into `unrecognised`.
+export function parseStudentRoster(raw: string): {
+  attended: string;
+  absent: string;
+  frozen: string;
+  replaced: string;
+  unrecognised: string[];
+} {
+  const lines = (raw || '').split(/\r?\n/);
+  const buckets: Record<string, string[]> = { attended: [], absent: [], frozen: [], replaced: [] };
+  const unrecognised: string[] = [];
+
+  // Header keywords we'll silently skip (case-insensitive)
+  const HEADER_TOKENS = /^(no\.?|#|student\s*name|attendance\s*status|status|name)$/i;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Split on tabs first (Excel's native copy separator), then 2+ spaces
+    let cols = trimmed.includes('\t')
+      ? trimmed.split('\t').map(s => s.trim()).filter(Boolean)
+      : trimmed.split(/ {2,}/).map(s => s.trim()).filter(Boolean);
+
+    if (cols.length < 2) { unrecognised.push(trimmed); continue; }
+
+    // Skip the header row ("No. | Student Name | Attendance Status")
+    if (cols.every(c => HEADER_TOKENS.test(c))) continue;
+
+    // Drop a leading row-number column (e.g. Excel's "1", "2", "10")
+    if (cols.length >= 3 && /^\d+\.?$/.test(cols[0])) cols = cols.slice(1);
+
+    if (cols.length < 2) { unrecognised.push(trimmed); continue; }
+
+    const status = cols[cols.length - 1].toLowerCase();
+    const name = cols.slice(0, -1).join(' ').trim();
+    if (!name) { unrecognised.push(trimmed); continue; }
+
+    if (status.startsWith('atten'))      buckets.attended.push(name);
+    else if (status.startsWith('abs'))   buckets.absent.push(name);
+    else if (status.startsWith('fr'))    buckets.frozen.push(name);
+    else if (status.startsWith('rep'))   buckets.replaced.push(name);
+    else                                  unrecognised.push(trimmed);
+  }
+
+  return {
+    attended: buckets.attended.join('\n'),
+    absent:   buckets.absent.join('\n'),
+    frozen:   buckets.frozen.join('\n'),
+    replaced: buckets.replaced.join('\n'),
+    unrecognised,
   };
 }
 

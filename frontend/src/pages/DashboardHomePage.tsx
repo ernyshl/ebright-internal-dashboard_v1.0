@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permissions';
-import { getUser } from '../lib/auth';
 
-export function DashboardHomePage({ previewMode = false }) {
+export function DashboardHomePage() {
   const navigate = useNavigate();
   const { permissions, dashboards, isLoading } = usePermissions();
 
@@ -21,7 +20,18 @@ export function DashboardHomePage({ previewMode = false }) {
     }
   ];
 
-  const departmentData = [
+  const departmentData: any[] = [
+    {
+      id: 'operations_dept',
+      name: 'Operations',
+      icon: '🎯',
+      color: '#0ea5e9',
+      links: [
+        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations_dept' },
+        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations_dept' },
+        { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations_dept' },
+      ]
+    },
     {
       id: 'academy',
       name: 'Academy',
@@ -29,16 +39,10 @@ export function DashboardHomePage({ previewMode = false }) {
       color: '#8b5cf6',
       links: [
         { label: 'Academy Dashboard', path: '/academy-dashboard', dashboard: 'academy' },
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
-      ]
-    },
-    {
-      id: 'fa_testing',
-      name: 'FA Dashboard Testing',
-      icon: '🧪',
-      color: '#6366f1',
-      links: [
-        { label: '🎓 FA Dashboard', path: '/fa-dashboard', dashboard: 'academy' }
+        { label: 'FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' },
+        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' },
+        { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' },
+        { label: 'Renewal by Branch', path: '/academy/renewal-by-branch', dashboard: 'academy' }
       ]
     },
     {
@@ -47,8 +51,8 @@ export function DashboardHomePage({ previewMode = false }) {
       icon: '🎪',
       color: '#f43f5e',
       links: [
-        { label: 'Event Dashboard', path: '/events', dashboard: 'events' },
-        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'events' },
+        { label: 'Event Dashboard', path: '/events', dashboard: 'event_mkt' },
+        { label: 'Event MKT Dashboard', path: '/event-mkt-dashboard', dashboard: 'event_mkt' },
       ]
     },
     {
@@ -57,7 +61,6 @@ export function DashboardHomePage({ previewMode = false }) {
       icon: '💰',
       color: '#10b981',
       links: [
-        { label: 'Finance Dashboard', path: '/finance', dashboard: 'finance' },
         { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
       ]
     },
@@ -68,8 +71,7 @@ export function DashboardHomePage({ previewMode = false }) {
       color: '#3b82f6',
       links: [
         { label: 'GHL Dashboard', path: '/dashboard', dashboard: 'operations' },
-        { label: 'Branch Distribution', path: '/branch-distribution', dashboard: 'operations' },
-        { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'operations' }
+        { label: 'Branch Distribution', path: '/branch-distribution', dashboard: 'operations' }
       ]
     },
     {
@@ -108,10 +110,10 @@ export function DashboardHomePage({ previewMode = false }) {
       icon: '🗄️',
       color: '#0891b2',
       links: [
-        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
-        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr' },
-        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr' },
-        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
+        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_db' },
+        { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr_db' },
+        { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr_db' },
+        { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr_db' },
       ]
     },
     {
@@ -131,11 +133,12 @@ export function DashboardHomePage({ previewMode = false }) {
       icon: '🧪',
       color: '#14b8a6',
       links: [
-        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'testing' },
-        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'testing' },
-        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'testing' },
-        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'testing' },
-        { label: 'ST Attendance Dashboard', path: '/st-attendance', dashboard: 'testing' },
+        { label: 'Overview v2', path: '/hrfs-overview-v2', dashboard: 'hr_testing' },
+        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'hr_testing' },
+        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
+        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
+        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
+        { label: 'ST Attendance Dashboard', path: '/st-attendance', dashboard: 'hr_testing' },
       ]
     },
     {
@@ -146,6 +149,8 @@ export function DashboardHomePage({ previewMode = false }) {
       links: [
         { label: 'Student Records', path: '/student-database', dashboard: 'student_db' },
         { label: '🗂 Archived Students', path: '/archived-students', dashboard: 'student_db' },
+        { label: '📋 Student Attendance', path: '/student-attendance', dashboard: 'student_db' },
+        { label: '🎯 Coach & BM Performance', path: '/coach-bm-performance', dashboard: 'student_db' },
       ]
     },
     {
@@ -158,6 +163,7 @@ export function DashboardHomePage({ previewMode = false }) {
         { label: 'Permissions', path: '/permissions', dashboard: 'admin' },
         { label: '📺 TV Devices', path: '/admin/devices', dashboard: 'admin' },
         { label: '📋 Audit Log', path: '/admin/audit-log', dashboard: 'admin' },
+        { label: '🚫 GHL Ignored Payloads', path: '/admin/ghl-ignored', dashboard: 'admin' },
       ]
     },
     {
@@ -166,10 +172,20 @@ export function DashboardHomePage({ previewMode = false }) {
       icon: '🧪',
       color: '#f97316',
       links: [
-        { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'testing' },
-        { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'testing' },
+        { label: 'Branch Performance', path: '/branch-performance', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
         { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
+      ]
+    },
+    {
+      id: 'manjeet',
+      name: 'For Manjeet',
+      icon: '🎯',
+      color: '#f59e0b',
+      links: [
+        { label: 'Leads Dashboard v2', path: '/leads-dashboard-v2', dashboard: 'manjeet' },
+        { label: 'Day Distribution',    path: '/day-distribution',    dashboard: 'manjeet' },
+        { label: 'Time Slot Distribution', path: '/time-slot-distribution', dashboard: 'manjeet' },
       ]
     },
     {
@@ -188,32 +204,15 @@ export function DashboardHomePage({ previewMode = false }) {
     }
   ];
 
-  // When no user session, show all dashboards (local preview mode)
-  const noAuth = !getUser();
+  const filteredDepartments = departmentData
+    .map(dept => ({
+      ...dept,
+      gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
+      links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
+    }))
+    .filter(dept => dept.links.length > 0 || !!dept.gaReports);
 
-  // In preview mode, remap auth-protected routes to their preview equivalents
-  const PREVIEW_ROUTE_MAP = { '/okr-attendance': '/okr-preview' };
-  const resolvePreviewPath = (path) => previewMode ? (PREVIEW_ROUTE_MAP[path] ?? path) : path;
-
-  // Filter departments based on permissions (skipped in preview mode or when no auth)
-  const filteredDepartments = (previewMode || noAuth)
-    ? departmentData.map(dept => ({
-        ...dept,
-        links: dept.links.map(link => ({ ...link, path: resolvePreviewPath(link.path) })),
-      }))
-    : departmentData
-        .map(dept => ({
-          ...dept,
-          gaReports: dept.gaReports && canAccess(dept.id, permissions) ? dept.gaReports : undefined,
-          links: dept.links.filter(link => !link.dashboard || canAccess(link.dashboard, permissions)),
-        }))
-        .filter(dept => {
-          const hasLinks = dept.links.length > 0;
-          const hasGaReports = !!dept.gaReports;
-          return hasLinks || hasGaReports;
-        });
-
-  if (!previewMode && isLoading) {
+  if (isLoading) {
     return (
       <div className="dashboardHomePage">
         <div className="dashboardHomeHeader">
@@ -236,7 +235,7 @@ export function DashboardHomePage({ previewMode = false }) {
           <div
             key={dept.id}
             className="dashboardHomeCard"
-            style={{ '--card-color': dept.color }}
+            style={{ '--card-color': dept.color } as React.CSSProperties}
           >
             <div className="dashboardHomeCardHeader">
               <span className="dashboardHomeCardIcon">{dept.icon}</span>

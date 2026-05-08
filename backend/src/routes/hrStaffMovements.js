@@ -6,7 +6,7 @@ const router = express.Router();
 
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
-// GET /api/hr-staff-movements/dashboard — dashboard view (-2 weeks to +2 months)
+// GET /api/hr-staff-movements/dashboard — dashboard view
 //
 // Source: ebrightleads_db.hrfs."BranchStaff" (HR system of record), reached
 // via leadsPool. Aliased into the shape the frontend already consumes

@@ -2702,6 +2702,172 @@
   border-collapse: collapse;
 }
 
+/* Theme-aware styling for Renewal by Branch table — overrides hardcoded
+   Tailwind grays so the table reads correctly in both light and dark modes. */
+.renewalBranchTable th,
+.renewalBranchTable td {
+  border-color: var(--border);
+}
+.renewalBranchTable thead {
+  background: var(--borderLight);
+}
+.renewalBranchTable thead th {
+  color: var(--text);
+}
+.renewalBranchTable .accentCol {
+  background: var(--border);
+}
+.renewalBranchTable tbody tr:hover td {
+  background: var(--tableRowHover);
+}
+.renewalBranchTable .totalsRow td {
+  background: var(--borderLight);
+  color: var(--text);
+}
+.renewalBranchTable .totalsRow .accentCol {
+  background: var(--border);
+}
+.renewalBranchTable .amountCell {
+  color: var(--textSecondary);
+}
+.renewalBranchTable .grandTotalCell {
+  color: #3b82f6;
+}
+.renewalBranchTable .rowNumCell {
+  color: var(--muted);
+}
+.renewalBranchTable th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.renewalBranchTable th.sortable:hover {
+  background: var(--border);
+}
+
+/* --- Renewal Ranking Graph --- */
+.renewalGraphHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.renewalGraphMetricToggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.renewalGraphMetricToggle button {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--textSecondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.renewalGraphMetricToggle button.active {
+  background: var(--brand);
+  color: #fff;
+}
+.renewalGraphMetricToggle button:not(.active):hover {
+  background: var(--borderLight);
+  color: var(--text);
+}
+/* Solid-bg replacement for .card — .card uses backdrop-filter:blur which
+   html-to-image silently drops, leaving the captured chart area opaque
+   over its own children. Use this class for the graph container instead. */
+.renewalGraphCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+/* Use HTML table for the bar list — flexbox/grid had unreliable widths
+   during html-to-image cloning (track collapsed to 0). Tables compute
+   layout deterministically and match BranchRankingPage's proven pattern. */
+.renewalGraphTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.renewalGraphTable td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--borderLight);
+  vertical-align: middle;
+}
+/* Mute zero-renewal rows via explicit muted colors instead of opacity —
+   html-to-image doesn't reliably render opacity on <tr>, which made
+   zero rows disappear from captured PNGs. Full-opacity colors render
+   in both the live view and the capture. */
+.renewalGraphTable tr.zeroRow td.renewalGraphRank,
+.renewalGraphTable tr.zeroRow td.renewalGraphName {
+  color: var(--muted);
+}
+.renewalGraphTable td.renewalGraphRank {
+  width: 48px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--textSecondary);
+  text-align: right;
+  white-space: nowrap;
+}
+.renewalGraphTable td.renewalGraphName {
+  width: 220px;
+  max-width: 220px;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.renewalGraphTable td.renewalGraphBarCell {
+  /* width: auto — takes the remaining space in the table layout */
+}
+.renewalGraphTrack {
+  width: 100%;
+  height: 22px;
+  background: var(--borderLight);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.renewalGraphFill {
+  height: 100%;
+  border-radius: 4px;
+}
+.renewalGraphTable td.renewalGraphValue {
+  width: 140px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.renewalGraphTable tr.zeroRow td.renewalGraphValue {
+  color: var(--muted);
+}
+.renewalGraphCaptureToast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+}
+
 .brRankDataRow {
   border-bottom: 1px solid var(--border);
 }
@@ -2770,7 +2936,7 @@
   position: absolute;
   top: -3px;
   bottom: -3px;
-  width: 2px;
+  width: 4px;
   background: #d97706;
   border-radius: 2px;
   z-index: 2;
@@ -2796,6 +2962,60 @@
 .brRankZeroVal {
   color: var(--muted);
   font-weight: 400;
+}
+
+/* --- Jackpot Winners Summary Card --- */
+.brRankWinnersCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.brRankWinnersRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+.brRankWinnersDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  align-self: center;
+}
+.brRankWinnersLabel {
+  font-weight: 700;
+  color: var(--text);
+}
+.brRankWinnersList {
+  color: var(--textSecondary);
+}
+
+/* --- Chart legend (jackpot threshold colors) --- */
+.brRankLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 0 4px 10px;
+  border-bottom: 1px solid var(--borderLight);
+  margin-bottom: 8px;
+}
+.brRankLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--textSecondary);
+}
+.brRankLegendDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 /* Tier badge column (rowspanned) */
@@ -2832,6 +3052,100 @@
   font-size: 13px;
   font-weight: 800;
   color: var(--text);
+}
+
+/* ─── Diverging mode (Branch Revenue & Renewals) ────────────────────────── */
+
+.brRankDivergingRow {
+  /* Replaces the .brRankBarCell width/padding behaviour. The row uses a fixed
+     12-column subgrid via inline flex so it lines up across rows. */
+}
+
+.brRankDivLeftRm,
+.brRankDivRightRm {
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.95em;
+  padding: 0 8px;
+}
+
+.brRankDivLeftRm {
+  text-align: right;
+  color: #9333ea; /* renewal purple */
+}
+
+.brRankDivLeftRm.zero {
+  color: var(--textSecondary, #94a3b8);
+  font-weight: 500;
+}
+
+.brRankDivRightRm {
+  text-align: left;
+}
+
+.brRankDivBarWrap {
+  position: relative;
+  height: 22px;
+  background: var(--border);
+  border-radius: 4px;
+  display: flex;
+  width: 100%;
+  overflow: visible;
+}
+
+.brRankDivBarLeft,
+.brRankDivBarRight {
+  position: relative;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+.brRankDivBarLeft {
+  justify-content: flex-end;
+  border-right: 1px solid var(--textSecondary, #94a3b8);
+}
+
+.brRankDivBarRight {
+  justify-content: flex-start;
+}
+
+.brRankDivBarFillLeft {
+  background: #9333ea; /* renewal purple */
+  border-radius: 4px 0 0 4px;
+  transition: width 0.4s ease;
+  min-width: 0;
+}
+
+.brRankDivBarFillRight {
+  border-radius: 0 4px 4px 0;
+  transition: width 0.4s ease;
+  min-width: 0;
+}
+
+.brRankDivPctLeft,
+.brRankDivPctRight {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--textPrimary);
+  pointer-events: none;
+}
+
+.brRankDivPctLeft {
+  right: calc(50% + 6px);
+}
+
+.brRankDivPctRight {
+  left: calc(50% + 6px);
+}
+
+.brRankDivPctMuted {
+  color: var(--textSecondary, #94a3b8);
+  font-weight: 500;
 }
 
 /* ===== LEADS BREAKDOWN PAGE ===== */
@@ -2950,6 +3264,185 @@
   font-size: 10px;
   color: var(--textSecondary);
   margin-top: 2px;
+}
+
+/* Hourly Target Card — sits to the left of the centered summary stats */
+.summaryStatsRow {
+  position: relative;
+  margin-bottom: 20px;
+  min-height: 180px;
+}
+
+.summaryStatsRow .summaryStats {
+  margin-bottom: 0;
+}
+
+.hourlyTargetCard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 210px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px 12px 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.hourlyTargetCard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  border-radius: 14px 0 0 14px;
+}
+
+.hourlyTargetCard:hover {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.hourlyTargetCard--good::before {
+  background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+}
+
+.hourlyTargetCard--bad::before {
+  background: linear-gradient(180deg, #f87171 0%, #ef4444 100%);
+}
+
+.hourlyTargetHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--textSecondary);
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.hourlyTargetHeaderIcon {
+  font-size: 14px;
+}
+
+.hourlyTargetBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hourlyTargetBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.hourlyTargetBlock--met {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.16);
+}
+
+.hourlyTargetBlock--missed {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+}
+
+.hourlyTargetLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--textSecondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.hourlyTargetLabelKey {
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.hourlyTargetBlock--met .hourlyTargetLabelKey {
+  color: #059669;
+  opacity: 1;
+}
+
+.hourlyTargetBlock--missed .hourlyTargetLabelKey {
+  color: #dc2626;
+  opacity: 1;
+}
+
+.hourlyTargetLabelTime {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.2px;
+  color: var(--textSecondary);
+  opacity: 0.85;
+  font-size: 10.5px;
+}
+
+.hourlyTargetMetric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hourlyTargetNumber {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hourlyTargetBlock--met .hourlyTargetNumber {
+  color: #059669;
+}
+
+.hourlyTargetBlock--missed .hourlyTargetNumber {
+  color: #dc2626;
+}
+
+.hourlyTargetUnit {
+  font-size: 11px;
+  color: var(--textSecondary);
+  font-weight: 500;
+}
+
+.hourlyTargetBlock--met .hourlyTargetUnit {
+  color: #047857;
+  font-weight: 600;
+}
+
+.hourlyTargetBlock--missed .hourlyTargetUnit {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+@media (max-width: 1400px) {
+  .hourlyTargetCard {
+    position: static;
+    width: 100%;
+    margin-bottom: 12px;
+  }
 }
 
 /* Sections */

@@ -4,26 +4,34 @@ import { usePermissions, canAccess } from '../lib/permissions';
 
 /**
  * Protects a route based on dashboard permissions or role.
- * - `dashboard` — checks the user's dashboard permission (e.g. 'marketing', 'finance')
- * - `roles` — checks if the user has one of the specified roles (e.g. ['super_admin'])
+ * - `dashboard`  — single permission key the user must have
+ * - `dashboards` — array of keys; access granted if user has ANY of them
+ *                   (used for routes shared between cards, e.g. /hr-staff-list
+ *                   appears in both 'hr_db' and 'hr_crud' cards)
+ * - `roles`      — checks if the user has one of the specified roles
  * Super admins bypass all permission checks.
  */
-export function RequirePermission({ dashboard, roles, children }: { dashboard?: string; roles?: string[]; children: any }) {
+export function RequirePermission({ dashboard, dashboards, roles, children }: { dashboard?: string; dashboards?: string[]; roles?: string[]; children: any }) {
     const user = getUser();
     const { permissions, isLoading } = usePermissions();
 
-    // No session (local preview) or super admin — bypass all checks
-    if (!user || user?.role === 'super_admin') return children;
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Super admins bypass all permission checks
+    if (user.role === 'super_admin') return children;
 
     // Role-based check (e.g. users page is super_admin only)
     if (roles && roles.length > 0) {
-        if (!user || !roles.includes(user.role)) {
+        if (!roles.includes(user.role)) {
             return <Navigate to="/" replace />;
         }
     }
 
-    // Dashboard permission check
-    if (dashboard) {
+    // Dashboard permission check (single or any-of)
+    const keys = dashboards && dashboards.length > 0 ? dashboards : (dashboard ? [dashboard] : []);
+    if (keys.length > 0) {
         if (isLoading) {
             return (
                 <div className="dashboardPage">
@@ -37,7 +45,8 @@ export function RequirePermission({ dashboard, roles, children }: { dashboard?: 
             );
         }
 
-        if (!canAccess(dashboard, permissions)) {
+        const allowed = keys.some(k => canAccess(k, permissions));
+        if (!allowed) {
             return <Navigate to="/" replace />;
         }
     }

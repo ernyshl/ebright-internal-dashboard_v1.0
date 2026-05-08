@@ -7,17 +7,19 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  INV_DATABASE_URL: z.string().min(1, 'INV_DATABASE_URL is required'),
 
   // Source DB for the ST attendance/staff sync service (different database on same host).
   // When unset, the sync service is disabled.
   ST_SYNC_SOURCE_DATABASE_URL: z.string().optional(),
+  ST_SYNC_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
 
   // Connection to ebrightleads_db (HR system of record — has hrfs.BranchStaff,
   // hrfs.AttendanceLog, etc.). When unset, defaults to swapping the database
   // name in DATABASE_URL — same host/user/password, db = ebrightleads_db.
   // Override only if the leads DB lives on a different host/credentials.
   LEADS_DATABASE_URL: z.string().optional(),
-  ST_SYNC_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('8h'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
@@ -25,7 +27,7 @@ const EnvSchema = z.object({
   // DEV-ONLY: when NODE_ENV=development AND this is '1', /api/auth/dev-bypass is exposed.
   // REMOVE THIS AND THE ASSOCIATED ROUTE BEFORE DEPLOYING TO PRODUCTION.
   DEV_AUTH_BYPASS: z.string().optional(),
-  
+
   // Google Ads API Configuration
   GOOGLE_DEVELOPER_TOKEN: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -61,9 +63,14 @@ const EnvSchema = z.object({
   // 50,000-event on-board buffer up to the watermark. 5 min is a balance
   // between freshness and not hammering a rate-limited terminal.
   AMF_SYNC_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
+
+  // Telegram bot (required at runtime when bot is used, optional at boot)
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_ALLOWED_CHATS: z.string().optional(),
+  TELEGRAM_REPORT_CHATS: z.string().optional(),
+  TELEGRAM_ALERT_CHATS: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
 
 module.exports = { env };
-

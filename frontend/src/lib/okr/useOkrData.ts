@@ -116,6 +116,7 @@ export function useOkrData({ dashBranch, dashWeek }) {
     // Raw records
     branches,
     weekRecords,
+    week1Records, // last week (all branches)
     listRecords,
     listLoading,
     dashRecord,

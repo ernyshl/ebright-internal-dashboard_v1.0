@@ -1,22 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
-import { ALL_BRANCHES, DAYS } from '../../lib/okr/constants';
+import { ALL_BRANCHES, DAYS, REGIONS } from '../../lib/okr/constants';
 import { weekRange } from '../../lib/okr/utils';
 import { USE_MOCK, MOCK_WEEK, MOCK_RECORDS } from '../../lib/okr/mock';
 import { apiFetch } from '../../lib/api';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-function toWednesday(dateStr) {
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-  d.setDate(d.getDate() - (d.getDay() - 3 + 7) % 7);
-  return d.toISOString().slice(0, 10);
+function localYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
+function toWednesday(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return localYMD(d);
+}
 function thisWeekWed() {
-  return toWednesday(new Date().toISOString().slice(0, 10));
+  return toWednesday(localYMD(new Date()));
 }
 
 function smartDay(records) {
@@ -41,6 +43,7 @@ const AONE_DAY_MAP = {
   sunday: 'sun',    sun: 'sun',
 };
 const AONE_STATUS = new Set(['attended', 'absent', 'frozen', 'replaced']);
+const DAY_OFFSET: Record<string, number> = { wed: 0, thu: 1, fri: 2, sat: 3, sun: 4 };
 
 // ─── AOne Excel parser ───────────────────────────────────────────────────────
 // Reads the raw AOne attendance export (one row per student per lesson)
@@ -256,7 +259,13 @@ export function DailyBulkEntry({ filterBranch = null }) {
           <label>Week</label>
           <input type="date" value={weekDate}
             onChange={e => setWeekDate(toWednesday(e.target.value))} />
-          {weekDate && <div className="okrWeekRangePill">{weekRange(weekDate)} (Wed)</div>}
+          {weekDate && (() => {
+            const d = new Date(weekDate + 'T00:00:00');
+            d.setDate(d.getDate() + (DAY_OFFSET[day] ?? 0));
+            const dayLabel = DAYS.find(x => x.key === day)?.label ?? '';
+            const dayDate = `${d.getDate()}/${d.getMonth() + 1}`;
+            return <div className="okrWeekRangePill">{weekRange(weekDate)} · {dayLabel} {dayDate}</div>;
+          })()}
         </div>
         <div className="formGroup">
           <label>View Day</label>
@@ -284,7 +293,11 @@ export function DailyBulkEntry({ filterBranch = null }) {
             <div className="okrUploadBranchSelect">
               <label>Branch</label>
               <select value={uploadBranch} onChange={e => setUploadBranch(e.target.value)}>
-                {ALL_BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                {Object.entries(REGIONS).map(([region, branches]) => (
+                  <optgroup key={region} label={`Region ${region}`}>
+                    {branches.map(b => <option key={b.name} value={b.name}>{b.name} - {b.code}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </div>
           )}

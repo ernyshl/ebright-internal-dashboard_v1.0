@@ -15,30 +15,73 @@ router.get('/branches', requireAuth, requireRole(ALLOWED_ROLES), async (_req, re
   } catch (err) { return next(err); }
 });
 
+// Snap any date string to the Monday of its Mon–Sun week.
+// Returns YYYY-MM-DD using LOCAL date components — toISOString() would shift
+// the date back by the server's UTC offset (e.g. KL UTC+8 turning Mon 20/4
+// into Sun 19/4), which would store every record one day too early.
+function toWednesday(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// pg returns DATE columns as JS Date objects (local midnight). When serialized to
+// JSON they become UTC ISO strings, which shifts the date back by the timezone
+// offset (e.g. Malaysia UTC+8 turns 2026-04-20 into 2026-04-19T16:00Z). We format
+// using local date components so the wire format matches what was stored.
+function formatRowDates(row) {
+  if (row && row.week_date instanceof Date) {
+    const d = row.week_date;
+    row.week_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return row;
+}
+
 // GET /api/okr-attendance — list with optional filters
 router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { branch = '', week_date = '', limit = 50 } = req.query;
+
+    if (week_date) {
+      // When filtering by week, deduplicate: one record per branch (most recently updated wins).
+      // This handles old Wednesday-anchor vs new Monday-anchor duplicates.
+      const mon = toWednesday(week_date);
+      const params = [mon, mon];
+      const branchClause = branch ? `AND branch = $${params.push(branch)}` : '';
+      params.push(Number(limit));
+      const limitIdx = params.length;
+
+      const result = await pool.query(
+        `SELECT DISTINCT ON (branch) *
+         FROM branch_okr_attendance
+         WHERE week_date >= $1::date AND week_date <= $2::date + INTERVAL '6 days'
+           ${branchClause}
+         ORDER BY branch ASC, updated_at DESC
+         LIMIT $${limitIdx}`,
+        params
+      );
+      return res.json({ records: result.rows.map(formatRowDates) });
+    }
+
+    // No week filter — return all records (history view)
     const conditions = [];
     const params = [];
     let idx = 1;
-
-    if (branch)    { conditions.push(`branch = $${idx++}`);          params.push(branch); }
-    if (week_date) { conditions.push(`week_date = $${idx++}::date`); params.push(week_date); }
-
+    if (branch) { conditions.push(`branch = $${idx++}`); params.push(branch); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await pool.query(
       `SELECT * FROM branch_okr_attendance ${where} ORDER BY week_date DESC, branch ASC LIMIT $${idx}`,
       [...params, Number(limit)]
     );
-    return res.json({ records: result.rows });
+    return res.json({ records: result.rows.map(formatRowDates) });
   } catch (err) { return next(err); }
 });
 
 // POST /api/okr-attendance — upsert (insert or update by branch + week_date)
 router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
-    const b = req.body;
+    const b = { ...req.body, week_date: toWednesday(req.body.week_date) };
 
     const result = await pool.query(
       `INSERT INTO branch_okr_attendance (
@@ -52,10 +95,11 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
         not_enrolled, outstanding_invoice_disc, expired_package, newly_enrolled,
         pc_meetup_invited, pc_meetup_showup,
         outstanding_invoice_pct, partially_paid_unpaid, active_students,
+        frozen_student_names, attended_student_names, absent_student_names, replaced_student_names,
         updated_at
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
-        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,NOW()
+        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,NOW()
       )
       ON CONFLICT (branch, week_date) DO UPDATE SET
         total_online_attendance  = EXCLUDED.total_online_attendance,
@@ -81,6 +125,10 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
         outstanding_invoice_pct  = EXCLUDED.outstanding_invoice_pct,
         partially_paid_unpaid    = EXCLUDED.partially_paid_unpaid,
         active_students          = EXCLUDED.active_students,
+        frozen_student_names     = EXCLUDED.frozen_student_names,
+        attended_student_names   = EXCLUDED.attended_student_names,
+        absent_student_names     = EXCLUDED.absent_student_names,
+        replaced_student_names   = EXCLUDED.replaced_student_names,
         updated_at               = NOW()
       RETURNING *`,
       [
@@ -109,10 +157,14 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
         n(b.outstanding_invoice_pct),                       // $33
         n(b.partially_paid_unpaid),                         // $34
         n(b.active_students),                               // $35
+        b.frozen_student_names ?? '',                       // $36
+        b.attended_student_names ?? '',                     // $37
+        b.absent_student_names ?? '',                       // $38
+        b.replaced_student_names ?? '',                     // $39
       ]
     );
 
-    return res.json({ ok: true, record: result.rows[0] });
+    return res.json({ ok: true, record: formatRowDates(result.rows[0]) });
   } catch (err) { return next(err); }
 });
 

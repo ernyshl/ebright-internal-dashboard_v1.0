@@ -49,7 +49,7 @@ const REGIONS = {
   'Region C': ['PJY', 'KW', 'BBB', 'CJY', 'BSP', 'ONL'],
 };
 
-const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GB1','GB2'];
+const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GA3','GA4','GB1','GB2','GB3','GB4'];
 const BRANCH_LIST = ['ONL','ST','CJY','SA','PJY','AMP','BBB','DK','KLG','KD','SHA','DA','SP','BSP','EGR','BTHO','RBY','TSG','KW','KTG'];
 
 /* ─────────────────────────── Helpers ─────────────────────────── */
@@ -74,9 +74,9 @@ function CustomBacklogTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;
-  const delta = d.delta ?? 0;
-  const cleared = Math.max(0, -delta);
-  const added   = Math.max(0,  delta);
+  const delta = d.delta ?? 0;  // delta = prev - current; positive = improvement
+  const cleared = Math.max(0,  delta);
+  const added   = Math.max(0, -delta);
   return (
     <div style={{
       background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
@@ -139,13 +139,13 @@ function CustomGradeTooltip({ active, payload }) {
 
 /* ─────────────────────────── Branch Card ─────────────────────────── */
 
-function BranchCard({ branch, filtered }) {
+function BranchCard({ branch, filtered, prevData }) {
   const pct = branch.active > 0 ? (branch.backlog / branch.active) * 100 : 0;
   const pctRounded = Math.round(pct);
   const backlogNumColor = getBacklogColor(branch.backlog, branch.active);
   const progressColor = getProgressBarColor(pct);
-  const prev = PREVIOUS_DATA[branch.code] ?? branch.backlog;
-  const delta = branch.backlog - prev;
+  const prev = (prevData ?? PREVIOUS_DATA)[branch.code] ?? branch.backlog;
+  const delta = prev - branch.backlog;  // positive = improvement
 
   return (
     <div style={{
@@ -178,10 +178,10 @@ function BranchCard({ branch, filtered }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {delta !== 0 && (
             <span style={{
-              fontSize: 10, fontWeight: 800, color: delta < 0 ? '#86efac' : '#fca5a5',
+              fontSize: 10, fontWeight: 800, color: delta > 0 ? '#86efac' : '#fca5a5',
               background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '1px 6px',
             }}>
-              {delta < 0 ? `↓${Math.abs(delta)}` : `↑${delta}`}
+              {delta > 0 ? `↓${delta}` : `↑${Math.abs(delta)}`}
             </span>
           )}
           <span style={{
@@ -622,6 +622,14 @@ export function FaDashboardPage() {
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedBranch, setSelectedBranch] = useState(() => sharedBranch !== 'All' ? sharedBranch : '');
   const [showCrude, setShowCrude]   = useState(false);
+  const [baselineSet, setBaselineSet] = useState(false);
+  const [previousData, setPreviousData] = useState<Record<string, number>>(() => {
+    try {
+      const stored = localStorage.getItem('fa_previous_backlog');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};  // No arrows until user sets a baseline
+  });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const user = getUser();
   const initials = user?.fullName
@@ -664,6 +672,15 @@ export function FaDashboardPage() {
     if (contextBranch !== selectedBranch) setSelectedBranch(contextBranch);
   }, [sharedBranch]);
 
+  function handleSetBaseline() {
+    const snapshot: Record<string, number> = {};
+    (branchData as any[]).forEach((b: any) => { snapshot[b.code] = b.backlog; });
+    localStorage.setItem('fa_previous_backlog', JSON.stringify(snapshot));
+    setPreviousData(snapshot);
+    setBaselineSet(true);
+    setTimeout(() => setBaselineSet(false), 2000);
+  }
+
   async function handleSave(committed) {
     const rows = committed.map(b => ({
       branch_code: b.code,
@@ -691,7 +708,7 @@ export function FaDashboardPage() {
     return Object.values(map);
   }, [dbStudents]);
 
-  // Use student-derived data if students are loaded, else fall back to saved FA Dashboard data
+  // FA Dashboard reads from student records (live data)
   const branchData = dbStudents.length > 0 ? studentBranchData : savedData;
 
   const availableBranches = useMemo(() => {
@@ -715,9 +732,9 @@ export function FaDashboardPage() {
 
   /* Backlog chart — health bar delta data */
   const backlogChartData = useMemo(() => {
-    return [...branchData].sort((a, b) => a.backlog - b.backlog).map(b => {
-      const prev  = PREVIOUS_DATA[b.code] ?? b.backlog;
-      const delta = b.backlog - prev;
+    return ([...branchData] as any[]).sort((a: any, b: any) => a.backlog - b.backlog).map((b: any) => {
+      const prev  = previousData[b.code] ?? b.backlog;
+      const delta = prev - b.backlog;  // positive = improvement (backlog decreased)
       // For stacked bars:
       // mainBar  = the solid health-colored portion (min of current/prev)
       // ghostBar = cleared amount (grey ghost, if improved)
@@ -747,9 +764,9 @@ export function FaDashboardPage() {
         </g>
       );
     }
-    const sign = delta < 0 ? '↓' : '↑';
+    const sign = delta > 0 ? '↓' : '↑';  // delta = prev - current; positive = improvement
     const amt  = Math.abs(delta);
-    const col  = delta < 0 ? '#16a34a' : '#dc2626';
+    const col  = delta > 0 ? '#16a34a' : '#dc2626';
     return (
       <g>
         <text x={cx} y={cy + 4} fontSize={10} fontWeight={700} fill="#64748b">{currentVal}</text>
@@ -896,6 +913,23 @@ export function FaDashboardPage() {
                 {!dbLoaded ? 'Loading…' : loadError ? 'Local data' : 'Live data'}
               </span>
             </div>
+
+            {/* Set as Baseline button */}
+            <button
+              onClick={handleSetBaseline}
+              style={{
+                padding: '9px 20px', borderRadius: 11, fontSize: 13, fontWeight: 700,
+                background: baselineSet
+                  ? 'linear-gradient(135deg, #14532d, #16a34a)'
+                  : 'linear-gradient(135deg, rgba(34,197,94,0.5), rgba(16,185,129,0.4))',
+                color: '#fff',
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              }}
+            >
+              {baselineSet ? '✅ Baseline Set!' : '📌 Set as Baseline'}
+            </button>
 
             {/* Edit Data button */}
             <button
@@ -1136,7 +1170,7 @@ export function FaDashboardPage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
               {cardBranches.map(branch => (
-                <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} />
+                <BranchCard key={branch.code} branch={branch} filtered={isFiltered(branch.code)} prevData={previousData} />
               ))}
             </div>
           )}

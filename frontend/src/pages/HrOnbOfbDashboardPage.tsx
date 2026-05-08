@@ -330,11 +330,31 @@ export function HrOnbOfbDashboardPage() {
           dateLabel="End Date"
           onBack={() => setDetailView(null)}
         />
+      ) : detailView === 'mc' ? (
+        <DetailView
+          title="MC"
+          color="var(--warning)"
+          lightColor="var(--warningLight)"
+          records={mcRecords}
+          dateField="mc_date"
+          dateLabel="MC Date"
+          onBack={() => setDetailView(null)}
+        />
+      ) : detailView === 'annual_leave' ? (
+        <DetailView
+          title="Annual Leave"
+          color="#7c3aed"
+          lightColor="rgba(124, 58, 237, 0.08)"
+          records={alRecords}
+          dateField="al_date"
+          dateLabel="AL Date"
+          onBack={() => setDetailView(null)}
+        />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <DashCard
             title="ONBOARDING"
-            subtitle="-1 month → +6 months"
+            subtitle="-1 week → +6 months"
             color="var(--success)"
             lightColor="var(--successLight)"
             records={onboarding}
@@ -378,10 +398,11 @@ export function HrOnbOfbDashboardPage() {
             mainCount={mcRecords.length}
             mainLabel="Total"
             extraField="reason"
+            onViewAll={() => setDetailView('mc')}
           />
           <DashCard
             title="ANNUAL LEAVE"
-            subtitle="-2 weeks → +2 weeks"
+            subtitle="today → +2 weeks"
             color="#7c3aed"
             lightColor="rgba(124, 58, 237, 0.08)"
             records={alRecords}
@@ -389,6 +410,7 @@ export function HrOnbOfbDashboardPage() {
             mainCount={alRecords.length}
             mainLabel="Total"
             extraField="al_duration"
+            onViewAll={() => setDetailView('annual_leave')}
           />
         </div>
       )}

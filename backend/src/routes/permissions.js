@@ -5,33 +5,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Available dashboards
-const DASHBOARDS = [
-  { id: 'academy', name: 'Academy', icon: '🎓' },
-  { id: 'marketing', name: 'Marketing', icon: '📈' },
-  { id: 'finance', name: 'Finance', icon: '💰' },
-  { id: 'operations', name: 'Optimisation', icon: '⚙️' },
-  { id: 'department', name: 'Department', icon: '✅' },
-  { id: 'hr', name: 'HR', icon: '👥' },
-  { id: 'events', name: 'Events', icon: '🎪' },
-  { id: 'admin', name: 'Admin', icon: '🔧' },
-  { id: 'testing', name: 'Testing (dnft)', icon: '🧪' },
-  { id: 'rm_dashboard', name: 'Regional Manager', icon: '📊' },
-  { id: 'hr_crud', name: 'CRUD HR Data', icon: '📋' },
-  { id: 'student_db', name: 'Student Database', icon: '📚' },
-];
-
-// Role-based default permissions
-const ROLE_DEFAULTS = {
-  super_admin: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr', 'events', 'admin', 'testing', 'rm_dashboard', 'hr_crud', 'student_db'],
-  ceo: ['academy', 'marketing', 'finance', 'operations', 'department', 'hr', 'events', 'testing', 'rm_dashboard', 'hr_crud', 'student_db'],
-  rm: ['operations', 'academy', 'rm_dashboard'],
-  marketing: ['marketing', 'academy'],
-  od: ['operations', 'academy'],
-  hr: ['department', 'hr', 'hr_crud'],
-  academy: ['academy', 'events'],
-  finance: ['finance'],
-};
+const { DASHBOARDS, ROLE_DEFAULTS } = require('../lib/dashboardDefaults');
 
 // GET /api/permissions — get current user's permissions
 router.get('/', requireAuth, async (req, res, next) => {
@@ -187,4 +161,4 @@ router.delete('/:userId/:dashboard', requireAuth, requireRole(['super_admin']), 
   }
 });
 
-module.exports = { permissionsRouter: router, DASHBOARDS, ROLE_DEFAULTS };
+module.exports = { permissionsRouter: router };

@@ -4,12 +4,20 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
-const JACKPOT = 80000;
+// Two jackpot thresholds. Order matters — the table renders one vertical line
+// per tier on each branch's bar, and the revenue label is colored by the
+// highest tier the branch has hit (last one in the array if ranges overlap).
+const JACKPOT_TIERS = [
+  { amount: 80000,  color: '#16a34a', label: 'RM80K' },   // green
+  { amount: 120000, color: '#2563eb', label: 'RM120K' },  // blue
+];
+const MAX_JACKPOT = Math.max(...JACKPOT_TIERS.map(t => t.amount));
 
 const TIER_DEFS = [
-  { label: 'Tier A', emoji: '🥇', reward: 'RM500', color: '#22c55e', size: 7 },
-  { label: 'Tier B', emoji: '🥈', reward: 'RM300', color: '#f59e0b', size: 7 },
-  { label: 'Tier C', emoji: '🥉', reward: 'RM100', color: '#f97316', size: 6 },
+  { label: 'Tier A', emoji: '🥇',  reward: 'RM600', color: '#22c55e', size: 5 },
+  { label: 'Tier B', emoji: '🥈',  reward: 'RM500', color: '#f59e0b', size: 5 },
+  { label: 'Tier C', emoji: '🥉',  reward: 'RM300', color: '#f97316', size: 5 },
+  { label: 'Tier D', emoji: '🎖️', reward: 'RM100', color: '#64748b', size: 5 },
 ];
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -138,9 +146,16 @@ export function BranchRankingPage() {
   const branchList = data?.branchList || [];
 
   const maxTotal = branches.length > 0
-    ? Math.max(branches[0]?.total || 0, JACKPOT * 1.05)
-    : JACKPOT * 1.05;
-  const jackpotPct = Math.min((JACKPOT / maxTotal) * 100, 97);
+    ? Math.max(branches[0]?.total || 0, MAX_JACKPOT * 1.05)
+    : MAX_JACKPOT * 1.05;
+
+  // Per-tier winner lists (a branch hitting RM120K also appears in the RM80K
+  // list — both are real achievements, not a stack).
+  const jackpotWinners = JACKPOT_TIERS.map(t => ({
+    ...t,
+    pct: Math.min((t.amount / maxTotal) * 100, 99),
+    winners: branches.filter((b: any) => b.total >= t.amount),
+  }));
 
   const tierRows = [];
   let idx = 0;
@@ -227,6 +242,26 @@ export function BranchRankingPage() {
 
       {toast && <div className="brRankToast">{toast}</div>}
 
+      {/* Jackpot Winners Summary — sits between filter bar and chart so it's
+          included in the captureRef PNG. */}
+      {!isLoading && !isError && (
+        <div className="card brRankWinnersCard">
+          {jackpotWinners.map(t => (
+            <div key={t.amount} className="brRankWinnersRow">
+              <span className="brRankWinnersDot" style={{ background: t.color }} />
+              <span className="brRankWinnersLabel">
+                🏆 {t.label} Jackpot Winners ({t.winners.length}):
+              </span>
+              <span className="brRankWinnersList">
+                {t.winners.length > 0
+                  ? t.winners.map((w: any) => w.branch).join(', ')
+                  : 'none yet'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Chart Table */}
       {isLoading ? (
         <div className="card"><div className="loadingCard"><div className="loadingDots"><span /><span /><span /></div> Loading…</div></div>
@@ -234,13 +269,30 @@ export function BranchRankingPage() {
         <div className="errorText">Failed to load branch ranking data.</div>
       ) : (
         <div className="card brRankChartCard">
+          <div className="brRankLegend">
+            {JACKPOT_TIERS.map(t => (
+              <span key={t.amount} className="brRankLegendItem">
+                <span className="brRankLegendDot" style={{ background: t.color }} />
+                {t.label} Jackpot
+              </span>
+            ))}
+          </div>
           <table className="brRankBarTable">
             <tbody>
               {tierRows.map(({ tier, branches: tierBranches, startIdx }, tIdx) =>
                 tierBranches.map((b, i) => {
                   const rank = startIdx + i;
                   const barPct = b.total > 0 ? (b.total / maxTotal) * 100 : 0;
-                  const isJackpot = b.total >= JACKPOT;
+                  // Highest jackpot this branch hit in the SELECTED period.
+                  // Drives the bold/colored revenue label on the bar.
+                  const highestJackpot = [...JACKPOT_TIERS]
+                    .reverse()
+                    .find(t => b.total >= t.amount);
+                  // Highest jackpot the branch has EVER hit (any single month
+                  // since 2026-01-01). Drives the permanent branch-name color.
+                  const lifetimeJackpot = [...JACKPOT_TIERS]
+                    .reverse()
+                    .find(t => (b.lifetime_max ?? 0) >= t.amount);
                   const isTierFirst = i === 0 && tIdx > 0;
                   return (
                     <tr key={b.branch} className={`brRankDataRow${isTierFirst ? ' tierStart' : ''}`}>
@@ -249,7 +301,12 @@ export function BranchRankingPage() {
                           #{rank + 1}
                         </span>
                       </td>
-                      <td className="brRankNameCell">{b.branch}</td>
+                      <td
+                        className="brRankNameCell"
+                        style={lifetimeJackpot ? { color: lifetimeJackpot.color, fontWeight: 700 } : undefined}
+                      >
+                        {b.branch}
+                      </td>
                       <td className="brRankBarCell">
                         <div className="brRankBarWrap">
                           {b.total > 0 && (
@@ -261,10 +318,20 @@ export function BranchRankingPage() {
                               }}
                             />
                           )}
-                          <div className="brRankJackpotLine" style={{ left: `${jackpotPct}%` }} />
+                          {jackpotWinners.map(t => (
+                            <div
+                              key={t.amount}
+                              className="brRankJackpotLine"
+                              style={{ left: `${t.pct}%`, background: t.color }}
+                            />
+                          ))}
                           <span
-                            className={`brRankRevenueLabel${isJackpot ? ' brRankJackpotVal' : b.total === 0 ? ' brRankZeroVal' : ''}`}
-                            style={{ left: `calc(${barPct}% + 6px)` }}
+                            className={`brRankRevenueLabel${b.total === 0 ? ' brRankZeroVal' : ''}`}
+                            style={{
+                              left: `calc(${barPct}% + 6px)`,
+                              color: highestJackpot?.color,
+                              fontWeight: highestJackpot ? 800 : undefined,
+                            }}
                           >
                             {b.total === 0 ? 'RM0.00' : formatRM(b.total)}
                           </span>
@@ -274,7 +341,7 @@ export function BranchRankingPage() {
                         <td
                           rowSpan={tierBranches.length}
                           className="brRankTierBadgeCell"
-                          style={{ '--tier-color': tier.color }}
+                          style={{ '--tier-color': tier.color } as React.CSSProperties}
                         >
                           <div className="brRankTierBadgeInner">
                             <div className="brRankTierBadgeEmoji">{tier.emoji}</div>

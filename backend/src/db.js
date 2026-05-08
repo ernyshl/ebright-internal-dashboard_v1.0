@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const { env } = require('./env');
 
+// Main Leads Database Pool
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: 20,                        // max connections in the pool
@@ -12,9 +13,23 @@ const pool = new Pool({
   connectionTimeoutMillis: 15000,
 });
 
+// Inventory Database Pool
+// Ensure you add INV_DATABASE_URL to your backend/.env file!
+const invPool = new Pool({
+  connectionString: env.INV_DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
 pool.on('error', (err) => {
   // eslint-disable-next-line no-console
-  console.error('Unexpected PostgreSQL idle client error', err);
+  console.error('Unexpected PostgreSQL Leads DB error', err);
+});
+
+invPool.on('error', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('Unexpected PostgreSQL Inventory DB error', err);
 });
 
 // Secondary pool for ebrightleads_db — that's where the HR system of record
@@ -40,5 +55,4 @@ leadsPool.on('error', (err) => {
   console.error('Unexpected leadsPool idle client error', err);
 });
 
-module.exports = { pool, leadsPool };
-
+module.exports = { pool, invPool, leadsPool };
