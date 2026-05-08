@@ -19,8 +19,5 @@ CREATE TABLE IF NOT EXISTS coach_program_enrollment (
   atcl_diploma     BOOLEAN     NOT NULL DEFAULT FALSE,
   toastmasters     BOOLEAN     NOT NULL DEFAULT FALSE,
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_by       INTEGER
+  updated_by       UUID        REFERENCES users(id) ON DELETE SET NULL
 );
-
-CREATE INDEX IF NOT EXISTS idx_coach_program_updated_at
-  ON coach_program_enrollment (updated_at DESC);
