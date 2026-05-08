@@ -94,6 +94,39 @@ router.get('/', async (req, res, next) => {
   } catch (err) { return next(err); }
 });
 
+// GET /api/coach-bm-performance/stats?branch=...
+//
+// Returns enrollment totals across all active coaches/BMs matching the
+// branch filter (search is intentionally ignored — the cards mirror the
+// branch filter only, same convention as Student Database's FA cards).
+router.get('/stats', async (req, res, next) => {
+  try {
+    const { branch = '' } = req.query;
+    const conditions = [
+      `(bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
+      `bs."status" = 'Active'`,
+    ];
+    const params = [];
+    if (branch) {
+      conditions.push(`bs."branch" = $1`);
+      params.push(branch);
+    }
+
+    const { rows } = await pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE COALESCE(cpe.weekly_training, FALSE))::int AS weekly_training,
+         COUNT(*) FILTER (WHERE COALESCE(cpe.atcl_diploma,    FALSE))::int AS atcl_diploma,
+         COUNT(*) FILTER (WHERE COALESCE(cpe.toastmasters,    FALSE))::int AS toastmasters
+       FROM hrfs."BranchStaff" bs
+       LEFT JOIN coach_program_enrollment cpe ON cpe.branch_staff_id = bs.id
+       WHERE ${conditions.join(' AND ')}`,
+      params
+    );
+    return res.json(rows[0]);
+  } catch (err) { return next(err); }
+});
+
 // PUT /api/coach-bm-performance/:branchStaffId/program
 //
 // Body: { program: 'weekly_training' | 'atcl_diploma' | 'toastmasters', enrolled: boolean }

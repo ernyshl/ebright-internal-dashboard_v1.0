@@ -46,6 +46,12 @@ export function CoachBmPerformancePage() {
     staleTime: 2 * 60 * 1000,
   });
 
+  const { data: stats } = useQuery({
+    queryKey: ['coachBmPerformanceStats', branchFilter],
+    queryFn: () => apiFetch(`/api/coach-bm-performance/stats${branchFilter !== 'All' ? `?branch=${encodeURIComponent(branchFilter)}` : ''}`),
+    staleTime: 2 * 60 * 1000,
+  });
+
   const queryClient = useQueryClient();
 
   const toggleMutation = useMutation({
@@ -74,6 +80,7 @@ export function CoachBmPerformancePage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformanceStats'] });
     },
   });
 
@@ -93,9 +100,10 @@ export function CoachBmPerformancePage() {
     </div>
   );
 
-  const wtCount   = records.filter(r => r.weekly_training).length;
-  const atclCount = records.filter(r => r.atcl_diploma).length;
-  const tmCount   = records.filter(r => r.toastmasters).length;
+  const wtCount   = stats?.weekly_training ?? 0;
+  const atclCount = stats?.atcl_diploma    ?? 0;
+  const tmCount   = stats?.toastmasters    ?? 0;
+  const statsTotal = stats?.total ?? 0;
 
   return (
     <div className="dashboardPage">
@@ -117,9 +125,9 @@ export function CoachBmPerformancePage() {
       )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
-        {statCard('Weekly Training', wtCount,   `/${records.length}`, '#4f46e5', '🏋️')}
-        {statCard('ATCL Diploma',    atclCount, `/${records.length}`, '#8b5cf6', '🎓')}
-        {statCard('Toastmasters',    tmCount,   `/${records.length}`, '#10b981', '🎤')}
+        {statCard('Weekly Training', wtCount,   `/${statsTotal}`, '#4f46e5', '🏋️')}
+        {statCard('ATCL Diploma',    atclCount, `/${statsTotal}`, '#8b5cf6', '🎓')}
+        {statCard('Toastmasters',    tmCount,   `/${statsTotal}`, '#10b981', '🎤')}
       </div>
 
       {/* Filters */}
