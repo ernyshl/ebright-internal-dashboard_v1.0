@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { BRANCHES, GRADES, CHAPTERS } from '../../lib/studentTypes';
 import { getFaCount, getPcmCount, reconcileFa } from '../../lib/studentFaLogic';
+import { apiFetch } from '../../lib/api';
 
 const inp: React.CSSProperties = { width:'100%', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:13, background:'var(--bg)', color:'var(--text)', outline:'none', boxSizing:'border-box' };
 const lbl = { display:'block', fontSize:11, fontWeight:600, color:'var(--muted)', marginBottom:4, textTransform:'uppercase', letterSpacing:0.5 };
@@ -28,6 +30,22 @@ export default function EditStudentModal({ student, onClose, onSave }) {
       return next;
     });
   }
+
+  const branch = form.branch;
+
+  const {
+    data: coachData,
+    isLoading: coachesLoading,
+    isError: coachesError,
+  } = useQuery({
+    queryKey: ['coachOptions', branch],
+    queryFn: () => apiFetch(`/api/coach-bm-performance/coaches?branch=${encodeURIComponent(branch)}`),
+    enabled: Boolean(branch),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const coaches: { id: number; name: string }[] = coachData?.coaches || [];
+  const currentCoachInList = !form.coachName || coaches.some(c => c.name === form.coachName);
 
   const faCount = getFaCount(form.grade, form.chapter);
   const pcmCount = getPcmCount(form.grade, form.chapter);
@@ -69,13 +87,28 @@ export default function EditStudentModal({ student, onClose, onSave }) {
           </div>
           <div>
             <label style={lbl}>Coach Name</label>
-            <input
-              type="text"
-              style={inp}
-              placeholder="e.g., Coach Lim"
-              value={form.coachName || ''}
-              onChange={e => set('coachName', e.target.value)}
-            />
+            {(() => {
+              if (coachesLoading) {
+                return <select style={inp} disabled value=""><option value="">Loading coaches…</option></select>;
+              }
+              if (coachesError) {
+                return <select style={inp} disabled value=""><option value="">Failed to load coaches</option></select>;
+              }
+              if (coaches.length === 0) {
+                return <select style={inp} disabled value=""><option value="">No coaches in this branch</option></select>;
+              }
+              return (
+                <select style={inp} value={form.coachName || ''} onChange={e => set('coachName', e.target.value)}>
+                  <option value="">— None —</option>
+                  {!currentCoachInList && form.coachName && (
+                    <option value={form.coachName}>{form.coachName} (not in {branch})</option>
+                  )}
+                  {coaches.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              );
+            })()}
           </div>
           <div>
             <label style={lbl}>Enrollment Date</label>

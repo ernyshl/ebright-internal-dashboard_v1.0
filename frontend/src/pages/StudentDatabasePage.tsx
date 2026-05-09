@@ -78,6 +78,11 @@ export function StudentDatabasePage() {
   const faInvited = activeFiltered.reduce((acc, s) => acc + s.faAttended.filter(Boolean).length, 0);
   const faBacklog = faDue - faInvited;
 
+  // PCM stats — same logic as FA but using pcmAttended
+  const pcmDue     = activeFiltered.reduce((acc, s) => acc + s.pcmAttended.length, 0);
+  const pcmInvited = activeFiltered.reduce((acc, s) => acc + s.pcmAttended.filter(Boolean).length, 0);
+  const pcmBacklog = pcmDue - pcmInvited;
+
   // ── Add students (bulk insert) ────────────────────────────────────────────
   const addStudents = useCallback(async (newStudents: any[]) => {
     try {
@@ -213,16 +218,6 @@ export function StudentDatabasePage() {
     XLSX.writeFile(wb, `student-records-${branchFilter.toLowerCase()}-${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
-  const statCard = (label: string, val: any, sub: string, color: string, icon: string) => (
-    <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'var(--shadow-sm)' }}>
-      <div>
-        <p style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:0.5, margin:'0 0 4px' }}>{label}</p>
-        <p style={{ fontSize:24, fontWeight:800, color, margin:0 }}>{val}<span style={{ fontSize:14, fontWeight:500, color:'var(--muted)' }}>{sub}</span></p>
-      </div>
-      <div style={{ width:40, height:40, borderRadius:'50%', background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{icon}</div>
-    </div>
-  );
-
   return (
     <div className="dashboardPage">
       {/* Header */}
@@ -251,14 +246,36 @@ export function StudentDatabasePage() {
         </div>
       )}
 
-      {/* Summary Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:16 }}>
-        {statCard('FA Invited', faInvited, `/${faDue}`, '#4f46e5', '🎓')}
-        {statCard('FA Due', faDue, '', '#8b5cf6', '📅')}
-        {statCard('FA Backlog', faBacklog, `/${faDue}`, '#ef4444', '📋')}
-        {statCard('Total Students', students.length, '', '#6366f1', '👥')}
-        {statCard('Total Active', students.filter(s=>s.status==='Active').length, ' active', '#10b981', '✅')}
-      </div>
+      {/* Summary Stats — left side panel (Students/Active) + right detail grid (FA/PCM rows) */}
+      {(() => {
+        const totalStudents = students.length;
+        const totalActive   = students.filter(s => s.status === 'Active').length;
+        const statCard = (label: string, val: any, sub: string, color: string, icon: string) => (
+          <div style={{ background:'var(--panel)', border:'1.5px solid #cbd5e1', borderRadius:12, padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', boxShadow:'var(--shadow-sm)' }}>
+            <div>
+              <p style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:0.5, margin:'0 0 4px' }}>{label}</p>
+              <p style={{ fontSize:24, fontWeight:800, color, margin:0 }}>{val}<span style={{ fontSize:14, fontWeight:500, color:'var(--muted)' }}>{sub}</span></p>
+            </div>
+            <div style={{ width:40, height:40, borderRadius:'50%', background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{icon}</div>
+          </div>
+        );
+        return (
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(180px, 220px) 1fr', gap:12, marginBottom:16 }}>
+            <div style={{ display:'grid', gridTemplateRows:'1fr 1fr', gap:12 }}>
+              {statCard('Total Students', totalStudents, '',         '#6366f1', '👥')}
+              {statCard('Total Active',   totalActive,   ' active',  '#10b981', '✅')}
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gridTemplateRows:'1fr 1fr', gap:12 }}>
+              {statCard('FA Invited',   faInvited,  `/${faDue}`,  '#4f46e5', '🎓')}
+              {statCard('FA Due',       faDue,      '',           '#8b5cf6', '📅')}
+              {statCard('FA Backlog',   faBacklog,  `/${faDue}`,  '#ef4444', '📋')}
+              {statCard('PCM Invited',  pcmInvited, `/${pcmDue}`, '#0ea5e9', '🧪')}
+              {statCard('PCM Due',      pcmDue,     '',           '#06b6d4', '📅')}
+              {statCard('PCM Backlog',  pcmBacklog, `/${pcmDue}`, '#f97316', '📋')}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Filters: Branch + Search */}
       <div style={{ background:'var(--panel)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>

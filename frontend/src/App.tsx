@@ -33,6 +33,7 @@ import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
 import { HrStaffListPage } from './pages/HrStaffListPage';
 import { FaDashboardPage } from './pages/FaDashboardPage';
 import { FaDashboardTestingPage } from './pages/FaDashboardTestingPage';
+import { PcmDashboardPage } from './pages/PcmDashboardPage';
 import { HrMcPage } from './pages/HrMcPage';
 import { EventMktDashboardPage } from './pages/EventMktDashboardPage';
 import { AuditLogPage } from './pages/AuditLogPage';
@@ -69,6 +70,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/fa-dashboard" element={<FaDashboardPage />} />
         <Route path="/fa-dashboard-testing" element={<FaDashboardTestingPage />} />
+        <Route path="/pcm-dashboard" element={<PcmDashboardPage />} />
         <Route path="/okr-preview" element={<OkrAttendancePage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardHomePage />} />
