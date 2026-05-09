@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { BRANCHES } from '../lib/studentTypes';
 import { apiFetch } from '../lib/api';
@@ -26,6 +26,7 @@ type CoachRow = {
   contract: string | null;
   status: string | null;
   programs: string[];
+  completed_programs: string[];
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -58,6 +59,42 @@ export function CoachBmPerformancePage() {
     staleTime: 2 * 60 * 1000,
   });
 
+  const queryClient = useQueryClient();
+
+  const toggleCompletion = useMutation({
+    mutationFn: ({ id, program, completed }: { id: number; program: string; completed: boolean }) =>
+      apiFetch(`/api/coach-bm-performance/${id}/completion`, {
+        method: 'PUT',
+        body: { program, completed },
+      }),
+    onMutate: async ({ id, program, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
+      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
+      const previous = queryClient.getQueryData<any>(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          records: previous.records.map((r: CoachRow) => {
+            if (r.id !== id) return r;
+            const set = new Set(r.completed_programs);
+            if (completed) set.add(program); else set.delete(program);
+            return { ...r, completed_programs: Array.from(set) };
+          }),
+        });
+      }
+      return { previous, queryKey };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous && ctx?.queryKey) {
+        queryClient.setQueryData(ctx.queryKey, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformanceStats'] });
+    },
+  });
+
   const records: CoachRow[] = data?.records || [];
   const total: number = data?.total || 0;
   const totalPages: number = data?.totalPages || 1;
@@ -74,12 +111,20 @@ export function CoachBmPerformancePage() {
     </div>
   );
 
-  const ccpCount   = stats?.ccp             ?? 0;
-  const wtCount    = stats?.weekly_training ?? 0;
-  const tmCount    = stats?.toastmasters    ?? 0;
-  const tprrCount  = stats?.tprr            ?? 0;
-  const atclCount  = stats?.atcl_diploma    ?? 0;
-  const statsTotal = stats?.total           ?? 0;
+  const assigned  = stats?.assigned  ?? {};
+  const completed = stats?.completed ?? {};
+
+  const ccpCount      = completed.ccp             ?? 0;
+  const wtCount       = completed.weekly_training ?? 0;
+  const tmCount       = completed.toastmasters    ?? 0;
+  const tprrCount     = completed.tprr            ?? 0;
+  const atclCount     = completed.atcl_diploma    ?? 0;
+
+  const ccpAssigned   = assigned.ccp              ?? 0;
+  const wtAssigned    = assigned.weekly_training  ?? 0;
+  const tmAssigned    = assigned.toastmasters     ?? 0;
+  const tprrAssigned  = assigned.tprr             ?? 0;
+  const atclAssigned  = assigned.atcl_diploma     ?? 0;
 
   return (
     <div className="dashboardPage">
@@ -101,11 +146,11 @@ export function CoachBmPerformancePage() {
       )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12, marginBottom:16 }}>
-        {statCard('CCP',             ccpCount,  `/${statsTotal}`, '#0ea5e9', '📘')}
-        {statCard('Weekly Training', wtCount,   `/${statsTotal}`, '#4f46e5', '🏋️')}
-        {statCard('Toastmasters',    tmCount,   `/${statsTotal}`, '#10b981', '🎤')}
-        {statCard('TPRR',            tprrCount, `/${statsTotal}`, '#f59e0b', '🗣️')}
-        {statCard('ATCL Diploma',    atclCount, `/${statsTotal}`, '#8b5cf6', '🎓')}
+        {statCard('CCP',             ccpCount,  `/${ccpAssigned}`,  '#0ea5e9', '📘')}
+        {statCard('Weekly Training', wtCount,   `/${wtAssigned}`,   '#4f46e5', '🏋️')}
+        {statCard('Toastmasters',    tmCount,   `/${tmAssigned}`,   '#10b981', '🎤')}
+        {statCard('TPRR',            tprrCount, `/${tprrAssigned}`, '#f59e0b', '🗣️')}
+        {statCard('ATCL Diploma',    atclCount, `/${atclAssigned}`, '#8b5cf6', '🎓')}
       </div>
 
       {/* Filters */}
@@ -180,16 +225,25 @@ export function CoachBmPerformancePage() {
                       {r.programs.length === 0 ? (
                         <span style={{ color:'var(--muted)' }}>—</span>
                       ) : (
-                        <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                           {r.programs.map(p => {
                             const color = PROGRAM_COLORS[p] || '#6366f1';
+                            const done = r.completed_programs.includes(p);
                             return (
-                              <span key={p} style={{
-                                fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600,
-                                background: `${color}18`,
-                                color,
-                                alignSelf:'flex-start',
-                              }}>{p}</span>
+                              <label key={p} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={done}
+                                  onChange={() => toggleCompletion.mutate({ id: r.id, program: p, completed: !done })}
+                                  style={{ accentColor: color, cursor:'pointer' }}
+                                />
+                                <span style={{
+                                  fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600,
+                                  background: `${color}18`,
+                                  color,
+                                  alignSelf:'flex-start',
+                                }}>{p}</span>
+                              </label>
                             );
                           })}
                         </div>
