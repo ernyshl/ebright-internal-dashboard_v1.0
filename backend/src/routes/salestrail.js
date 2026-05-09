@@ -6,16 +6,18 @@ const router = express.Router();
 
 router.get('/ranking', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing', 'tv']), async (req, res, next) => {
   try {
-    const { date_from, date_to } = req.query;
+    const { date_from, date_to, rolling_days } = req.query;
 
     let dateFilter = '';
     const params = [];
 
-    if (date_from && date_to) {
+    if (rolling_days) {
+      params.push(parseInt(rolling_days));
+      dateFilter = `AND start_time_utc >= NOW() - ($1 || ' days')::INTERVAL`;
+    } else if (date_from && date_to) {
       params.push(date_from, date_to);
       dateFilter = `AND call_date BETWEEN $1 AND $2`;
     } else {
-      // Default: this month
       dateFilter = `AND DATE_TRUNC('month', call_date) = DATE_TRUNC('month', CURRENT_DATE)`;
     }
 

@@ -5,27 +5,28 @@ import { BackButton } from '../components/BackButton';
 
 type Period = 'today' | 'yesterday' | 'this_week' | 'this_month' | 'last_7' | 'last_30';
 
-function getPeriodDates(period: Period): { date_from: string; date_to: string } {
+function getPeriodQuery(period: Period): string {
   const now = new Date();
   const fmt = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const today = fmt(now);
   const yesterday = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  // Sunday-start week (matches Salestrail)
   const dow = now.getDay();
-  const weekStart = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (dow === 0 ? -6 : 1 - dow)));
+  const weekStart = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow));
   const monthStart = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
-  const last7 = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
-  const last30 = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29));
 
-  const map: Record<Period, { date_from: string; date_to: string }> = {
-    today:      { date_from: today,     date_to: today },
-    yesterday:  { date_from: yesterday, date_to: yesterday },
-    this_week:  { date_from: weekStart, date_to: today },
+  if (period === 'last_7')  return `rolling_days=7`;
+  if (period === 'last_30') return `rolling_days=30`;
+
+  const dateMap: Partial<Record<Period, { date_from: string; date_to: string }>> = {
+    today:      { date_from: today,      date_to: today },
+    yesterday:  { date_from: yesterday,  date_to: yesterday },
+    this_week:  { date_from: weekStart,  date_to: today },
     this_month: { date_from: monthStart, date_to: today },
-    last_7:     { date_from: last7,     date_to: today },
-    last_30:    { date_from: last30,    date_to: today },
   };
-  return map[period];
+  const d = dateMap[period]!;
+  return `date_from=${d.date_from}&date_to=${d.date_to}`;
 }
 
 function fmtDuration(secs: number): string {
@@ -68,13 +69,13 @@ interface RankRow {
 }
 
 export function SalestrailPage() {
-  const [period, setPeriod] = useState<Period>('this_month');
+  const [period, setPeriod] = useState<Period>('today');
 
-  const { date_from, date_to } = getPeriodDates(period);
+  const periodQuery = getPeriodQuery(period);
 
   const q = useQuery({
-    queryKey: ['salestrail', 'ranking', date_from, date_to],
-    queryFn: () => apiFetch(`/api/salestrail/ranking?date_from=${date_from}&date_to=${date_to}`),
+    queryKey: ['salestrail', 'ranking', periodQuery],
+    queryFn: () => apiFetch(`/api/salestrail/ranking?${periodQuery}`),
     refetchInterval: 120_000,
   });
 
