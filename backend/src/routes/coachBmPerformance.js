@@ -202,6 +202,42 @@ router.get('/stats', async (req, res, next) => {
   } catch (err) { return next(err); }
 });
 
+// GET /api/coach-bm-performance/coaches?branch=KTG
+//
+// Lookup endpoint for the Edit Student modal's coach dropdown.
+// Returns { coaches: [{ id, name }] } for active coaches/BMs in the
+// requested branch, sorted by name. Reuses the same name_lookup CTE
+// as GET / to resolve stub-row names.
+router.get('/coaches', async (req, res, next) => {
+  try {
+    const branch = (req.query.branch || '').toString().trim();
+    if (!branch) {
+      return res.status(400).json({ error: 'branch required' });
+    }
+
+    const { rows } = await pool.query(
+      `WITH name_lookup AS (
+         SELECT DISTINCT ON ("nickname") "nickname", "name"
+         FROM hrfs."BranchStaff"
+         WHERE "name" IS NOT NULL AND TRIM("name") <> ''
+           AND "nickname" IS NOT NULL AND TRIM("nickname") <> ''
+         ORDER BY "nickname", "createdAt" DESC
+       )
+       SELECT bs.id,
+              COALESCE(NULLIF(TRIM(bs."name"), ''), nl."name") AS name
+       FROM hrfs."BranchStaff" bs
+       LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
+       WHERE (bs."role" ILIKE '%coach%' OR bs."role" = 'BM')
+         AND bs."status" = 'Active'
+         AND bs."branch" = $1
+         AND COALESCE(NULLIF(TRIM(bs."name"), ''), nl."name") IS NOT NULL
+       ORDER BY name ASC`,
+      [branch]
+    );
+
+    return res.json({ coaches: rows });
+  } catch (err) { return next(err); }
+});
 
 // PUT /api/coach-bm-performance/:branchStaffId/completion
 //
