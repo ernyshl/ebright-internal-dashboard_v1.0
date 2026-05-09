@@ -41,7 +41,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         SELECT
           CASE
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Bandar Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
+              'Bandar Rimbayu','Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
             ]) THEN 'Region A'
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
               'Danau Kota','Kota Damansara','Ampang','Sri Petaling',
@@ -126,7 +126,11 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
         COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
+        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days,
+        COUNT(*) FILTER (WHERE ${asDate} = ${today} AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_today,
+        COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1 AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_yesterday,
+        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days' AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_7_days,
+        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days' AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_30_days
       FROM master_leads_powerbi
       WHERE sibling_index = 1;
     `;
