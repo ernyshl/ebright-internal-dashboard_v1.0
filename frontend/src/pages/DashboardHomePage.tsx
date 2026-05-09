@@ -30,6 +30,7 @@ export function DashboardHomePage() {
         { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations_dept' },
         { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations_dept' },
         { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations_dept' },
+        { label: 'Salestrail', path: '/salestrail', dashboard: 'operations_dept' },
       ]
     },
     {
@@ -175,7 +176,6 @@ export function DashboardHomePage() {
         { label: 'Branch Performance', path: '/branch-performance', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
         { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
-        { label: 'Salestrail', path: '/salestrail', dashboard: 'testing' },
       ]
     },
     {

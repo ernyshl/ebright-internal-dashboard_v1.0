@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
@@ -70,6 +71,7 @@ interface RankRow {
 
 export function SalestrailPage() {
   const [period, setPeriod] = useState<Period>('today');
+  const navigate = useNavigate();
 
   const periodQuery = getPeriodQuery(period);
 
@@ -220,7 +222,10 @@ export function SalestrailPage() {
                           </td>
                           <td>
                             <div className="branchName" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <span>{row.user_name}</span>
+                              <span
+                                style={{ cursor: 'pointer', color: 'var(--accent, #3b82f6)', textDecoration: 'underline' }}
+                                onClick={() => navigate(`/salestrail/branch/${row.user_id}?period=${encodeURIComponent(periodQuery)}&name=${encodeURIComponent(row.user_name)}`)}
+                              >{row.user_name}</span>
                               <div style={{ background: 'var(--surface-muted, #e2e8f0)', borderRadius: 4, height: 4, width: '100%', maxWidth: 120 }}>
                                 <div style={{ background: 'var(--accent, #3b82f6)', borderRadius: 4, height: 4, width: `${barPct}%` }} />
                               </div>
