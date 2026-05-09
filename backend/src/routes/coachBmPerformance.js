@@ -7,6 +7,11 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireDashboard('student_db'));
 
+// Server-side allowlist of program names the completion endpoint will
+// accept. Keep in sync with the labels emitted by the GET / handler's
+// CASE expression and with the frontend's PROGRAM_COLORS map keys.
+const VALID_PROGRAMS = new Set(['CCP', 'Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']);
+
 // GET /api/coach-bm-performance
 //
 // Returns active coaches and BMs from hrfs."BranchStaff" with each row's
@@ -147,5 +152,82 @@ router.get('/stats', async (req, res, next) => {
   } catch (err) { return next(err); }
 });
 
+
+// PUT /api/coach-bm-performance/:branchStaffId/completion
+//
+// Body: { program: string, completed: boolean }
+//
+// `program` must be one of VALID_PROGRAMS AND currently assigned to the
+// coach (the same contract → programs derivation that GET / uses). The
+// assignment check prevents writing a completion for a program the
+// coach isn't actually on (e.g. ATCL Diploma for a 9M coach).
+//
+// completed=true  → INSERT ... ON CONFLICT DO UPDATE (refresh timestamp)
+// completed=false → DELETE (idempotent; missing row is fine)
+router.put('/:branchStaffId/completion', async (req, res, next) => {
+  try {
+    const branchStaffId = parseInt(req.params.branchStaffId, 10);
+    if (!Number.isInteger(branchStaffId) || branchStaffId <= 0) {
+      return res.status(400).json({ error: 'Invalid branchStaffId' });
+    }
+
+    const { program, completed } = req.body || {};
+    if (!VALID_PROGRAMS.has(program)) {
+      return res.status(400).json({ error: 'Invalid program' });
+    }
+    if (typeof completed !== 'boolean') {
+      return res.status(400).json({ error: 'completed must be boolean' });
+    }
+
+    // Guard: confirm the staff row exists, is Active coach/BM, and the
+    // requested program is in their currently assigned set. Re-runs the
+    // same CASE expression as GET /.
+    const { rows: assignmentRows } = await pool.query(
+      `SELECT
+         CASE
+           WHEN bs."contract" IS NULL OR TRIM(bs."contract") = '' THEN ARRAY[]::text[]
+           ELSE
+             ARRAY['CCP'] ||
+             CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
+               WHEN 15 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR']
+               WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
+               ELSE ARRAY[]::text[]
+             END
+         END AS programs
+       FROM hrfs."BranchStaff" bs
+       WHERE bs.id = $1
+         AND bs."status" = 'Active'
+         AND (bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
+      [branchStaffId]
+    );
+    if (!assignmentRows.length) {
+      return res.status(404).json({ error: 'Coach or BM not found' });
+    }
+    if (!assignmentRows[0].programs.includes(program)) {
+      return res.status(422).json({ error: 'Program not assigned to this coach' });
+    }
+
+    const userId = req.user.sub;
+    if (completed) {
+      await pool.query(
+        `INSERT INTO coach_program_completion
+           (branch_staff_id, program, completed_at, completed_by)
+         VALUES ($1, $2, NOW(), $3)
+         ON CONFLICT (branch_staff_id, program) DO UPDATE SET
+           completed_at = NOW(),
+           completed_by = EXCLUDED.completed_by`,
+        [branchStaffId, program, userId]
+      );
+    } else {
+      await pool.query(
+        `DELETE FROM coach_program_completion
+         WHERE branch_staff_id = $1 AND program = $2`,
+        [branchStaffId, program]
+      );
+    }
+
+    return res.json({ ok: true, branch_staff_id: branchStaffId, program, completed });
+  } catch (err) { return next(err); }
+});
 
 module.exports = { coachBmPerformanceRouter: router };
