@@ -36,6 +36,7 @@ import { FaDashboardTestingPage } from './pages/FaDashboardTestingPage';
 import { PcmDashboardPage } from './pages/PcmDashboardPage';
 import { HrMcPage } from './pages/HrMcPage';
 import { EventMktDashboardPage } from './pages/EventMktDashboardPage';
+import { HrEventDashboardPage } from './pages/HrEventDashboardPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { HrAttendancePage } from './pages/HrAttendancePage';
 import { HrHiringPage } from './pages/HrHiringPage';
@@ -85,6 +86,9 @@ export default function App() {
           } />
           <Route path="/event-mkt-dashboard" element={
             <RequirePermission dashboard="event_mkt"><EventMktDashboardPage /></RequirePermission>
+          } />
+          <Route path="/hr-event-dashboard" element={
+            <RequirePermission dashboard="hr"><HrEventDashboardPage /></RequirePermission>
           } />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leads-centre" element={
