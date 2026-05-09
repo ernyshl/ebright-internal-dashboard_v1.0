@@ -46,6 +46,14 @@ jobs:
             grep -q '^ARCHIVED_TABLE=' backend/.env \
               && sed -i 's|^ARCHIVED_TABLE=.*|ARCHIVED_TABLE=archived_students_testing|' backend/.env \
               || echo "ARCHIVED_TABLE=archived_students_testing" >> backend/.env
+            # Pin staging FA snapshot table to testing variant so it never overwrites prod snapshots
+            grep -q '^FA_SNAPSHOT_TABLE=' backend/.env \
+              && sed -i 's|^FA_SNAPSHOT_TABLE=.*|FA_SNAPSHOT_TABLE=fa_backlog_snapshots_testing|' backend/.env \
+              || echo "FA_SNAPSHOT_TABLE=fa_backlog_snapshots_testing" >> backend/.env
+            # Pin staging PCM snapshot table to testing variant
+            grep -q '^PCM_SNAPSHOT_TABLE=' backend/.env \
+              && sed -i 's|^PCM_SNAPSHOT_TABLE=.*|PCM_SNAPSHOT_TABLE=pcm_backlog_snapshots_testing|' backend/.env \
+              || echo "PCM_SNAPSHOT_TABLE=pcm_backlog_snapshots_testing" >> backend/.env
             # INV_DATABASE_URL is required by env.js boot validation; keep in sync if Dina provides a real inventory DB
             grep -q '^INV_DATABASE_URL=' backend/.env \
               || echo "INV_DATABASE_URL=postgresql://optidept:ebrightoptidept2025@103.209.156.174:5433/ebrightleads_db" >> backend/.env

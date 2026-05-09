@@ -75,6 +75,8 @@ jobs:
             # Defensive: NEVER let prod point at testing tables, even if someone copy-pasted staging .env by mistake
             sed -i '/^STUDENT_TABLE=/d' "$APP_DIR/backend/.env"
             sed -i '/^ARCHIVED_TABLE=/d' "$APP_DIR/backend/.env"
+            sed -i '/^FA_SNAPSHOT_TABLE=/d' "$APP_DIR/backend/.env"
+            sed -i '/^PCM_SNAPSHOT_TABLE=/d' "$APP_DIR/backend/.env"
 
             # Step 5: Rebuild backend + nginx
             cd "$APP_DIR"
