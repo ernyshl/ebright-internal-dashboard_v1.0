@@ -21,6 +21,7 @@ type CoachRow = {
   id: number;
   name: string;
   gender: string | null;
+  phone: string | null;
   branch: string | null;
   start_date: string | null;
   contract: string | null;
@@ -193,14 +194,14 @@ export function CoachBmPerformancePage() {
             <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                  {['No.','Name','Gender','Branch','Start Date','Contract Period','Programs','No. of Lessons','No. of Students'].map(h => (
+                  {['No.','Name','Gender','Phone','Branch','Start Date','Contract Period','Programs','No. of Lessons','No. of Students'].map(h => (
                     <th key={h} style={th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={9} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                  <tr><td colSpan={10} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                       <span style={{ fontSize:36 }}>🎯</span>
                       <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
@@ -218,6 +219,7 @@ export function CoachBmPerformancePage() {
                       </div>
                     </td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{r.gender || '—'}</td>
+                    <td style={{ ...td, color: r.phone ? 'var(--text)' : 'var(--muted)', whiteSpace:'nowrap' }}>{r.phone || '—'}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{r.branch || '—'}</span></td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.start_date)}</td>
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>

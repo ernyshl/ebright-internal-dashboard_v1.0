@@ -73,6 +73,7 @@ router.get('/', async (req, res, next) => {
          SELECT bs.id,
                 COALESCE(NULLIF(TRIM(bs."name"), ''), nl."name") AS name,
                 bs."gender",
+                bs."phone",
                 bs."branch",
                 bs.start_date,
                 bs."contract",
