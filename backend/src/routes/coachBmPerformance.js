@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { requireDashboard } = require('../middleware/dashboards');
+const { getTableNames } = require('../utils/tableNames');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -29,6 +30,7 @@ const VALID_PROGRAMS = new Set(['CCP', 'Weekly Training', 'Toastmasters', 'TPRR'
 router.get('/', async (req, res, next) => {
   try {
     const { search = '', branch = '', page = 1, limit = 50 } = req.query;
+    const { students } = getTableNames();
     const conditions = [
       `(bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
       `bs."status" = 'Active'`,
@@ -69,7 +71,12 @@ router.get('/', async (req, res, next) => {
         params
       ),
       pool.query(
-        `${nameLookupCte}
+        `${nameLookupCte},
+         branch_student_counts AS (
+           SELECT branch, COUNT(*)::int AS cnt
+           FROM ${students}
+           GROUP BY branch
+         )
          SELECT bs.id,
                 COALESCE(NULLIF(TRIM(bs."name"), ''), nl."name") AS name,
                 bs."gender",
@@ -93,9 +100,11 @@ router.get('/', async (req, res, next) => {
                      FROM coach_program_completion cpc
                     WHERE cpc.branch_staff_id = bs.id),
                   ARRAY[]::text[]
-                ) AS completed_programs
+                ) AS completed_programs,
+                COALESCE(bsc.cnt, 0)::int AS student_count
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
+         LEFT JOIN branch_student_counts bsc ON bsc.branch = bs."branch"
          ${where}
          ORDER BY name ASC
          LIMIT $${idx} OFFSET $${idx + 1}`,

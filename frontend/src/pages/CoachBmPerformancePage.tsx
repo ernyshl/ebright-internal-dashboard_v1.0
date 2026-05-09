@@ -28,6 +28,7 @@ type CoachRow = {
   status: string | null;
   programs: string[];
   completed_programs: string[];
+  student_count: number;
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -252,7 +253,7 @@ export function CoachBmPerformancePage() {
                       )}
                     </td>
                     <td style={{ ...td, color:'var(--muted)' }}>—</td>
-                    <td style={{ ...td, color:'var(--muted)' }}>—</td>
+                    <td style={{ ...td, color: r.student_count > 0 ? 'var(--text)' : 'var(--muted)', whiteSpace:'nowrap' }}>{r.student_count}</td>
                   </tr>
                 ))}
               </tbody>
