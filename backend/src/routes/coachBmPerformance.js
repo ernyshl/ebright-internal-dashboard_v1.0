@@ -81,7 +81,13 @@ router.get('/', async (req, res, next) => {
                       WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
                       ELSE ARRAY[]::text[]
                     END
-                END AS programs
+                END AS programs,
+                COALESCE(
+                  (SELECT array_agg(cpc.program ORDER BY cpc.program)
+                     FROM coach_program_completion cpc
+                    WHERE cpc.branch_staff_id = bs.id),
+                  ARRAY[]::text[]
+                ) AS completed_programs
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
          ${where}
