@@ -19,6 +19,7 @@ const { telegramBotRouter } = require('./routes/telegramBot');
 const { hrStaffMovementsRouter } = require('./routes/hrStaffMovements');
 const { hrMcRouter } = require('./routes/hrMc');
 const { eventMktRouter } = require('./routes/eventMkt');
+const { hrEventRouter } = require('./routes/hrEvent');
 const { auditLogRouter, writeLog } = require('./routes/auditLog');
 const { hrAttendanceRouter } = require('./routes/hrAttendance');
 const { hrHiringRouter } = require('./routes/hrHiring');
@@ -154,6 +155,7 @@ function createApp() {
   app.use('/api/hr-mc', applyRoleBasedRateLimit, hrMcRouter);
   app.use('/api/hr-annual-leave', applyRoleBasedRateLimit, hrAnnualLeaveRouter);
   app.use('/api/event-mkt', applyRoleBasedRateLimit, eventMktRouter);
+  app.use('/api/hr-event', applyRoleBasedRateLimit, hrEventRouter);
   app.use('/api/audit-log', applyRoleBasedRateLimit, auditLogRouter);
   app.use('/api/hr-attendance', applyRoleBasedRateLimit, hrAttendanceRouter);
   app.use('/api/hr-hiring', applyRoleBasedRateLimit, hrHiringRouter);

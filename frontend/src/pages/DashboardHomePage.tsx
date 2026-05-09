@@ -103,6 +103,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'HR Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr' },
         { label: 'HR Overview Dashboard', path: '/hr-onb-ofb', dashboard: 'hr' },
+        { label: 'HR Event Dashboard', path: '/hr-event-dashboard', dashboard: 'hr' },
       ]
     },
     {
