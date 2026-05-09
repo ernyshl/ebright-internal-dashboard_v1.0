@@ -62,6 +62,7 @@ interface RankRow {
   total_calls: string;
   answered: string;
   missed: string;
+  no_answer: string;
   outbound: string;
   inbound: string;
   total_duration_sec: string;
@@ -85,6 +86,7 @@ export function SalestrailPage() {
   const totalCalls = rows.reduce((s, r) => s + parseInt(r.total_calls), 0);
   const totalAnswered = rows.reduce((s, r) => s + parseInt(r.answered), 0);
   const totalMissed = rows.reduce((s, r) => s + parseInt(r.missed), 0);
+  const totalNoAnswer = rows.reduce((s, r) => s + parseInt(r.no_answer), 0);
   const totalDuration = rows.reduce((s, r) => s + parseInt(r.total_duration_sec || '0'), 0);
   const overallAnswerRate = totalCalls > 0 ? ((totalAnswered / totalCalls) * 100).toFixed(1) : '0.0';
 
@@ -143,10 +145,17 @@ export function SalestrailPage() {
               </div>
             </div>
             <div className="statCard" style={{ '--stat-color': '#ef4444' } as React.CSSProperties}>
-              <div className="statCardIcon">❌</div>
+              <div className="statCardIcon">📵</div>
               <div className="statCardContent">
                 <div className="statCardValue">{totalMissed.toLocaleString()}</div>
-                <div className="statCardTitle">Missed</div>
+                <div className="statCardTitle">Missed (BM)</div>
+              </div>
+            </div>
+            <div className="statCard" style={{ '--stat-color': '#f97316' } as React.CSSProperties}>
+              <div className="statCardIcon">🔇</div>
+              <div className="statCardContent">
+                <div className="statCardValue">{totalNoAnswer.toLocaleString()}</div>
+                <div className="statCardTitle">No Answer (Customer)</div>
               </div>
             </div>
             <div className="statCard" style={{ '--stat-color': '#f59e0b' } as React.CSSProperties}>
@@ -180,7 +189,8 @@ export function SalestrailPage() {
                       <th>Branch</th>
                       <th className="textRight">Total Calls</th>
                       <th className="textRight">Answered</th>
-                      <th className="textRight">Missed</th>
+                      <th className="textRight">Missed (BM)</th>
+                      <th className="textRight">No Answer (Cust)</th>
                       <th className="textRight">Answer Rate</th>
                       <th className="textRight">Outbound</th>
                       <th className="textRight">Inbound</th>
@@ -194,6 +204,7 @@ export function SalestrailPage() {
                       const total = parseInt(row.total_calls);
                       const answered = parseInt(row.answered);
                       const missed = parseInt(row.missed);
+                      const noAnswer = parseInt(row.no_answer);
                       const outbound = parseInt(row.outbound);
                       const inbound = parseInt(row.inbound);
                       const avgSec = parseInt(row.avg_duration_sec || '0');
@@ -233,7 +244,8 @@ export function SalestrailPage() {
                           </td>
                           <td className="textRight fontBold">{total}</td>
                           <td className="textRight" style={{ color: '#10b981' }}>{answered}</td>
-                          <td className="textRight" style={{ color: missed > answered ? '#ef4444' : undefined }}>{missed}</td>
+                          <td className="textRight" style={{ color: missed > 0 ? '#ef4444' : undefined }}>{missed}</td>
+                          <td className="textRight" style={{ color: noAnswer > 0 ? '#f97316' : undefined }}>{noAnswer}</td>
                           <td className="textRight">
                             <span style={{
                               fontWeight: 600,

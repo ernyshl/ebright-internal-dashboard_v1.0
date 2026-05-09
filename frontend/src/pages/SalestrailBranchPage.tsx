@@ -69,7 +69,8 @@ export function SalestrailBranchPage() {
 
   const calls: CallRow[] = q.data?.calls || [];
   const answered = calls.filter(c => c.answered).length;
-  const missed = calls.filter(c => !c.answered).length;
+  const missed = calls.filter(c => !c.answered && c.inbound).length;
+  const noAnswer = calls.filter(c => !c.answered && !c.inbound).length;
   const outbound = calls.filter(c => !c.inbound).length;
   const inbound = calls.filter(c => c.inbound).length;
   const withRecording = calls.filter(c => c.recording_uri).length;
@@ -115,10 +116,17 @@ export function SalestrailBranchPage() {
               </div>
             </div>
             <div className="statCard" style={{ '--stat-color': '#ef4444' } as React.CSSProperties}>
-              <div className="statCardIcon">❌</div>
+              <div className="statCardIcon">📵</div>
               <div className="statCardContent">
                 <div className="statCardValue">{missed}</div>
-                <div className="statCardTitle">Missed</div>
+                <div className="statCardTitle">Missed (BM)</div>
+              </div>
+            </div>
+            <div className="statCard" style={{ '--stat-color': '#f97316' } as React.CSSProperties}>
+              <div className="statCardIcon">🔇</div>
+              <div className="statCardContent">
+                <div className="statCardValue">{noAnswer}</div>
+                <div className="statCardTitle">No Answer (Customer)</div>
               </div>
             </div>
             <div className="statCard" style={{ '--stat-color': '#f59e0b' } as React.CSSProperties}>
