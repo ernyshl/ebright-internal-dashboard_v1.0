@@ -24,6 +24,8 @@ const { hrAttendanceRouter } = require('./routes/hrAttendance');
 const { hrHiringRouter } = require('./routes/hrHiring');
 const { hrAnnualLeaveRouter } = require('./routes/hrAnnualLeave');
 const { faDashboardRouter } = require('./routes/faDashboard');
+const { faSnapshotsRouter } = require('./routes/faSnapshots');
+const { pcmSnapshotsRouter } = require('./routes/pcmSnapshots');
 const { hrfsRouter } = require('./routes/hrfs');
 const { stAttendanceRouter } = require('./routes/stAttendance');
 const { stStaffRouter } = require('./routes/stStaff');
@@ -35,6 +37,7 @@ const { studentAttendanceRouter } = require('./routes/studentAttendance');
 const { guardianBackfillRouter } = require('./routes/guardianBackfill');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
 const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
+const { salestrailRouter } = require('./routes/salestrail');
 
 const jwt = require('jsonwebtoken');
 
@@ -156,6 +159,8 @@ function createApp() {
   app.use('/api/hr-attendance', applyRoleBasedRateLimit, hrAttendanceRouter);
   app.use('/api/hr-hiring', applyRoleBasedRateLimit, hrHiringRouter);
   app.use('/api/fa-dashboard', applyRoleBasedRateLimit, faDashboardRouter);
+  app.use('/api/fa-snapshots', applyRoleBasedRateLimit, faSnapshotsRouter);
+  app.use('/api/pcm-snapshots', applyRoleBasedRateLimit, pcmSnapshotsRouter);
   app.use('/api/hrfs', applyRoleBasedRateLimit, hrfsRouter);
   app.use('/api/st-attendance', applyRoleBasedRateLimit, stAttendanceRouter);
   app.use('/api/st-staff', applyRoleBasedRateLimit, stStaffRouter);
@@ -167,6 +172,7 @@ function createApp() {
   app.use('/api/coach-bm-performance', applyRoleBasedRateLimit, coachBmPerformanceRouter);
   app.use('/api/guardian-backfill', applyRoleBasedRateLimit, guardianBackfillRouter);
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
+  app.use('/api/salestrail', applyRoleBasedRateLimit, salestrailRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
