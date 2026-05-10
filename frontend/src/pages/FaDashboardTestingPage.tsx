@@ -196,6 +196,10 @@ function CustomTooltip({ active, payload }: any) {
           <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.backlog}</strong>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+          <span style={{ color: 'rgba(255,255,255,0.65)' }}>Backlog %</span>
+          <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.active > 0 ? `${d.backlogPct}%` : '—'}</strong>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
           <span style={{ color: 'rgba(255,255,255,0.65)' }}>Baseline</span>
           <strong style={{ color: '#94a3b8' }}>{d.prev ?? '—'}</strong>
         </div>
@@ -288,14 +292,17 @@ export function FaDashboardTestingPage() {
 
   // Compute backlog from student records
   const branchData = useMemo(() => {
-    const map: Record<string, { code: string; active: number; invited: number; backlog: number }> = {};
-    BRANCH_LIST.forEach(code => { map[code] = { code, active: 0, invited: 0, backlog: 0 }; });
+    const map: Record<string, { code: string; active: number; invited: number; backlog: number; backlogPct: number }> = {};
+    BRANCH_LIST.forEach(code => { map[code] = { code, active: 0, invited: 0, backlog: 0, backlogPct: 0 }; });
     dbStudents.filter((s: any) => s.status === 'Active').forEach((s: any) => {
-      if (!map[s.branch]) map[s.branch] = { code: s.branch, active: 0, invited: 0, backlog: 0 };
+      if (!map[s.branch]) map[s.branch] = { code: s.branch, active: 0, invited: 0, backlog: 0, backlogPct: 0 };
       map[s.branch].active  += s.faAttended.length;
       map[s.branch].invited += s.faAttended.filter(Boolean).length;
     });
-    Object.values(map).forEach(b => { b.backlog = Math.max(0, b.active - b.invited); });
+    Object.values(map).forEach(b => {
+      b.backlog    = Math.max(0, b.active - b.invited);
+      b.backlogPct = b.active > 0 ? Math.min(100, Math.round((b.backlog / b.active) * 100)) : 0;
+    });
     return Object.values(map);
   }, [dbStudents]);
 
@@ -505,15 +512,19 @@ export function FaDashboardTestingPage() {
                 </div>
                 <ResponsiveContainer width="100%" height={560}>
                   <BarChart data={chartData} layout="vertical"
-                    margin={{ top: 0, right: 60, left: 8, bottom: 0 }} barCategoryGap="25%">
+                    margin={{ top: 0, right: 130, left: 8, bottom: 0 }} barCategoryGap="25%">
                     <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false}
+                    <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]}
+                      tickFormatter={(v: number) => `${v}%`}
+                      tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false}
                       axisLine={{ stroke: 'var(--border)' }} />
                     <YAxis dataKey="code" type="category"
                       tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }}
                       tickLine={false} axisLine={false} width={48} />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
-                    <Bar dataKey="backlog" maxBarSize={18} radius={[0, 4, 4, 0]}>
+                    {/* Gray "track" = FA Due baseline (full 100%); colored fill = backlog as % of FA Due */}
+                    <Bar dataKey="backlogPct" maxBarSize={18} radius={[0, 4, 4, 0]}
+                      background={{ fill: 'var(--border)' }}>
                       {chartData.map(entry => (
                         <Cell key={entry.code}
                           fill={filteredCodes && !filteredCodes.has(entry.code)
@@ -521,21 +532,26 @@ export function FaDashboardTestingPage() {
                             : getBacklogColor(entry.backlog, entry.active)} />
                       ))}
                       <LabelList content={(props: any) => {
-                        const { x, y, width, height, index } = props;
+                        const { y, height, index } = props;
                         if (index === undefined || !chartData[index]) return null;
                         const d = chartData[index];
-                        const cx = x + (width ?? 0) + 6;
+                        // Anchor labels to the END of the chart area, not the bar tip,
+                        // so they line up regardless of fill %.
+                        const cx = (props.viewBox?.x ?? 0) + (props.viewBox?.width ?? 0) + 6;
                         const cy = y + (height ?? 0) / 2 + 4;
                         const delta = d.delta ?? 0;
-                        if (delta === 0) return (
-                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} —</text>
+                        const labelText = d.active === 0
+                          ? '0/0'
+                          : `${d.backlog}/${d.active} (${d.backlogPct}%)`;
+                        if (delta === 0 || d.active === 0) return (
+                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{labelText} {d.active === 0 ? '' : '—'}</text>
                         );
                         const sign = delta > 0 ? '↓' : '↑';
                         const col  = delta > 0 ? '#16a34a' : '#dc2626';
                         return (
                           <g>
-                            <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{d.backlog} </text>
-                            <text x={cx + 24} y={cy} fontSize={10} fontWeight={800} fill={col}>{sign}{Math.abs(delta)}</text>
+                            <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{labelText} </text>
+                            <text x={cx + (labelText.length * 5.6)} y={cy} fontSize={10} fontWeight={800} fill={col}>{sign}{Math.abs(delta)}</text>
                           </g>
                         );
                       }} />
