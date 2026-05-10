@@ -8,6 +8,7 @@ const { startAmfSync } = require('./services/amfSync');
 const { getTableNames } = require('./utils/tableNames');
 const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
 const { startFinanceRenewalsRefreshJob } = require('./jobs/refreshFinanceRenewals');
+const { startDailySnapshotJob } = require('./jobs/dailySnapshotCron');
 
 async function runMigrations() {
   const { students: studentsTbl } = getTableNames();
@@ -188,6 +189,7 @@ async function start() {
   startStSync();
   startFinanceRefreshJob();
   startFinanceRenewalsRefreshJob();
+  startDailySnapshotJob();
 }
 
 // Don't let a transient DB blip (remote Postgres dropping an idle client, etc.)

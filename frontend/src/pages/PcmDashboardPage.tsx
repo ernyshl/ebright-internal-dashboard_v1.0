@@ -16,7 +16,7 @@ const GRADE_OPTIONS = ['G1','G2','G3','G4','G5','G6','G7','G8','GA1','GA2','GA3'
 type ComparisonKey = 'today' | 'yesterday' | 'lastWeek' | 'lastMonth' | 'custom';
 
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
 }
 
 function addDays(iso: string, n: number): string {
@@ -25,17 +25,15 @@ function addDays(iso: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function mondayOfISO(input?: string): string {
-  const d = input ? new Date(input + 'T00:00:00Z') : new Date();
-  const dow = d.getUTCDay();
-  const daysFromMonday = (dow + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - daysFromMonday);
-  return d.toISOString().slice(0, 10);
-}
-
-function firstOfMonthISO(input?: string): string {
-  const d = input ? new Date(input + 'T00:00:00Z') : new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+function sameDateLastMonth(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  const day  = d.getUTCDate();
+  const prev = d.getUTCMonth() - 1;
+  const year = prev < 0 ? d.getUTCFullYear() - 1 : d.getUTCFullYear();
+  const month = (prev + 12) % 12;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const targetDay = Math.min(day, lastDay);
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
 }
 
 function formatPretty(iso: string): string {
@@ -49,8 +47,8 @@ function isValidIsoDate(s: string | null | undefined): s is string {
 function comparisonDate(key: ComparisonKey, today: string, custom: string | null): string | null {
   if (key === 'today')      return null;
   if (key === 'yesterday')  return addDays(today, -1);
-  if (key === 'lastWeek')   return mondayOfISO(today);
-  if (key === 'lastMonth')  return firstOfMonthISO(today);
+  if (key === 'lastWeek')   return addDays(today, -7);
+  if (key === 'lastMonth')  return sameDateLastMonth(today);
   if (key === 'custom')     return isValidIsoDate(custom) ? custom : null;
   return null;
 }
@@ -255,16 +253,8 @@ export function PcmDashboardPage() {
     }
   }, []);
 
-  // Auto-capture today's PCM snapshot once per day (idempotent on the backend).
-  useEffect(() => {
-    const stamp = `pcm_snapshot_captured_${today}`;
-    if (localStorage.getItem(stamp)) return;
-    apiFetch('/api/pcm-snapshots/capture', { method: 'POST' })
-      .then(() => { localStorage.setItem(stamp, '1'); })
-      .catch(() => {});
-  }, [today]);
-
   // Earliest snapshot date — used in "no comparison data" message.
+  // (Daily snapshots now run via backend cron at 23:59 Asia/Kuala_Lumpur.)
   useEffect(() => {
     apiFetch('/api/pcm-snapshots/earliest')
       .then((res: any) => setEarliestSnapshot(res?.earliest || null))
@@ -472,8 +462,8 @@ export function PcmDashboardPage() {
                   <span style={{ fontSize: 12, color: 'var(--textSecondary)', fontWeight: 600, marginLeft: 4 }}>
                     {selectedComparison === 'today' && 'Showing current backlog (no comparison)'}
                     {selectedComparison === 'yesterday' && compareDate && `Compared to ${formatPretty(compareDate)}`}
-                    {selectedComparison === 'lastWeek' && compareDate && `Compared to Mon ${formatPretty(compareDate)} (week-to-date)`}
-                    {selectedComparison === 'lastMonth' && compareDate && `Compared to ${formatPretty(compareDate)} (month-to-date)`}
+                    {selectedComparison === 'lastWeek' && compareDate && `Compared to ${formatPretty(compareDate)} (7 days ago)`}
+                    {selectedComparison === 'lastMonth' && compareDate && `Compared to ${formatPretty(compareDate)} (same day last month)`}
                     {selectedComparison === 'custom' && compareDate && `Compared to ${formatPretty(compareDate)}`}
                     {comparisonLoading && <span style={{ marginLeft: 6, color: 'var(--muted)' }}>loading…</span>}
                   </span>
