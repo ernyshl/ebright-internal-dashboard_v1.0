@@ -512,32 +512,30 @@ export function FaDashboardTestingPage() {
                 </div>
                 <ResponsiveContainer width="100%" height={560}>
                   <BarChart data={chartData} layout="vertical"
-                    margin={{ top: 0, right: 130, left: 8, bottom: 0 }} barCategoryGap="25%">
+                    margin={{ top: 0, right: 160, left: 8, bottom: 0 }} barCategoryGap="25%">
                     <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis type="number" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]}
-                      tickFormatter={(v: number) => `${v}%`}
+                    <XAxis type="number"
                       tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false}
                       axisLine={{ stroke: 'var(--border)' }} />
                     <YAxis dataKey="code" type="category"
                       tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }}
                       tickLine={false} axisLine={false} width={48} />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
-                    {/* Gray "track" = FA Due baseline (full 100%); colored fill = backlog as % of FA Due */}
-                    <Bar dataKey="backlogPct" maxBarSize={18} radius={[0, 4, 4, 0]}
-                      background={{ fill: 'var(--border)' }}>
+                    {/* Stacked bar — total length = FA Due. Colored part = backlog, gray = invited. */}
+                    <Bar dataKey="backlog" stackId="fa" maxBarSize={18}>
                       {chartData.map(entry => (
                         <Cell key={entry.code}
                           fill={filteredCodes && !filteredCodes.has(entry.code)
                             ? '#e2e8f0'
                             : getBacklogColor(entry.backlog, entry.active)} />
                       ))}
+                    </Bar>
+                    <Bar dataKey="invited" stackId="fa" fill="var(--border)" maxBarSize={18} radius={[0, 4, 4, 0]}>
                       <LabelList content={(props: any) => {
-                        const { y, height, index } = props;
+                        const { x, y, width, height, index } = props;
                         if (index === undefined || !chartData[index]) return null;
                         const d = chartData[index];
-                        // Anchor labels to the END of the chart area, not the bar tip,
-                        // so they line up regardless of fill %.
-                        const cx = (props.viewBox?.x ?? 0) + (props.viewBox?.width ?? 0) + 6;
+                        const cx = x + (width ?? 0) + 6; // end of invited segment = end of full stack
                         const cy = y + (height ?? 0) / 2 + 4;
                         const delta = d.delta ?? 0;
                         const labelText = d.active === 0
