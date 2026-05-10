@@ -171,56 +171,65 @@ function CustomTooltip({ active, payload }: any) {
   const d = payload[0]?.payload;
   if (!d) return null;
   const delta = d.delta ?? 0;
-  const cleared = Math.max(0, delta);
-  const added   = Math.max(0, -delta);
+  const showArrow = d.showArrow;
+  const changeStr = !showArrow
+    ? null
+    : delta > 0 ? `↓${delta}`
+    : delta < 0 ? `↑${Math.abs(delta)}`
+    : '─';
+  const changeColor = !showArrow ? '#94a3b8'
+    : delta > 0 ? '#22c55e'
+    : delta < 0 ? '#ef4444'
+    : '#94a3b8';
+
+  const row = (label: string, value: any, valColor?: string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+      <span style={{ color: 'rgba(255,255,255,0.65)' }}>{label}</span>
+      <strong style={{ color: valColor || '#fff' }}>{value}</strong>
+    </div>
+  );
+  const sectionHeader = (text: string) => (
+    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 2, marginBottom: 4 }}>
+      {text}
+    </div>
+  );
+
   return (
     <div style={{
       background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
       border: '1px solid rgba(99,102,241,0.4)',
       borderRadius: 12, padding: '10px 16px',
       boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-      fontSize: 13, color: '#fff', minWidth: 190,
+      fontSize: 13, color: '#fff', minWidth: 220,
     }}>
       <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.15)', paddingBottom: 6 }}>
         {d.code}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>PCM Backlog</span>
-          <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.backlog}</strong>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>Backlog %</span>
-          <strong style={{ color: getBacklogColor(d.backlog, d.active) }}>{d.active > 0 ? `${d.backlogPct}%` : '—'}</strong>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>Baseline</span>
-          <strong style={{ color: '#94a3b8' }}>{d.prev ?? '—'}</strong>
-        </div>
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
-        {delta === 0 && <div style={{ color: '#94a3b8', fontWeight: 600 }}>No change</div>}
-        {cleared > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-            <span style={{ color: 'rgba(255,255,255,0.65)' }}>Cleared (good)</span>
-            <strong style={{ color: '#22c55e' }}>↓ {cleared}</strong>
-          </div>
-        )}
-        {added > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-            <span style={{ color: 'rgba(255,255,255,0.65)' }}>Added (bad)</span>
-            <strong style={{ color: '#ef4444' }}>↑ {added}</strong>
-          </div>
-        )}
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>PCM Due</span>
-          <strong>{d.active}</strong>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.65)' }}>PCM Attended</span>
-          <strong style={{ color: '#22c55e' }}>{d.invited}</strong>
-        </div>
+
+      {/* Section 1 — selected date (or Today when in Today mode / fallback) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {sectionHeader(d.selectedDateLabel)}
+        {row('PCM Backlog', d.backlog, getBacklogColor(d.backlog, d.active))}
+        {row('PCM Invited', d.invited, '#22c55e')}
+        {row('PCM Due', d.active)}
+        {row('Backlog %', d.active > 0 ? `${d.backlogPct}%` : '—', getBacklogColor(d.backlog, d.active))}
       </div>
+
+      {/* Section 2 — today live (only when comparing AND snapshot exists) */}
+      {showArrow && (
+        <>
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.12)', margin: '8px 0 4px' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {sectionHeader(`Today (${d.todayDateLabel})`)}
+            {row('PCM Backlog', d.liveToday.backlog, getBacklogColor(d.liveToday.backlog, d.liveToday.active))}
+            {row('PCM Invited', d.liveToday.invited, '#22c55e')}
+            {row('PCM Due', d.liveToday.active)}
+            {row('Backlog %', d.liveToday.active > 0 ? `${d.liveToday.backlogPct}%` : '—', getBacklogColor(d.liveToday.backlog, d.liveToday.active))}
+          </div>
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.12)', margin: '8px 0 4px' }} />
+          {row('Change', changeStr, changeColor)}
+        </>
+      )}
     </div>
   );
 }
@@ -234,7 +243,7 @@ export function PcmDashboardPage() {
   const today = todayISO();
   const [selectedComparison, setSelectedComparison] = useState<ComparisonKey>('today');
   const [customDate, setCustomDate] = useState<string | null>(null);
-  const [comparisonMap, setComparisonMap] = useState<Record<string, { backlog: number }> | null>(null);
+  const [comparisonMap, setComparisonMap] = useState<Record<string, { active: number; invited: number; backlog: number }> | null>(null);
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [earliestSnapshot, setEarliestSnapshot] = useState<string | null>(null);
   const compareDate = comparisonDate(selectedComparison, today, customDate);
@@ -274,8 +283,10 @@ export function PcmDashboardPage() {
     setComparisonLoading(true);
     apiFetch(`/api/pcm-snapshots?date=${compareDate}`)
       .then((res: any) => {
-        const map: Record<string, { backlog: number }> = {};
-        (res?.data || []).forEach((r: any) => { map[r.branch] = { backlog: r.backlog }; });
+        const map: Record<string, { active: number; invited: number; backlog: number }> = {};
+        (res?.data || []).forEach((r: any) => {
+          map[r.branch] = { active: r.active, invited: r.invited, backlog: r.backlog };
+        });
         setComparisonMap(map);
       })
       .catch(() => setComparisonMap({}))
@@ -313,13 +324,52 @@ export function PcmDashboardPage() {
     return out;
   }, [comparisonMap]);
 
-  const chartData = useMemo(() =>
-    [...branchData].sort((a, b) => b.backlog - a.backlog).map(b => {
-      const prev  = comparisonMap?.[b.code]?.backlog ?? null;
-      const delta = prev !== null ? prev - b.backlog : 0;
-      return { ...b, prev, delta };
-    }),
-  [branchData, comparisonMap]);
+  // Chart shows the SELECTED date's snapshot (or today's live for "Today" / when snapshot missing).
+  // Delta arrow = (snapshot backlog) − (today's live backlog) — only when comparing AND snapshot exists.
+  const chartData = useMemo(() => {
+    const useSnapshot = selectedComparison !== 'today' && comparisonMap !== null;
+    const todayLabel  = formatPretty(today);
+    const compareLabel = compareDate ? formatPretty(compareDate) : todayLabel;
+
+    const rows = branchData.map(live => {
+      const snap = comparisonMap?.[live.code];
+      const hasSnap = useSnapshot && snap !== undefined;
+
+      const display = hasSnap
+        ? { active: snap.active, invited: snap.invited, backlog: snap.backlog }
+        : { active: live.active, invited: live.invited, backlog: live.backlog };
+      const backlogPct = display.active > 0
+        ? Math.min(100, Math.round((display.backlog / display.active) * 100))
+        : 0;
+
+      const liveToday = {
+        active: live.active,
+        invited: live.invited,
+        backlog: live.backlog,
+        backlogPct: live.active > 0
+          ? Math.min(100, Math.round((live.backlog / live.active) * 100))
+          : 0,
+      };
+
+      const showArrow = hasSnap;
+      const delta = showArrow ? snap.backlog - live.backlog : 0;
+      const prev  = showArrow ? snap.backlog : null;
+
+      return {
+        code: live.code,
+        ...display,
+        backlogPct,
+        prev,
+        delta,
+        showArrow,
+        liveToday,
+        selectedDateLabel: hasSnap ? compareLabel : todayLabel,
+        todayDateLabel:    todayLabel,
+      };
+    });
+
+    return rows.sort((a, b) => b.backlog - a.backlog);
+  }, [branchData, comparisonMap, selectedComparison, compareDate, today]);
 
   const availableBranches = useMemo(() => {
     if (!selectedRegion) return BRANCH_LIST.slice().sort();
@@ -486,12 +536,8 @@ export function PcmDashboardPage() {
                   </h3>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--textSecondary)' }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#94a3b8' }} />
-                      Cleared / improved
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--textSecondary)' }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#f9a8d4' }} />
-                      Added / regressed
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#cbd5e1' }} />
+                      Baseline / Already invited
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#16a34a', fontWeight: 700 }}>
                       ↓ Improvement
@@ -521,7 +567,7 @@ export function PcmDashboardPage() {
                             : getBacklogColor(entry.backlog, entry.active)} />
                       ))}
                     </Bar>
-                    <Bar dataKey="invited" stackId="pcm" fill="var(--border)" maxBarSize={18} radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="invited" stackId="pcm" fill="#cbd5e1" maxBarSize={18} radius={[0, 4, 4, 0]}>
                       <LabelList content={(props: any) => {
                         const { x, y, width, height, index } = props;
                         if (index === undefined || !chartData[index]) return null;
@@ -532,8 +578,11 @@ export function PcmDashboardPage() {
                         const labelText = d.active === 0
                           ? '0/0'
                           : `${d.backlog}/${d.active} (${d.backlogPct}%)`;
-                        if (delta === 0 || d.active === 0) return (
-                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{labelText} {d.active === 0 ? '' : '—'}</text>
+                        if (!d.showArrow || d.active === 0) return (
+                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{labelText}</text>
+                        );
+                        if (delta === 0) return (
+                          <text x={cx} y={cy} fontSize={10} fontWeight={700} fill="#64748b">{labelText} ─</text>
                         );
                         const sign = delta > 0 ? '↓' : '↑';
                         const col  = delta > 0 ? '#16a34a' : '#dc2626';
