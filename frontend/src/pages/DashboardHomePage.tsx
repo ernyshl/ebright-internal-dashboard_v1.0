@@ -30,6 +30,7 @@ export function DashboardHomePage() {
         { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations_dept' },
         { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations_dept' },
         { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations_dept' },
+        { label: 'Salestrail', path: '/salestrail', dashboard: 'operations_dept' },
       ]
     },
     {
@@ -140,7 +141,6 @@ export function DashboardHomePage() {
         { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
         { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
         { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
-        { label: 'ST Attendance Dashboard', path: '/st-attendance', dashboard: 'hr_testing' },
       ]
     },
     {

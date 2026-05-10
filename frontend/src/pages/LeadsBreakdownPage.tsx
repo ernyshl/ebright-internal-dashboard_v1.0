@@ -5,7 +5,7 @@ import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
 const REGION_BRANCHES = {
-  'Region A': ['Bandar Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
+  'Region A': ['Bandar Rimbayu', 'Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
   'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak'],
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
@@ -374,9 +374,8 @@ export function LeadsBreakdownPage() {
   const activeBranches = branches.filter(b => !inactiveBranches.includes(b.clean_branch));
   const branchCount = activeBranches.length;
 
-  // Online branch today count
-  const onlineBranch = branches.find(b => b.clean_branch && b.clean_branch.toLowerCase().includes('online'));
-  const onlineToday = parseInt(onlineBranch?.count_today) || 0;
+  // Online count without siblings — comes from grandTotal to stay consistent with Lead Sources section
+  const onlineToday = parseInt(grandTotal.count_online_today) || 0;
 
   const leadSources = [
     { id: 'website', name: 'Website', icon: '🌐' },

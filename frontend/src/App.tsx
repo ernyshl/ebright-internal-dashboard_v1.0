@@ -60,6 +60,9 @@ import { DayDistributionPage } from './pages/DayDistributionPage';
 import { TimeSlotDistributionPage } from './pages/TimeSlotDistributionPage';
 import { GhlIgnoredPayloadsPage } from './pages/GhlIgnoredPayloadsPage';
 import { HrfsOverviewV2Page } from './pages/HrfsOverviewV2Page';
+import { SalestrailPage } from './pages/SalestrailPage';
+import { SalestrailBranchPage } from './pages/SalestrailBranchPage';
+
 
 export default function App() {
   return (
@@ -214,6 +217,12 @@ export default function App() {
           } />
           <Route path="/branch-performance" element={
             <RequirePermission dashboard="testing"><BranchPerformancePage /></RequirePermission>
+          } />
+          <Route path="/salestrail" element={
+            <RequirePermission dashboard="operations_dept"><SalestrailPage /></RequirePermission>
+          } />
+          <Route path="/salestrail/branch/:userId" element={
+            <RequirePermission dashboard="operations_dept"><SalestrailBranchPage /></RequirePermission>
           } />
           <Route path="/leads-dashboard-v2" element={
             <RequirePermission dashboard="manjeet"><LeadsDashboardV2Page /></RequirePermission>

@@ -38,6 +38,7 @@ const { studentAttendanceRouter } = require('./routes/studentAttendance');
 const { guardianBackfillRouter } = require('./routes/guardianBackfill');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
 const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
+const { salestrailRouter } = require('./routes/salestrail');
 
 const jwt = require('jsonwebtoken');
 
@@ -173,6 +174,7 @@ function createApp() {
   app.use('/api/coach-bm-performance', applyRoleBasedRateLimit, coachBmPerformanceRouter);
   app.use('/api/guardian-backfill', applyRoleBasedRateLimit, guardianBackfillRouter);
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
+  app.use('/api/salestrail', applyRoleBasedRateLimit, salestrailRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
