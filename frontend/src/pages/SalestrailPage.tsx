@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
 type Period = 'today' | 'yesterday' | 'this_week' | 'this_month' | 'last_7' | 'last_30';
+type CallFilter = 'all' | 'answered' | 'missed' | 'no_answer';
 
 function getPeriodQuery(period: Period): string {
   const now = new Date();
@@ -12,7 +13,6 @@ function getPeriodQuery(period: Period): string {
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const today = fmt(now);
   const yesterday = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
-  // Sunday-start week (matches Salestrail)
   const dow = now.getDay();
   const weekStart = fmt(new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow));
   const monthStart = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -56,6 +56,25 @@ const PERIODS: { label: string; value: Period }[] = [
   { label: 'Last 30d',  value: 'last_30' },
 ];
 
+const BRANCH_NAME_MAP: Record<string, string> = {
+  'Ebright TSG':          'Ebright Taman Sri Gombak',
+  'Ebright BTHO':         'Ebright Bandar Tun Hussein Onn',
+  'ebright subang taipan': 'Ebright Subang Taipan',
+  'Ebright coach':        'Ebright Head Quarters',
+  'Ebright Rimbayu':      'Ebright Bandar Rimbayu',
+};
+
+function displayName(name: string): string {
+  return BRANCH_NAME_MAP[name] ?? name;
+}
+
+const FILTER_META: Record<CallFilter, { icon: string; label: string; subtext: string; color: string }> = {
+  all:       { icon: '📞', label: 'All Calls',               subtext: 'All calls across all branches',                  color: '#3b82f6' },
+  answered:  { icon: '✅', label: 'Answered Calls',          subtext: 'Calls that were successfully answered',           color: '#10b981' },
+  missed:    { icon: '📵', label: 'Missed Calls (BM)',        subtext: 'Customer called — branch manager did not answer', color: '#ef4444' },
+  no_answer: { icon: '🔇', label: 'No Answer (Customer)',     subtext: 'Branch called — customer did not pick up',       color: '#f97316' },
+};
+
 interface RankRow {
   user_id: string;
   user_name: string;
@@ -70,8 +89,23 @@ interface RankRow {
   answer_rate: string;
 }
 
+interface ModalCallRow {
+  call_id: string;
+  user_id: string;
+  user_name: string;
+  call_date: string;
+  call_time: string;
+  duration: string;
+  answered: boolean;
+  inbound: boolean;
+  number: string;
+  formatted_number: string;
+  phonebook_name: string | null;
+}
+
 export function SalestrailPage() {
   const [period, setPeriod] = useState<Period>('today');
+  const [activeFilter, setActiveFilter] = useState<CallFilter | null>(null);
   const navigate = useNavigate();
 
   const periodQuery = getPeriodQuery(period);
@@ -82,13 +116,33 @@ export function SalestrailPage() {
     refetchInterval: 120_000,
   });
 
+  const modalQ = useQuery({
+    queryKey: ['salestrail', 'all-calls', activeFilter, periodQuery],
+    queryFn: () => apiFetch(`/api/salestrail/all-calls?type=${activeFilter}&${periodQuery}`),
+    enabled: !!activeFilter,
+  });
+
   const rows: RankRow[] = q.data?.ranking || [];
+  const modalCalls: ModalCallRow[] = modalQ.data?.calls || [];
+
   const totalCalls = rows.reduce((s, r) => s + parseInt(r.total_calls), 0);
   const totalAnswered = rows.reduce((s, r) => s + parseInt(r.answered), 0);
   const totalMissed = rows.reduce((s, r) => s + parseInt(r.missed), 0);
   const totalNoAnswer = rows.reduce((s, r) => s + parseInt(r.no_answer), 0);
   const totalDuration = rows.reduce((s, r) => s + parseInt(r.total_duration_sec || '0'), 0);
   const overallAnswerRate = totalCalls > 0 ? ((totalAnswered / totalCalls) * 100).toFixed(1) : '0.0';
+
+  function openFilter(f: CallFilter) {
+    setActiveFilter(prev => prev === f ? null : f);
+  }
+
+  const clickableCard = (color: string, filter: CallFilter): React.CSSProperties => ({
+    '--stat-color': color,
+    cursor: 'pointer',
+    outline: activeFilter === filter ? `2px solid ${color}` : '2px solid transparent',
+    outlineOffset: 2,
+    transition: 'outline 0.15s',
+  } as React.CSSProperties);
 
   return (
     <div className="leadsBreakdownPage">
@@ -130,28 +184,28 @@ export function SalestrailPage() {
         <>
           {/* Summary cards */}
           <div className="summaryStats" style={{ marginBottom: 24 }}>
-            <div className="statCard" style={{ '--stat-color': '#3b82f6' } as React.CSSProperties}>
+            <div className="statCard" style={clickableCard('#3b82f6', 'all')} onClick={() => openFilter('all')}>
               <div className="statCardIcon">📞</div>
               <div className="statCardContent">
                 <div className="statCardValue">{totalCalls.toLocaleString()}</div>
                 <div className="statCardTitle">Total Calls</div>
               </div>
             </div>
-            <div className="statCard" style={{ '--stat-color': '#10b981' } as React.CSSProperties}>
+            <div className="statCard" style={clickableCard('#10b981', 'answered')} onClick={() => openFilter('answered')}>
               <div className="statCardIcon">✅</div>
               <div className="statCardContent">
                 <div className="statCardValue">{totalAnswered.toLocaleString()}</div>
                 <div className="statCardTitle">Answered</div>
               </div>
             </div>
-            <div className="statCard" style={{ '--stat-color': '#ef4444' } as React.CSSProperties}>
+            <div className="statCard" style={clickableCard('#ef4444', 'missed')} onClick={() => openFilter('missed')}>
               <div className="statCardIcon">📵</div>
               <div className="statCardContent">
                 <div className="statCardValue">{totalMissed.toLocaleString()}</div>
                 <div className="statCardTitle">Missed (BM)</div>
               </div>
             </div>
-            <div className="statCard" style={{ '--stat-color': '#f97316' } as React.CSSProperties}>
+            <div className="statCard" style={clickableCard('#f97316', 'no_answer')} onClick={() => openFilter('no_answer')}>
               <div className="statCardIcon">🔇</div>
               <div className="statCardContent">
                 <div className="statCardValue">{totalNoAnswer.toLocaleString()}</div>
@@ -235,8 +289,8 @@ export function SalestrailPage() {
                             <div className="branchName" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <span
                                 style={{ cursor: 'pointer', color: 'var(--accent, #3b82f6)', textDecoration: 'underline' }}
-                                onClick={() => navigate(`/salestrail/branch/${row.user_id}?period=${encodeURIComponent(periodQuery)}&name=${encodeURIComponent(row.user_name)}`)}
-                              >{row.user_name}</span>
+                                onClick={() => navigate(`/salestrail/branch/${row.user_id}?period=${encodeURIComponent(periodQuery)}&name=${encodeURIComponent(displayName(row.user_name))}`)}
+                              >{displayName(row.user_name)}</span>
                               <div style={{ background: 'var(--surface-muted, #e2e8f0)', borderRadius: 4, height: 4, width: '100%', maxWidth: 120 }}>
                                 <div style={{ background: 'var(--accent, #3b82f6)', borderRadius: 4, height: 4, width: `${barPct}%` }} />
                               </div>
@@ -267,6 +321,107 @@ export function SalestrailPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Call details modal */}
+      {activeFilter && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.65)',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            padding: '60px 16px 24px',
+            overflowY: 'auto',
+          }}
+          onClick={() => setActiveFilter(null)}
+        >
+          <div
+            style={{
+              background: 'var(--surface, #1e293b)',
+              borderRadius: 12, padding: 24, width: '100%', maxWidth: 900,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+                  {FILTER_META[activeFilter].icon} {FILTER_META[activeFilter].label}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  {FILTER_META[activeFilter].subtext}
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveFilter(null)}
+                style={{
+                  background: 'none', border: '1px solid var(--border, #334155)',
+                  color: 'var(--text)', borderRadius: 6, padding: '4px 12px',
+                  cursor: 'pointer', fontSize: 16, flexShrink: 0, marginLeft: 16,
+                }}
+              >✕</button>
+            </div>
+
+            {!modalQ.isLoading && !modalQ.isError && (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
+                {modalCalls.length} call{modalCalls.length !== 1 ? 's' : ''} found
+                {modalCalls.length >= 500 ? ' (showing first 500)' : ''}
+              </div>
+            )}
+
+            {modalQ.isLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+                <div className="loadingDots"><span /><span /><span /></div> Loading calls…
+              </div>
+            ) : modalQ.isError ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>Failed to load call details.</div>
+            ) : modalCalls.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>No calls found for this period.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="branchTable">
+                  <thead>
+                    <tr>
+                      <th>Branch</th>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Contact</th>
+                      <th className="textCenter">Direction</th>
+                      <th className="textRight">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modalCalls.map(call => {
+                      const contact = call.phonebook_name || call.formatted_number || call.number || '—';
+                      const dur = parseInt(call.duration || '0');
+                      return (
+                        <tr key={call.call_id}>
+                          <td style={{ fontSize: 13, fontWeight: 600 }}>{displayName(call.user_name)}</td>
+                          <td style={{ fontSize: 13 }}>{call.call_date}</td>
+                          <td style={{ fontSize: 13, color: 'var(--muted)' }}>{call.call_time?.slice(0, 5)}</td>
+                          <td style={{ fontSize: 13 }}>{contact}</td>
+                          <td className="textCenter">
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                              background: call.inbound ? '#dbeafe' : '#fef3c7',
+                              color: call.inbound ? '#1d4ed8' : '#92400e',
+                            }}>
+                              {call.inbound ? '← IN' : '→ OUT'}
+                            </span>
+                          </td>
+                          <td className="textRight" style={{ fontSize: 13, color: 'var(--muted)' }}>
+                            {dur > 0 ? fmtDuration(dur) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
