@@ -39,10 +39,13 @@ function checkBasicAuth(req) {
 
 // Find the XML chunk inside a possibly multipart body. If the body already
 // starts with `<?xml` or `<EventNotificationAlert`, return as-is. Otherwise
-// look for a part with Content-Type: application/xml.
+// look for a part with Content-Type: application/xml. Returns null for
+// empty / non-XML / heartbeat bodies (Hikvision sends those frequently).
 function extractXml(rawBody) {
+  if (!rawBody || !rawBody.length) return null;
   const text = rawBody.toString('utf8');
-  if (text.trimStart().startsWith('<?xml') || text.trimStart().startsWith('<Event')) {
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith('<?xml') || trimmed.startsWith('<Event')) {
     return text;
   }
   // Multipart — naive boundary parse, just find the first XML block.
