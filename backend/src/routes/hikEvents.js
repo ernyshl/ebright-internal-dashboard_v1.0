@@ -89,11 +89,23 @@ router.post('/', async (req, res) => {
     return res.status(401).set('WWW-Authenticate', 'Basic realm="hik-events"').end();
   }
 
+  const bodyLen = req.body?.length || 0;
+  // Diagnostic: log everything for non-empty bodies so we can see what the
+  // device actually sends. Remove once parsing is confirmed working.
+  if (bodyLen > 0) {
+    // eslint-disable-next-line no-console
+    console.log('[hik-events] POST',
+      'content-type=', req.headers['content-type'],
+      'content-length=', req.headers['content-length'],
+      'body-len=', bodyLen,
+      'body-head=', req.body.toString('utf8').slice(0, 500));
+  }
+
   const xml = extractXml(req.body);
   if (!xml) {
     // Acknowledge anyway so the device doesn't retry-spam; just log it.
     // eslint-disable-next-line no-console
-    console.warn('[hik-events] non-XML body, length=', req.body?.length || 0);
+    console.warn('[hik-events] non-XML body, length=', bodyLen);
     return res.status(200).end();
   }
 
