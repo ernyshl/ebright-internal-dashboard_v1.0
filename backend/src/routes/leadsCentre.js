@@ -106,6 +106,7 @@ const LEADS_SRC = `(
   FROM raw_wix_leads rw
   CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(rw.children_count, 1), 1)) gs(gs)
   LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(rw.raw_branch_text)
+  WHERE rw.is_test IS NOT TRUE
 ) AS leads_view`;
 
 function sanitizeSearchTerm(term) {
