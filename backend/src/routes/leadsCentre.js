@@ -50,8 +50,12 @@ const LEADS_SRC = `(
       WHERE (fd.value->>'name') ILIKE '%branch%'
       LIMIT 1
     ))
-  LEFT JOIN branch_mapping bm2
-    ON lower(ml.form_name) ILIKE ('%' || lower(bm2.keyword) || '%')
+  LEFT JOIN LATERAL (
+    SELECT official_name
+    FROM branch_mapping
+    WHERE lower(ml.form_name) ILIKE ('%' || lower(keyword) || '%')
+    LIMIT 1
+  ) bm2 ON true
 
   UNION ALL
 
