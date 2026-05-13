@@ -42,7 +42,7 @@ const LEADS_SRC = `(
     END AS raw_branch_text,
     NULL::text AS region,
     (((ml.raw_data->>'created_time')::timestamptz) AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
-  FROM meta_leads ml
+  FROM public.meta_leads ml
   LEFT JOIN branch_mapping bm
     ON lower(bm.keyword) = lower((
       SELECT (fd.value->'values')->>0
@@ -82,7 +82,7 @@ const LEADS_SRC = `(
       THEN ((left(sp.raw_data->>'created_time', 19))::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Kuala_Lumpur'
       ELSE sp.created_at::timestamp
     END AS submitted_at
-  FROM social_posts sp
+  FROM crm.social_posts sp
   LEFT JOIN branch_mapping bm
     ON lower(bm.keyword) = lower(COALESCE(
       sp.raw_data->>'Please choose your preferred branch',
