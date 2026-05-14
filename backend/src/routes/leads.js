@@ -9,6 +9,7 @@ const VALID_BRANCHES = [
   'Putrajaya', 'Ampang', 'Cyberjaya', 'Klang', 'Denai Alam', 'Bandar Baru Bangi',
   'Danau Kota', 'Shah Alam', 'Bandar Tun Hussein Onn', 'Eco Grandeur',
   'Bandar Seri Putra', 'Rimbayu', 'Kajang', 'Kota Warisan', 'Taman Sri Gombak',
+  'Dataran Puchong Utama',
 ];
 
 router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing', 'tv']), async (_req, res, next) => {
@@ -40,7 +41,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           CASE
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan']) THEN 'Region A'
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang','Taman Sri Gombak']) THEN 'Region B'
-            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra'])
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra','Dataran Puchong Utama'])
               OR LOWER(TRIM(clean_branch)) LIKE '%online%'            THEN 'Region C'
             ELSE NULL
           END                                                          AS region

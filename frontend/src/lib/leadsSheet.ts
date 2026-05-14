@@ -49,12 +49,13 @@ export const PIPELINE_REGION = {
   '18 TSG':  'Region B',
   '19 KW':   'Region C',
   '20 KTG':  'Region B',
+  '21 DPU':  'Region C',
 };
 
 export const REGION_PIPELINES = {
   'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY'],
   'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG'],
-  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW'],
+  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 DPU'],
 };
 
 export const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
