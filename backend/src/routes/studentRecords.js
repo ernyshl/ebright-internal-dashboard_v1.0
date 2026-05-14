@@ -2,8 +2,10 @@ const express = require('express');
 const { prisma } = require('../prismaClient');
 const { pool } = require('../db');
 const { getTableNames } = require('../utils/tableNames');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

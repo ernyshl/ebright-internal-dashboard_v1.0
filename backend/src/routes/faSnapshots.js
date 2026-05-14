@@ -2,8 +2,10 @@ const express = require('express');
 const { pool } = require('../db');
 const { getTableNames } = require('../utils/tableNames');
 const { captureFaSnapshot } = require('../services/faSnapshotService');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 function todayMYISO() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });

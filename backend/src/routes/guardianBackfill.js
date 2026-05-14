@@ -1,8 +1,10 @@
 const express = require('express');
 const { z } = require('zod');
 const { backfillGuardianInfo } = require('../services/guardianBackfill');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 const rowSchema = z.object({
   name: z.string().min(1, 'name is required'),
