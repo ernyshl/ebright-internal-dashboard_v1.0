@@ -11,7 +11,7 @@ const ALLOWED_ROLES = ['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv'
 const REGION_PIPELINES = {
   A: ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY'],
   B: ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG'],
-  C: ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 PU'],
+  C: ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '23 PU'],
 };
 const ALL_PIPELINES = [...REGION_PIPELINES.A, ...REGION_PIPELINES.B, ...REGION_PIPELINES.C];
 
