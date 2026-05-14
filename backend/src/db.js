@@ -27,6 +27,19 @@ pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL Leads DB error', err);
 });
 
+// Force search_path to public-first for the main pool. The optidept role's
+// default is 'crm, public', which causes unqualified table names (e.g. users,
+// branch_okr_attendance) to resolve to empty shadow tables in crm instead of
+// the real data in public. Setting it per-connection keeps the DB-wide role
+// config untouched (other apps using optidept stay on their expected default)
+// and leaves leadsPool alone so HR queries still hit crm/hrfs correctly.
+pool.on('connect', (client) => {
+  client.query("SET search_path TO public, crm").catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('Failed to set search_path on main pool connect:', err);
+  });
+});
+
 invPool.on('error', (err) => {
   // eslint-disable-next-line no-console
   console.error('Unexpected PostgreSQL Inventory DB error', err);
