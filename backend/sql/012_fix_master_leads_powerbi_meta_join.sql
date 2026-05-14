@@ -53,12 +53,12 @@ UNION ALL
         END) AS clean_branch,
     COALESCE(bm.region,
         CASE
-            WHEN (sp.raw_data ->> 'Please Select Your Preferred Day'::text) ~~* 'Online%'::text THEN 'Region 3'::text
-            WHEN (sp.raw_data ->> 'Sila Pilih Hari Anda'::text) ~~* 'Online%'::text THEN 'Region 3'::text
+            WHEN (sp.raw_data ->> 'Please Select Your Preferred Day'::text) ~~* 'Online%'::text THEN 'Region C'::text
+            WHEN (sp.raw_data ->> 'Sila Pilih Hari Anda'::text) ~~* 'Online%'::text THEN 'Region C'::text
             ELSE NULL::text
         END) AS region,
     1 AS sibling_index
-   FROM social_posts sp
+   FROM crm.social_posts sp
      LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(COALESCE(sp.raw_data ->> 'Please choose your preferred branch'::text, sp.raw_data ->> 'Sila pilih cawangan pilihan anda'::text))
   WHERE sp.platform::text = 'tiktok_lead'::text
 UNION ALL
