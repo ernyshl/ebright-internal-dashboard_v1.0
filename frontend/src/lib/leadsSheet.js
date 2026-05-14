@@ -22,7 +22,7 @@ export const BRANCH_TO_PIPELINE = {
   'Kajang TTDI Grove':       '20 KTG',
   'Kota Warisan':            '19 KW',
   'Taman Sri Gombak':        '18 TSG',
-  'Dataran Puchong Utama':   '21 DPU',
+  'Dataran Puchong Utama':   '21 PU',
   'Tropicana Sungai Buloh':  '22 TSB',
   'Puncak Jalil':            '23 PJL',
 };
@@ -51,7 +51,7 @@ export const PIPELINE_REGION = {
   '18 TSG':  'Region B',
   '19 KW':   'Region C',
   '20 KTG':  'Region B',
-  '21 DPU':  'Region C',  // Dataran Puchong Utama
+  '21 PU':  'Region C',  // Dataran Puchong Utama
   '22 TSB':  'Region A',
   '23 PJL':  'Region B',
 };
@@ -59,7 +59,7 @@ export const PIPELINE_REGION = {
 export const REGION_PIPELINES = {
   'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY', '22 TSB'],
   'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG', '23 PJL'],
-  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 DPU'],
+  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 PU'],
 };
 
 export const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
@@ -86,7 +86,7 @@ export const PIPELINE_TO_BRANCH = {
   '18 TSG':  'Taman Sri Gombak',
   '19 KW':   'Kota Warisan',
   '20 KTG':  'Kajang TTDI Grove',
-  '21 DPU':  'Dataran Puchong Utama',
+  '21 PU':  'Dataran Puchong Utama',
   '22 TSB':  'Tropicana Sungai Buloh',
   '23 PJL':  'Puncak Jalil',
 };

@@ -22,7 +22,7 @@ type SortKey =
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // Region groupings — kept in the frontend so we can include not-yet-opened
-// branches (e.g. DPU) as zero-rows without needing a DB migration first.
+// branches (e.g. PU) as zero-rows without needing a DB migration first.
 type Region = 'A' | 'B' | 'C';
 const BRANCH_REGIONS: Record<string, Region> = {
   // Region A
@@ -30,13 +30,13 @@ const BRANCH_REGIONS: Record<string, Region> = {
   // Region B
   DK: 'B', KD: 'B', AMP: 'B', SP: 'B', BTHO: 'B', KTG: 'B', TSG: 'B',
   // Region C
-  PJY: 'C', KW: 'C', BBB: 'C', CJY: 'C', BSP: 'C', DPU: 'C', ONL: 'C',
+  PJY: 'C', KW: 'C', BBB: 'C', CJY: 'C', BSP: 'C', PU: 'C', ONL: 'C',
 };
 
 // Display names for branches that aren't (yet) returned by the API. Used to
 // render zero-row placeholders so the page reflects the full 21-branch roster.
 const BRANCH_NAME_FALLBACK: Record<string, string> = {
-  DPU: 'Ebright Dataran Puchong Utama',
+  PU: 'Ebright Dataran Puchong Utama',
 };
 
 // --- Helper Functions ---
@@ -176,7 +176,7 @@ export default function FinanceRenewalByBranchPage() {
 
   // 4. Filtering Logic
   // Pad the API response with zero-rows for any branch in BRANCH_REGIONS that
-  // the backend didn't return — keeps not-yet-opened branches (e.g. DPU)
+  // the backend didn't return — keeps not-yet-opened branches (e.g. PU)
   // visible in the table and graph as RM 0.00 placeholders.
   const allRows: RenewalData[] = useMemo(() => {
     const apiRows: RenewalData[] = mainData?.data || [];

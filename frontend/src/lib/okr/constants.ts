@@ -25,7 +25,7 @@ export const REGIONS = {
     { name: 'Bandar Baru Bangi',     code: 'BBB', num: 11 },
     { name: 'Cyberjaya',             code: 'CJY', num:  8 },
     { name: 'Bandar Seri Putra',     code: 'BSP', num: 16 },
-    { name: 'Dataran Puchong Utama', code: 'DPU', num: 21 },
+    { name: 'Dataran Puchong Utama', code: 'PU',  num: 21 },
     { name: 'Online',                code: 'ONL', num:  1 },
   ],
 };
