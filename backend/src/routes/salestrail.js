@@ -15,7 +15,11 @@ router.get('/ranking', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od
     const params = [];
 
     if (rolling_days) {
-      params.push(parseInt(rolling_days));
+      const days = parseInt(rolling_days, 10);
+      if (!Number.isFinite(days) || days < 1 || days > 3650) {
+        return res.status(400).json({ error: 'Invalid rolling_days' });
+      }
+      params.push(days);
       dateFilter = `AND start_time_utc >= NOW() - ($1 || ' days')::INTERVAL`;
     } else if (date_from && date_to) {
       params.push(date_from, date_to);
@@ -64,7 +68,11 @@ router.get('/calls', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od',
     let dateFilter = '';
 
     if (rolling_days) {
-      params.push(parseInt(rolling_days));
+      const days = parseInt(rolling_days, 10);
+      if (!Number.isFinite(days) || days < 1 || days > 3650) {
+        return res.status(400).json({ error: 'Invalid rolling_days' });
+      }
+      params.push(days);
       dateFilter = `AND start_time_utc >= NOW() - ($2 || ' days')::INTERVAL`;
     } else if (date_from && date_to) {
       params.push(date_from, date_to);
