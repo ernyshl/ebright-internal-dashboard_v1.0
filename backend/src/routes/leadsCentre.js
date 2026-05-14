@@ -9,7 +9,7 @@ const VALID_BRANCHES = [
   'Putrajaya', 'Ampang', 'Cyberjaya', 'Klang', 'Denai Alam', 'Bandar Baru Bangi',
   'Danau Kota', 'Shah Alam', 'Bandar Tun Hussein Onn', 'Eco Grandeur',
   'Bandar Seri Putra', 'Rimbayu', 'Kajang', 'Kota Warisan', 'Taman Sri Gombak',
-  'Dataran Puchong Utama',
+  'Dataran Puchong Utama', 'Tropicana Sungai Buloh', 'Puncak Jalil',
 ];
 
 const REGION_BRANCHES = {

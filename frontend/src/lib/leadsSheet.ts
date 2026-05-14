@@ -23,6 +23,8 @@ export const BRANCH_TO_PIPELINE = {
   'Kota Warisan':            '19 KW',
   'Taman Sri Gombak':        '20 KTG',
   'Dataran Puchong Utama':   '21 DPU',
+  'Tropicana Sungai Buloh':  '22 TSB',
+  'Puncak Jalil':            '23 PJL',
 };
 
 const SHEET_ID = '1o011OFPYmR0Y36tHRf6UEqMaJwjGoO0ntpXUEsPTI3w';
@@ -50,11 +52,13 @@ export const PIPELINE_REGION = {
   '19 KW':   'Region C',
   '20 KTG':  'Region B',
   '21 DPU':  'Region C',
+  '22 TSB':  'Region A',
+  '23 PJL':  'Region B',
 };
 
 export const REGION_PIPELINES = {
-  'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY'],
-  'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG'],
+  'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY', '22 TSB'],
+  'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG', '23 PJL'],
   'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 DPU'],
 };
 
@@ -83,6 +87,8 @@ export const PIPELINE_TO_BRANCH = {
   '19 KW':   'Kota Warisan',
   '20 KTG':  'Taman Sri Gombak',
   '21 DPU':  'Dataran Puchong Utama',
+  '22 TSB':  'Tropicana Sungai Buloh',
+  '23 PJL':  'Puncak Jalil',
 };
 
 function parseDate(str) {

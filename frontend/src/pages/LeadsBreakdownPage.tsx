@@ -5,8 +5,8 @@ import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
 const REGION_BRANCHES = {
-  'Region A': ['Bandar Rimbayu', 'Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
-  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak'],
+  'Region A': ['Bandar Rimbayu', 'Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan', 'Tropicana Sungai Buloh'],
+  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak', 'Puncak Jalil'],
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
 

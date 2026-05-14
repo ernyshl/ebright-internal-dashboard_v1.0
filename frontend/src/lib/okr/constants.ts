@@ -1,6 +1,7 @@
 export const REGIONS = {
   A: [
-    { name: 'Rimbayu',       code: 'RBY', num: 17 },
+    { name: 'Rimbayu',              code: 'RBY', num: 17 },
+    { name: 'Tropicana Sungai Buloh', code: 'TSB', num: 22 },
     { name: 'Klang',         code: 'KLG', num:  9 },
     { name: 'Shah Alam',     code: 'SHA', num: 13 },
     { name: 'Setia Alam',    code: 'SA',  num:  3 },
@@ -16,6 +17,7 @@ export const REGIONS = {
     { name: 'Bandar Tun Hussein Onn', code: 'BTHO', num: 14 },
     { name: 'Kajang TTDI Groove',     code: 'KTG',  num: 20 },
     { name: 'Taman Sri Gombak',       code: 'TSG',  num: 18 },
+    { name: 'Puncak Jalil',           code: 'PJL',  num: 23 },
   ],
   C: [
     { name: 'Putrajaya',             code: 'PJY', num:  6 },

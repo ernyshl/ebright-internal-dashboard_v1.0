@@ -111,8 +111,8 @@ async function getLeadsByRegion() {
   const { rows } = await pool.query(`
     SELECT
       CASE
-        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Bandar Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan']) THEN 'Region A'
-        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak']) THEN 'Region B'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Bandar Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan','Tropicana Sungai Buloh']) THEN 'Region A'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak','Puncak Jalil']) THEN 'Region B'
         WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra','Dataran Puchong Utama','Online']) THEN 'Region C'
         ELSE 'Other'
       END as region,
