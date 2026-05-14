@@ -26,7 +26,8 @@ function HourlyTargetCard({ currentLeads }) {
     return () => clearInterval(id);
   }, []);
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+  const nowMinutes = klTime.getHours() * 60 + klTime.getMinutes();
   const checkpoints = HOURLY_TARGETS.map(t => ({ ...t, totalMinutes: t.hour * 60 + t.minute }));
   const previous = [...checkpoints].reverse().find(c => nowMinutes >= c.totalMinutes);
   const next = checkpoints.find(c => nowMinutes < c.totalMinutes);
@@ -426,7 +427,7 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Hourly target + headline lead counts</p>
           </div>
           <div className="summaryStatsRow">
-            <HourlyTargetCard currentLeads={todayTotal} />
+            <HourlyTargetCard currentLeads={todayTotal - onlineToday} />
             <div className="summaryStats">
             <StatCard
               title="Total Leads (30d)"
