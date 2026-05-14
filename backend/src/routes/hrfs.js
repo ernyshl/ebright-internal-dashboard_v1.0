@@ -432,6 +432,13 @@ router.get('/overview-v2', requireAuth, requireRole(ALLOWED_ROLES), async (_req,
         WHERE lt."LeaveTypeCode" = 'SL'
           AND lt."LeaveDate" >= CURRENT_DATE - INTERVAL '7 days'
           AND lt."LeaveDate" <= CURRENT_DATE
+          -- Inactive staff only show in the Offboarding card. Hide their leave
+          -- transactions from MC / AL even if they fall in the date window.
+          AND NOT EXISTS (
+            SELECT 1 FROM hrfs."BranchStaff" bs
+            WHERE bs."employeeId" = lt."EmployeeCode"
+              AND bs.status = 'Inactive'
+          )
         ORDER BY lt."LeaveDate" DESC
       `),
       pool.query(`
@@ -445,6 +452,12 @@ router.get('/overview-v2', requireAuth, requireRole(ALLOWED_ROLES), async (_req,
         WHERE lt."LeaveTypeCode" = 'AL'
           AND lt."LeaveDate" >= CURRENT_DATE
           AND lt."LeaveDate" <= CURRENT_DATE + INTERVAL '14 days'
+          -- Inactive staff only show in the Offboarding card.
+          AND NOT EXISTS (
+            SELECT 1 FROM hrfs."BranchStaff" bs
+            WHERE bs."employeeId" = lt."EmployeeCode"
+              AND bs.status = 'Inactive'
+          )
         ORDER BY lt."LeaveDate" ASC
       `),
     ]);

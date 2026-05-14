@@ -16,7 +16,7 @@ function requireDashboard(dashboardId) {
 
     try {
       const { rows } = await pool.query(
-        'SELECT can_view FROM user_permissions WHERE user_id = $1 AND dashboard = $2',
+        'SELECT can_view FROM public.user_permissions WHERE user_id = $1 AND dashboard = $2',
         [req.user.sub, dashboardId]
       );
       if (rows.length) {

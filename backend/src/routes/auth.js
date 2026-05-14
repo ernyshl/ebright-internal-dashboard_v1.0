@@ -33,7 +33,7 @@ router.post('/login', async (req, res, next) => {
     const { rows } = await pool.query(
       `
       select id, email, full_name, role, password_hash, is_active
-      from users
+      from public.users
       where lower(email) = lower($1)
       limit 1
       `,
@@ -89,7 +89,7 @@ router.get('/me', requireAuth, async (req, res) => {
 router.get('/profile', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, full_name, role FROM users WHERE id = $1',
+      'SELECT id, email, full_name, role FROM public.users WHERE id = $1',
       [req.user.sub]
     );
     if (rows.length === 0) {
@@ -121,7 +121,7 @@ router.put('/profile', requireAuth, async (req, res, next) => {
 
     // Get current user
     const { rows: userRows } = await pool.query(
-      'SELECT password_hash FROM users WHERE id = $1',
+      'SELECT password_hash FROM public.users WHERE id = $1',
       [req.user.sub]
     );
     if (userRows.length === 0) {
@@ -179,19 +179,19 @@ router.put('/profile', requireAuth, async (req, res, next) => {
     if (newPassword) {
       const hash = await bcrypt.hash(newPassword, 12);
       await pool.query(
-        'UPDATE users SET full_name = $1, password_hash = $2, updated_at = now() WHERE id = $3',
+        'UPDATE public.users SET full_name = $1, password_hash = $2, updated_at = now() WHERE id = $3',
         [fullName, hash, req.user.sub]
       );
     } else {
       await pool.query(
-        'UPDATE users SET full_name = $1, updated_at = now() WHERE id = $2',
+        'UPDATE public.users SET full_name = $1, updated_at = now() WHERE id = $2',
         [fullName, req.user.sub]
       );
     }
 
     // Get updated user
     const { rows: updatedRows } = await pool.query(
-      'SELECT id, email, full_name, role FROM users WHERE id = $1',
+      'SELECT id, email, full_name, role FROM public.users WHERE id = $1',
       [req.user.sub]
     );
 
