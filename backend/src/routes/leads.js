@@ -4,12 +4,20 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
+const VALID_BRANCHES = [
+  'Online', 'Subang Taipan', 'Sri Petaling', 'Setia Alam', 'Kota Damansara',
+  'Putrajaya', 'Ampang', 'Cyberjaya', 'Klang', 'Denai Alam', 'Bandar Baru Bangi',
+  'Danau Kota', 'Shah Alam', 'Bandar Tun Hussein Onn', 'Eco Grandeur',
+  'Bandar Seri Putra', 'Rimbayu', 'Kajang', 'Kota Warisan', 'Taman Sri Gombak',
+];
+
 router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing', 'tv']), async (_req, res, next) => {
   try {
     // All date comparisons use Asia/Kuala_Lumpur (UTC+8)
     const TZ = `'Asia/Kuala_Lumpur'`;
     const today     = `(NOW() AT TIME ZONE ${TZ})::date`;
     const asDate    = `(submitted_at AT TIME ZONE ${TZ})::date`;
+    const validBranchFilter = `TRIM(clean_branch) = ANY($1)`;
 
     // A) Lead source breakdown — without siblings (sibling_index = 1 = primary lead row)
     const queryTotal = `
@@ -29,7 +37,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
       FROM master_leads_powerbi
-      WHERE sibling_index = 1
+      WHERE sibling_index = 1 AND ${validBranchFilter}
       GROUP BY 1
       ORDER BY count_30_days DESC;
     `;
@@ -41,15 +49,14 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         SELECT
           CASE
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Bandar Rimbayu','Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
+              'Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
             ]) THEN 'Region A'
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
               'Danau Kota','Kota Damansara','Ampang','Sri Petaling',
-              'Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak'
+              'Bandar Tun Hussein Onn','Kajang','Taman Sri Gombak'
             ]) THEN 'Region B'
             WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya',
-              'Bandar Seri Putra','Dataran Puchong Utama'
+              'Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra'
             ]) OR LOWER(TRIM(clean_branch)) LIKE '%online%' THEN 'Region C'
             ELSE NULL
           END AS region,
@@ -58,7 +65,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
           COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
-        WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != ''
+        WHERE ${validBranchFilter}
         GROUP BY 1
       ) sub
       WHERE region IS NOT NULL
@@ -77,7 +84,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
           COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
-        WHERE LOWER(TRIM(clean_branch)) LIKE '%online%'
+        WHERE ${validBranchFilter} AND LOWER(TRIM(clean_branch)) LIKE '%online%'
         GROUP BY 1, 2, 3
 
         UNION ALL
@@ -92,12 +99,8 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
           COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
         FROM master_leads_powerbi
         WHERE
-          clean_branch IS NOT NULL
-          AND TRIM(clean_branch) != ''
+          ${validBranchFilter}
           AND LOWER(TRIM(clean_branch)) NOT LIKE '%online%'
-          AND LOWER(TRIM(clean_branch)) NOT LIKE 'unspecified'
-          AND LOWER(TRIM(clean_branch)) NOT LIKE 'unknown branch'
-          AND LOWER(TRIM(clean_branch)) NOT LIKE '%test%'
         GROUP BY TRIM(clean_branch)
       ) combined
       ORDER BY count_30_days DESC;
@@ -132,7 +135,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days' AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_7_days,
         COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days' AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_30_days
       FROM master_leads_powerbi
-      WHERE sibling_index = 1;
+      WHERE sibling_index = 1 AND ${validBranchFilter};
     `;
 
     // F) Others breakdown — show distinct raw lead_source values that fall into 'Others'
@@ -142,7 +145,8 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
         COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
         COUNT(*) AS count_total
       FROM master_leads_powerbi
-      WHERE LOWER(TRIM(lead_source)) NOT IN (
+      WHERE ${validBranchFilter}
+      AND LOWER(TRIM(lead_source)) NOT IN (
         'meta', 'tiktok', 'trial class form', 'roadshow',
         'self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l',
         'walk in','walk-in','walkin','walk_in',
@@ -156,12 +160,12 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
     `;
 
     const [resTotal, resRegion, resBranch, resRoadshow, resGrandTotal, resOthersDetail] = await Promise.all([
-      pool.query(queryTotal),
-      pool.query(queryRegion),
-      pool.query(queryBranch),
+      pool.query(queryTotal, [VALID_BRANCHES]),
+      pool.query(queryRegion, [VALID_BRANCHES]),
+      pool.query(queryBranch, [VALID_BRANCHES]),
       pool.query(queryRoadshow),
-      pool.query(queryGrandTotal),
-      pool.query(queryOthersDetail),
+      pool.query(queryGrandTotal, [VALID_BRANCHES]),
+      pool.query(queryOthersDetail, [VALID_BRANCHES]),
     ]);
 
     return res.json({
