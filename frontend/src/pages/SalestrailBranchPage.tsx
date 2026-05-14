@@ -91,9 +91,11 @@ export function SalestrailBranchPage() {
   const withRecording = calls.filter(c => c.recording_uri).length;
   const totalDuration = calls.reduce((s, c) => s + parseInt(c.duration || '0'), 0);
 
-  const simAnsweredGt5 = calls.filter(c => c.answered && c.source_detail === 'SIM' && parseInt(c.duration || '0') > 5);
-  const simNoRec = simAnsweredGt5.filter(c => !c.recording_uri);
-  const recPct = simAnsweredGt5.length >= 5 ? (simNoRec.length / simAnsweredGt5.length) * 100 : null;
+  // Health check: answered calls with real audio (duration > 5s) that have no recording
+  // Excludes duration=0 calls (instant drops — no audio to record, not a recording failure)
+  const realAnswered = calls.filter(c => c.answered && parseInt(c.duration || '0') > 5);
+  const realNoRec = realAnswered.filter(c => !c.recording_uri);
+  const recPct = realAnswered.length >= 5 ? (realNoRec.length / realAnswered.length) * 100 : null;
   const recStatus = recPct === null ? null : recPct >= 50 ? 'BROKEN' : recPct >= 20 ? 'PARTIAL' : 'OK';
 
   const filteredCalls =
@@ -143,7 +145,7 @@ export function SalestrailBranchPage() {
               fontSize: 13,
             }}>
               <strong>Recording {recStatus === 'BROKEN' ? 'Broken' : 'Issues Detected'}:</strong>{' '}
-              {Math.round(recPct!)}% of SIM calls are missing recordings ({simNoRec.length} of {simAnsweredGt5.length} calls, duration &gt;5s).
+              {Math.round(recPct!)}% of answered calls are missing recordings ({realNoRec.length} of {realAnswered.length} calls with audio &gt;5s).
               {recStatus === 'BROKEN'
                 ? ' Action required: open the Salestrail app on this device, enable Call Recording in settings, and grant Phone + Microphone permissions.'
                 : ' Some calls are not being recorded — check Salestrail app permissions and ensure Call Recording is enabled.'}
@@ -298,8 +300,10 @@ export function SalestrailBranchPage() {
                                 >
                                   {loadingId === call.call_id ? '…' : isPlaying ? '⏸ Close' : '▶ Play'}
                                 </button>
+                              ) : dur === 0 ? (
+                                <span title="Call connected instantly then dropped — no audio captured" style={{ color: 'var(--muted)', fontSize: 11 }}>No audio</span>
                               ) : (
-                                <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>
+                                <span title="Call had audio but recording is missing — check Salestrail app permissions" style={{ color: '#f97316', fontSize: 11, fontWeight: 600 }}>Missing</span>
                               )}
                             </td>
                           </tr>
