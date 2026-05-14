@@ -1,16 +1,21 @@
 const express = require('express');
 const { pool } = require('../db');
+const { env } = require('../env');
 
 const router = express.Router();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const ALLOWED_CHAT_IDS = (process.env.TELEGRAM_ALLOWED_CHATS || '')
+const BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_SECRET = env.TELEGRAM_WEBHOOK_SECRET;
+const ALLOWED_CHAT_IDS = (env.TELEGRAM_ALLOWED_CHATS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
 
 if (!BOT_TOKEN) {
   console.warn('[telegramBot] TELEGRAM_BOT_TOKEN not set — webhook will reject calls');
+}
+if (!WEBHOOK_SECRET) {
+  console.warn('[telegramBot] TELEGRAM_WEBHOOK_SECRET not set — webhook accepts requests from any source');
 }
 if (ALLOWED_CHAT_IDS.length === 0) {
   console.warn('[telegramBot] TELEGRAM_ALLOWED_CHATS not set — webhook will ignore all messages');
@@ -153,6 +158,16 @@ async function sendTelegramMessage(chatId, text) {
 // Telegram webhook handler
 router.post('/webhook', async (req, res) => {
   try {
+    // Validate Telegram webhook secret token when configured.
+    // Set TELEGRAM_WEBHOOK_SECRET in env and pass it as secret_token when
+    // registering the webhook: POST /setWebhook { url, secret_token }.
+    if (WEBHOOK_SECRET) {
+      const incoming = req.headers['x-telegram-bot-api-secret-token'];
+      if (incoming !== WEBHOOK_SECRET) {
+        return res.status(403).end();
+      }
+    }
+
     const { message } = req.body;
     if (!message || !message.text) return res.json({ ok: true });
 
