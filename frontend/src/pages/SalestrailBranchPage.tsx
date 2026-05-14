@@ -91,6 +91,11 @@ export function SalestrailBranchPage() {
   const withRecording = calls.filter(c => c.recording_uri).length;
   const totalDuration = calls.reduce((s, c) => s + parseInt(c.duration || '0'), 0);
 
+  const simAnsweredGt5 = calls.filter(c => c.answered && c.source_detail === 'SIM' && parseInt(c.duration || '0') > 5);
+  const simNoRec = simAnsweredGt5.filter(c => !c.recording_uri);
+  const recPct = simAnsweredGt5.length >= 5 ? (simNoRec.length / simAnsweredGt5.length) * 100 : null;
+  const recStatus = recPct === null ? null : recPct >= 50 ? 'BROKEN' : recPct >= 20 ? 'PARTIAL' : 'OK';
+
   const filteredCalls =
     callFilter === 'answered'  ? calls.filter(c => c.answered) :
     callFilter === 'missed'    ? calls.filter(c => !c.answered && c.inbound) :
@@ -128,6 +133,23 @@ export function SalestrailBranchPage() {
         <div className="errorText">Failed to load call data.</div>
       ) : (
         <>
+          {/* Recording health banner */}
+          {recStatus && recStatus !== 'OK' && (
+            <div style={{
+              padding: '12px 16px', borderRadius: 8, marginBottom: 16,
+              background: recStatus === 'BROKEN' ? '#fee2e2' : '#fef3c7',
+              border: `1px solid ${recStatus === 'BROKEN' ? '#fca5a5' : '#fcd34d'}`,
+              color: recStatus === 'BROKEN' ? '#991b1b' : '#92400e',
+              fontSize: 13,
+            }}>
+              <strong>Recording {recStatus === 'BROKEN' ? 'Broken' : 'Issues Detected'}:</strong>{' '}
+              {Math.round(recPct!)}% of SIM calls are missing recordings ({simNoRec.length} of {simAnsweredGt5.length} calls, duration &gt;5s).
+              {recStatus === 'BROKEN'
+                ? ' Action required: open the Salestrail app on this device, enable Call Recording in settings, and grant Phone + Microphone permissions.'
+                : ' Some calls are not being recorded — check Salestrail app permissions and ensure Call Recording is enabled.'}
+            </div>
+          )}
+
           {/* Summary cards — click Missed/NoAnswer/Answered to filter the table */}
           <div className="summaryStats" style={{ marginBottom: 24 }}>
             <div className="statCard" style={cardStyle('#3b82f6', 'all')} onClick={() => setCallFilter('all')}>
