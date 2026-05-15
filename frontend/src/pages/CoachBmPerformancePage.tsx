@@ -33,6 +33,7 @@ type CoachRow = {
   student_count: number;
   training_confirmed: boolean;
   training_confirmed_at: string | null;
+  potential_ft: boolean;
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -240,14 +241,14 @@ export function CoachBmPerformancePage() {
             <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                  {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Programs','No. of Lessons','No. of Students'].map(h => (
+                  {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Potential FT Coach','Programs','No. of Lessons','No. of Students'].map(h => (
                     <th key={h} style={th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={13} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                  <tr><td colSpan={14} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                       <span style={{ fontSize:36 }}>🎯</span>
                       <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
