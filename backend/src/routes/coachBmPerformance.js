@@ -153,6 +153,7 @@ router.get('/stats', async (req, res, next) => {
       `WITH parsed AS (
          SELECT
            bs.id,
+           bs."role",
            NULLIF(regexp_replace(COALESCE(bs."contract", ''), '[^0-9]', '', 'g'), '')::int AS months,
            bs."contract" AS raw_contract
          FROM hrfs."BranchStaff" bs
@@ -161,32 +162,34 @@ router.get('/stats', async (req, res, next) => {
        SELECT
          COUNT(*)::int AS total,
          -- assigned counts
-         COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> '')::int AS assigned_ccp,
-         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                    AS assigned_weekly_training,
-         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                    AS assigned_toastmasters,
-         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                    AS assigned_tprr,
-         COUNT(*) FILTER (WHERE months = 18)::int                                           AS assigned_atcl_diploma,
+         COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> ''
+                              AND "role" <> 'BM')::int                                    AS assigned_ccp,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS assigned_weekly_training,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS assigned_toastmasters,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS assigned_tprr,
+         COUNT(*) FILTER (WHERE months = 18)::int                                         AS assigned_atcl_diploma,
          -- completed counts (only count completion if program is currently assigned)
          COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> ''
+                              AND "role" <> 'BM'
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'CCP'))::int                  AS completed_ccp,
+                                             AND cpc.program = 'CCP'))::int                AS completed_ccp,
          COUNT(*) FILTER (WHERE months IN (15, 18)
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'Weekly Training'))::int      AS completed_weekly_training,
+                                             AND cpc.program = 'Weekly Training'))::int    AS completed_weekly_training,
          COUNT(*) FILTER (WHERE months IN (15, 18)
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'Toastmasters'))::int         AS completed_toastmasters,
+                                             AND cpc.program = 'Toastmasters'))::int       AS completed_toastmasters,
          COUNT(*) FILTER (WHERE months IN (15, 18)
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'TPRR'))::int                 AS completed_tprr,
+                                             AND cpc.program = 'TPRR'))::int               AS completed_tprr,
          COUNT(*) FILTER (WHERE months = 18
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'ATCL Diploma'))::int         AS completed_atcl_diploma
+                                             AND cpc.program = 'ATCL Diploma'))::int       AS completed_atcl_diploma
        FROM parsed`,
       params
     );
