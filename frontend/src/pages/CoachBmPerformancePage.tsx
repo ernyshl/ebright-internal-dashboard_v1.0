@@ -23,12 +23,15 @@ type CoachRow = {
   gender: string | null;
   phone: string | null;
   branch: string | null;
-  start_date: string | null;
+  role: string | null;
+  training_start_date: string | null;
+  training_end_date: string | null;
   contract: string | null;
   status: string | null;
   programs: string[];
   completed_programs: string[];
   student_count: number;
+  training_confirmed: boolean;
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -195,14 +198,14 @@ export function CoachBmPerformancePage() {
             <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                  {['No.','Name','Gender','Phone','Branch','Start Date','Contract Period','Programs','No. of Lessons','No. of Students'].map(h => (
+                  {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Programs','No. of Lessons','No. of Students'].map(h => (
                     <th key={h} style={th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={10} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                  <tr><td colSpan={13} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                       <span style={{ fontSize:36 }}>🎯</span>
                       <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
