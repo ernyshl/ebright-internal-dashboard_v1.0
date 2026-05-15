@@ -32,6 +32,7 @@ type CoachRow = {
   completed_programs: string[];
   student_count: number;
   training_confirmed: boolean;
+  training_confirmed_at: string | null;
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -137,6 +138,7 @@ export function CoachBmPerformancePage() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformanceStats'] });
     },
   });
 
@@ -275,17 +277,16 @@ export function CoachBmPerformancePage() {
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>
                     <td style={td}>
                       {(() => {
-                        const gate = trainingGate(r.training_start_date);
-                        const showCheckbox = !!r.training_start_date;
-                        if (!showCheckbox) {
+                        if (!r.training_start_date) {
                           return <span title="Training start date not set" style={{ color:'var(--muted)' }}>—</span>;
                         }
+                        const gate = trainingGate(r.training_start_date);
                         // Disabled when within the 7-day window AND not already confirmed.
                         // Already-confirmed rows stay toggleable so academy can untick if they made a mistake.
                         const disabled = !gate.unlocked && !r.training_confirmed;
                         const tooltip = r.training_confirmed
-                          ? 'Confirmed'
-                          : (gate.unlocked ? '' : `Available on ${gate.availableOn?.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}`);
+                          ? (r.training_confirmed_at ? `Confirmed on ${fmtStartDate(r.training_confirmed_at)}` : 'Confirmed')
+                          : (!gate.unlocked ? `Available on ${gate.availableOn?.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}` : undefined);
                         return (
                           <label title={tooltip} style={{ display:'inline-flex', alignItems:'center', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}>
                             <input

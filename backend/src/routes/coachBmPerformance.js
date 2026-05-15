@@ -110,7 +110,8 @@ router.get('/', async (req, res, next) => {
                   ARRAY[]::text[]
                 ) AS completed_programs,
                 COALESCE(bsc.cnt, 0)::int AS student_count,
-                (ctc.branch_staff_id IS NOT NULL) AS training_confirmed
+                (ctc.branch_staff_id IS NOT NULL) AS training_confirmed,
+                ctc.confirmed_at                  AS training_confirmed_at
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
          LEFT JOIN branch_student_counts bsc ON bsc.branch = bs."branch"
