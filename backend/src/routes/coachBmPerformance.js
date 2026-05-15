@@ -335,4 +335,77 @@ router.put('/:branchStaffId/completion', async (req, res, next) => {
   } catch (err) { return next(err); }
 });
 
+// PUT /api/coach-bm-performance/:branchStaffId/training-completion
+//
+// Body: { confirmed: boolean }
+//
+// Records (or removes) academy's confirmation that the coach/BM has
+// completed their initial 1-week training.
+//
+// Guards:
+//   1. Row exists, is Active, and is a coach or BM.
+//   2. For confirmed=true ONLY: trainingStartDate IS NOT NULL AND
+//      NOW() >= trainingStartDate + 7 days. The 7-day rule mirrors the
+//      UI's enabled-state condition. Untick (confirmed=false) is always
+//      allowed regardless of date — covers the case where HR corrects
+//      the training start date after academy already confirmed.
+//
+// confirmed=true  → INSERT ... ON CONFLICT DO UPDATE (refresh timestamp)
+// confirmed=false → DELETE (idempotent)
+router.put('/:branchStaffId/training-completion', async (req, res, next) => {
+  try {
+    const branchStaffId = parseInt(req.params.branchStaffId, 10);
+    if (!Number.isInteger(branchStaffId) || branchStaffId <= 0) {
+      return res.status(400).json({ error: 'Invalid branchStaffId' });
+    }
+
+    const { confirmed } = req.body || {};
+    if (typeof confirmed !== 'boolean') {
+      return res.status(400).json({ error: 'confirmed must be boolean' });
+    }
+
+    const { rows: staffRows } = await pool.query(
+      `SELECT bs."trainingStartDate" AS training_start_date
+         FROM hrfs."BranchStaff" bs
+        WHERE bs.id = $1
+          AND bs."status" = 'Active'
+          AND (bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
+      [branchStaffId]
+    );
+    if (!staffRows.length) {
+      return res.status(404).json({ error: 'Coach or BM not found' });
+    }
+
+    if (confirmed) {
+      const trainingStartDate = staffRows[0].training_start_date;
+      if (!trainingStartDate) {
+        return res.status(422).json({ error: 'Training start date not set' });
+      }
+      const ageMs = Date.now() - new Date(trainingStartDate).getTime();
+      if (ageMs < 7 * 24 * 60 * 60 * 1000) {
+        return res.status(422).json({ error: 'Training period not yet elapsed (7 days)' });
+      }
+
+      const userId = req.user.sub;
+      await pool.query(
+        `INSERT INTO public.coach_training_completion
+           (branch_staff_id, confirmed_at, confirmed_by)
+         VALUES ($1, NOW(), $2)
+         ON CONFLICT (branch_staff_id) DO UPDATE SET
+           confirmed_at = NOW(),
+           confirmed_by = EXCLUDED.confirmed_by`,
+        [branchStaffId, userId]
+      );
+    } else {
+      await pool.query(
+        `DELETE FROM public.coach_training_completion
+         WHERE branch_staff_id = $1`,
+        [branchStaffId]
+      );
+    }
+
+    return res.json({ ok: true, branch_staff_id: branchStaffId, confirmed });
+  } catch (err) { return next(err); }
+});
+
 module.exports = { coachBmPerformanceRouter: router };
