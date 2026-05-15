@@ -111,11 +111,13 @@ router.get('/', async (req, res, next) => {
                 ) AS completed_programs,
                 COALESCE(bsc.cnt, 0)::int AS student_count,
                 (ctc.branch_staff_id IS NOT NULL) AS training_confirmed,
-                ctc.confirmed_at                  AS training_confirmed_at
+                ctc.confirmed_at                  AS training_confirmed_at,
+                (pft.branch_staff_id IS NOT NULL) AS potential_ft
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
          LEFT JOIN branch_student_counts bsc ON bsc.branch = bs."branch"
          LEFT JOIN public.coach_training_completion ctc ON ctc.branch_staff_id = bs.id
+         LEFT JOIN public.coach_potential_ft_flag pft ON pft.branch_staff_id = bs.id
          ${where}
          ORDER BY name ASC
          LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -410,6 +412,73 @@ router.put('/:branchStaffId/training-completion', async (req, res, next) => {
     }
 
     return res.json({ ok: true, branch_staff_id: branchStaffId, confirmed });
+  } catch (err) { return next(err); }
+});
+
+// PUT /api/coach-bm-performance/:branchStaffId/potential-ft
+//
+// Body: { flagged: boolean }
+//
+// Records (or removes) academy's flag that a PT Coach is a candidate
+// for FT promotion.
+//
+// Guards:
+//   1. Row exists, is Active, and is a coach or BM.
+//   2. For flagged=true ONLY: role must be 'PT - Coach' (exact match).
+//      Untick (flagged=false) is always allowed regardless of role —
+//      covers the case where HR corrects role from PT to FT after a
+//      flag was set.
+//
+// flagged=true  → INSERT ... ON CONFLICT DO UPDATE (refresh timestamp)
+// flagged=false → DELETE (idempotent)
+router.put('/:branchStaffId/potential-ft', async (req, res, next) => {
+  try {
+    const branchStaffId = parseInt(req.params.branchStaffId, 10);
+    if (!Number.isInteger(branchStaffId) || branchStaffId <= 0) {
+      return res.status(400).json({ error: 'Invalid branchStaffId' });
+    }
+
+    const { flagged } = req.body || {};
+    if (typeof flagged !== 'boolean') {
+      return res.status(400).json({ error: 'flagged must be boolean' });
+    }
+
+    const { rows: staffRows } = await pool.query(
+      `SELECT bs."role" AS role
+         FROM hrfs."BranchStaff" bs
+        WHERE bs.id = $1
+          AND bs."status" = 'Active'
+          AND (bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
+      [branchStaffId]
+    );
+    if (!staffRows.length) {
+      return res.status(404).json({ error: 'Coach or BM not found' });
+    }
+
+    if (flagged) {
+      if (staffRows[0].role !== 'PT - Coach') {
+        return res.status(422).json({ error: 'Only PT Coaches can be flagged' });
+      }
+
+      const userId = req.user.sub;
+      await pool.query(
+        `INSERT INTO public.coach_potential_ft_flag
+           (branch_staff_id, flagged_at, flagged_by)
+         VALUES ($1, NOW(), $2)
+         ON CONFLICT (branch_staff_id) DO UPDATE SET
+           flagged_at = NOW(),
+           flagged_by = EXCLUDED.flagged_by`,
+        [branchStaffId, userId]
+      );
+    } else {
+      await pool.query(
+        `DELETE FROM public.coach_potential_ft_flag
+         WHERE branch_staff_id = $1`,
+        [branchStaffId]
+      );
+    }
+
+    return res.json({ ok: true, branch_staff_id: branchStaffId, flagged });
   } catch (err) { return next(err); }
 });
 
