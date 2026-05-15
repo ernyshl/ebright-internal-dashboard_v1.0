@@ -30,14 +30,14 @@ Confirmation state is new and stored in a new dashboard-owned table.
 New table `coach_training_completion` (sibling to existing `coach_program_completion`):
 
 ```sql
-CREATE TABLE coach_training_completion (
-  branch_staff_id INT PRIMARY KEY REFERENCES hrfs."BranchStaff"(id) ON DELETE CASCADE,
-  confirmed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  confirmed_by    INT REFERENCES public.users(id)
+CREATE TABLE IF NOT EXISTS public.coach_training_completion (
+  branch_staff_id  INTEGER     PRIMARY KEY,
+  confirmed_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  confirmed_by     UUID        REFERENCES public.users(id) ON DELETE SET NULL
 );
 ```
 
-PK on `branch_staff_id` because at most one confirmation row per coach (no per-program key needed). `coach_program_completion` stays in use for the Programs column — different concept (per-program completion driven by contract length).
+PK on `branch_staff_id` because at most one confirmation row per coach (no per-program key needed). No FK to `hrfs."BranchStaff"` because that schema is a foreign-data wrapper and cross-schema FKs to FDW tables are not supported (same reason `coach_program_completion` omits its FK — see comment in `018_create_coach_program_completion.sql`). `confirmed_by` is `UUID` to match `public.users(id)`. `coach_program_completion` stays in use for the Programs column — different concept (per-program completion driven by contract length).
 
 ## Backend — `/api/coach-bm-performance`
 
