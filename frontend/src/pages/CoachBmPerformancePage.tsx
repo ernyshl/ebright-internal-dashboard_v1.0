@@ -6,8 +6,8 @@ import { apiFetch } from '../lib/api';
 
 const PAGE_SIZE = 50;
 
-const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
-const td = { padding:'10px 14px', fontSize:12 };
+const th = { padding:'10px 14px', textAlign:'center' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
+const td = { padding:'10px 14px', fontSize:12, textAlign:'center' as const };
 
 const PROGRAM_COLORS: Record<string, string> = {
   'CCP':              '#0ea5e9',
@@ -290,7 +290,7 @@ export function CoachBmPerformancePage() {
                   <tr key={r.id} style={{ borderTop:'1px solid var(--border)' }}>
                     <td style={{ ...td, color:'var(--muted)' }}>{pageStart + idx + 1}</td>
                     <td style={td}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
                         <span style={{ fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{r.name}</span>
                         <span style={{ fontSize:10, padding:'2px 7px', borderRadius:99, fontWeight:600, background:r.status==='Active'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.12)', color:r.status==='Active'?'#16a34a':'#dc2626' }}>{r.status}</span>
                       </div>
@@ -349,7 +349,7 @@ export function CoachBmPerformancePage() {
                       {r.programs.length === 0 ? (
                         <span style={{ color:'var(--muted)' }}>—</span>
                       ) : (
-                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                           {r.programs.map(p => {
                             const color = PROGRAM_COLORS[p] || '#6366f1';
                             const done = r.completed_programs.includes(p);
@@ -365,7 +365,6 @@ export function CoachBmPerformancePage() {
                                   fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600,
                                   background: `${color}18`,
                                   color,
-                                  alignSelf:'flex-start',
                                 }}>{p}</span>
                               </label>
                             );
