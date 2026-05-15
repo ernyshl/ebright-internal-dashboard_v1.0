@@ -143,6 +143,36 @@ export function CoachBmPerformancePage() {
     },
   });
 
+  const togglePotentialFt = useMutation({
+    mutationFn: ({ id, flagged }: { id: number; flagged: boolean }) =>
+      apiFetch(`/api/coach-bm-performance/${id}/potential-ft`, {
+        method: 'PUT',
+        body: { flagged },
+      }),
+    onMutate: async ({ id, flagged }) => {
+      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
+      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
+      const previous = queryClient.getQueryData<any>(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          records: previous.records.map((r: CoachRow) =>
+            r.id === id ? { ...r, potential_ft: flagged } : r
+          ),
+        });
+      }
+      return { previous, queryKey };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous && ctx?.queryKey) {
+        queryClient.setQueryData(ctx.queryKey, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+    },
+  });
+
   const records: CoachRow[] = data?.records || [];
   const total: number = data?.total || 0;
   const totalPages: number = data?.totalPages || 1;
@@ -300,6 +330,20 @@ export function CoachBmPerformancePage() {
                           </label>
                         );
                       })()}
+                    </td>
+                    <td style={td}>
+                      {r.role === 'PT - Coach' ? (
+                        <label style={{ display:'inline-flex', alignItems:'center', cursor:'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={r.potential_ft}
+                            onChange={() => togglePotentialFt.mutate({ id: r.id, flagged: !r.potential_ft })}
+                            style={{ accentColor: '#f59e0b', cursor:'pointer' }}
+                          />
+                        </label>
+                      ) : (
+                        <span style={{ color:'var(--muted)' }}>—</span>
+                      )}
                     </td>
                     <td style={td}>
                       {r.programs.length === 0 ? (
