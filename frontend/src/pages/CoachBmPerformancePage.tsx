@@ -6,8 +6,8 @@ import { apiFetch } from '../lib/api';
 
 const PAGE_SIZE = 50;
 
-const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
-const td = { padding:'10px 14px', fontSize:12 };
+const th = { padding:'10px 14px', textAlign:'center' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
+const td = { padding:'10px 14px', fontSize:12, textAlign:'center' as const };
 
 const PROGRAM_COLORS: Record<string, string> = {
   'CCP':              '#0ea5e9',
@@ -33,6 +33,7 @@ type CoachRow = {
   student_count: number;
   training_confirmed: boolean;
   training_confirmed_at: string | null;
+  potential_ft: boolean;
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -142,6 +143,36 @@ export function CoachBmPerformancePage() {
     },
   });
 
+  const togglePotentialFt = useMutation({
+    mutationFn: ({ id, flagged }: { id: number; flagged: boolean }) =>
+      apiFetch(`/api/coach-bm-performance/${id}/potential-ft`, {
+        method: 'PUT',
+        body: { flagged },
+      }),
+    onMutate: async ({ id, flagged }) => {
+      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
+      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
+      const previous = queryClient.getQueryData<any>(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          records: previous.records.map((r: CoachRow) =>
+            r.id === id ? { ...r, potential_ft: flagged } : r
+          ),
+        });
+      }
+      return { previous, queryKey };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous && ctx?.queryKey) {
+        queryClient.setQueryData(ctx.queryKey, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+    },
+  });
+
   const records: CoachRow[] = data?.records || [];
   const total: number = data?.total || 0;
   const totalPages: number = data?.totalPages || 1;
@@ -240,14 +271,14 @@ export function CoachBmPerformancePage() {
             <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                  {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Programs','No. of Lessons','No. of Students'].map(h => (
-                    <th key={h} style={th}>{h}</th>
+                  {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Potential FT Coach','Programs','No. of Lessons','No. of Students'].map(h => (
+                    <th key={h} style={h === 'Name' ? { ...th, textAlign:'left' as const } : th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={13} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                  <tr><td colSpan={14} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                       <span style={{ fontSize:36 }}>🎯</span>
                       <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
@@ -258,7 +289,7 @@ export function CoachBmPerformancePage() {
                 ) : records.map((r, idx) => (
                   <tr key={r.id} style={{ borderTop:'1px solid var(--border)' }}>
                     <td style={{ ...td, color:'var(--muted)' }}>{pageStart + idx + 1}</td>
-                    <td style={td}>
+                    <td style={{ ...td, textAlign:'left' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                         <span style={{ fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{r.name}</span>
                         <span style={{ fontSize:10, padding:'2px 7px', borderRadius:99, fontWeight:600, background:r.status==='Active'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.12)', color:r.status==='Active'?'#16a34a':'#dc2626' }}>{r.status}</span>
@@ -301,10 +332,24 @@ export function CoachBmPerformancePage() {
                       })()}
                     </td>
                     <td style={td}>
+                      {r.role === 'PT - Coach' ? (
+                        <label style={{ display:'inline-flex', alignItems:'center', cursor:'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={r.potential_ft}
+                            onChange={() => togglePotentialFt.mutate({ id: r.id, flagged: !r.potential_ft })}
+                            style={{ accentColor: '#f59e0b', cursor:'pointer' }}
+                          />
+                        </label>
+                      ) : (
+                        <span style={{ color:'var(--muted)' }}>—</span>
+                      )}
+                    </td>
+                    <td style={td}>
                       {r.programs.length === 0 ? (
                         <span style={{ color:'var(--muted)' }}>—</span>
                       ) : (
-                        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                           {r.programs.map(p => {
                             const color = PROGRAM_COLORS[p] || '#6366f1';
                             const done = r.completed_programs.includes(p);
@@ -320,7 +365,6 @@ export function CoachBmPerformancePage() {
                                   fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600,
                                   background: `${color}18`,
                                   color,
-                                  alignSelf:'flex-start',
                                 }}>{p}</span>
                               </label>
                             );
