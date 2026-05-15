@@ -41,6 +41,16 @@ function fmtStartDate(raw: string | null): string {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+const TRAINING_GATE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function trainingGate(trainingStartDate: string | null): { unlocked: boolean; availableOn: Date | null } {
+  if (!trainingStartDate) return { unlocked: false, availableOn: null };
+  const start = new Date(trainingStartDate);
+  if (isNaN(start.getTime())) return { unlocked: false, availableOn: null };
+  const availableOn = new Date(start.getTime() + TRAINING_GATE_MS);
+  return { unlocked: Date.now() >= availableOn.getTime(), availableOn };
+}
+
 export function CoachBmPerformancePage() {
   const [branchFilter, setBranchFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,6 +107,36 @@ export function CoachBmPerformancePage() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
       queryClient.invalidateQueries({ queryKey: ['coachBmPerformanceStats'] });
+    },
+  });
+
+  const toggleTrainingConfirmation = useMutation({
+    mutationFn: ({ id, confirmed }: { id: number; confirmed: boolean }) =>
+      apiFetch(`/api/coach-bm-performance/${id}/training-completion`, {
+        method: 'PUT',
+        body: { confirmed },
+      }),
+    onMutate: async ({ id, confirmed }) => {
+      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
+      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
+      const previous = queryClient.getQueryData<any>(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          records: previous.records.map((r: CoachRow) =>
+            r.id === id ? { ...r, training_confirmed: confirmed } : r
+          ),
+        });
+      }
+      return { previous, queryKey };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous && ctx?.queryKey) {
+        queryClient.setQueryData(ctx.queryKey, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
     },
   });
 
@@ -233,7 +273,32 @@ export function CoachBmPerformancePage() {
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.training_start_date)}</td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.training_end_date)}</td>
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>
-                    <td style={{ ...td, color:'var(--muted)' }}>{/* Training Completed — added in Task 7 */}—</td>
+                    <td style={td}>
+                      {(() => {
+                        const gate = trainingGate(r.training_start_date);
+                        const showCheckbox = !!r.training_start_date;
+                        if (!showCheckbox) {
+                          return <span title="Training start date not set" style={{ color:'var(--muted)' }}>—</span>;
+                        }
+                        // Disabled when within the 7-day window AND not already confirmed.
+                        // Already-confirmed rows stay toggleable so academy can untick if they made a mistake.
+                        const disabled = !gate.unlocked && !r.training_confirmed;
+                        const tooltip = r.training_confirmed
+                          ? 'Confirmed'
+                          : (gate.unlocked ? '' : `Available on ${gate.availableOn?.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}`);
+                        return (
+                          <label title={tooltip} style={{ display:'inline-flex', alignItems:'center', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}>
+                            <input
+                              type="checkbox"
+                              checked={r.training_confirmed}
+                              disabled={disabled}
+                              onChange={() => toggleTrainingConfirmation.mutate({ id: r.id, confirmed: !r.training_confirmed })}
+                              style={{ accentColor: '#10b981', cursor: disabled ? 'not-allowed' : 'pointer' }}
+                            />
+                          </label>
+                        );
+                      })()}
+                    </td>
                     <td style={td}>
                       {r.programs.length === 0 ? (
                         <span style={{ color:'var(--muted)' }}>—</span>
