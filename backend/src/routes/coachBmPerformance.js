@@ -82,11 +82,19 @@ router.get('/', async (req, res, next) => {
                 bs."gender",
                 bs."phone",
                 bs."branch",
-                bs.start_date,
+                bs."role",
+                bs."trainingStartDate" AS training_start_date,
+                bs."trainingEndDate"   AS training_end_date,
                 bs."contract",
                 bs."status",
                 CASE
                   WHEN bs."contract" IS NULL OR TRIM(bs."contract") = '' THEN ARRAY[]::text[]
+                  WHEN bs."role" = 'BM' THEN
+                    CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
+                      WHEN 15 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR']
+                      WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
+                      ELSE ARRAY[]::text[]
+                    END
                   ELSE
                     ARRAY['CCP'] ||
                     CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
@@ -101,10 +109,12 @@ router.get('/', async (req, res, next) => {
                     WHERE cpc.branch_staff_id = bs.id),
                   ARRAY[]::text[]
                 ) AS completed_programs,
-                COALESCE(bsc.cnt, 0)::int AS student_count
+                COALESCE(bsc.cnt, 0)::int AS student_count,
+                (ctc.branch_staff_id IS NOT NULL) AS training_confirmed
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
          LEFT JOIN branch_student_counts bsc ON bsc.branch = bs."branch"
+         LEFT JOIN public.coach_training_completion ctc ON ctc.branch_staff_id = bs.id
          ${where}
          ORDER BY name ASC
          LIMIT $${idx} OFFSET $${idx + 1}`,
