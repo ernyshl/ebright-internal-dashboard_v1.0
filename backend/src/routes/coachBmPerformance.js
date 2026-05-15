@@ -364,8 +364,14 @@ router.put('/:branchStaffId/training-completion', async (req, res, next) => {
       return res.status(400).json({ error: 'confirmed must be boolean' });
     }
 
+    // Gate computed in Postgres so the 7-day comparison is timezone-safe
+    // regardless of whether trainingStartDate is `date`, `timestamp`, or
+    // `timestamptz`. Doing this in JS (Date.now() - new Date(col)) would
+    // misinterpret bare `date` columns as UTC midnight and shave hours
+    // off the elapsed window in non-UTC zones.
     const { rows: staffRows } = await pool.query(
-      `SELECT bs."trainingStartDate" AS training_start_date
+      `SELECT bs."trainingStartDate" IS NOT NULL                            AS has_training_start,
+              bs."trainingStartDate" <= NOW() - INTERVAL '7 days'           AS gate_passed
          FROM hrfs."BranchStaff" bs
         WHERE bs.id = $1
           AND bs."status" = 'Active'
@@ -377,12 +383,10 @@ router.put('/:branchStaffId/training-completion', async (req, res, next) => {
     }
 
     if (confirmed) {
-      const trainingStartDate = staffRows[0].training_start_date;
-      if (!trainingStartDate) {
+      if (!staffRows[0].has_training_start) {
         return res.status(422).json({ error: 'Training start date not set' });
       }
-      const ageMs = Date.now() - new Date(trainingStartDate).getTime();
-      if (ageMs < 7 * 24 * 60 * 60 * 1000) {
+      if (!staffRows[0].gate_passed) {
         return res.status(422).json({ error: 'Training period not yet elapsed (7 days)' });
       }
 
