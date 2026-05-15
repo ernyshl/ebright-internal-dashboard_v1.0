@@ -9,6 +9,7 @@ const { getTableNames } = require('./utils/tableNames');
 const { startFinanceRefreshJob } = require('./jobs/refreshFinanceView');
 const { startFinanceRenewalsRefreshJob } = require('./jobs/refreshFinanceRenewals');
 const { startDailySnapshotJob } = require('./jobs/dailySnapshotCron');
+const { startAgeGroupRefreshJob } = require('./jobs/ageGroupRefreshCron');
 
 async function runMigrations() {
   const { students: studentsTbl } = getTableNames();
@@ -190,6 +191,7 @@ async function start() {
   startFinanceRefreshJob();
   startFinanceRenewalsRefreshJob();
   startDailySnapshotJob();
+  startAgeGroupRefreshJob();
 }
 
 // Don't let a transient DB blip (remote Postgres dropping an idle client, etc.)

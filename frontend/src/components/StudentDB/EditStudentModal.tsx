@@ -2,7 +2,7 @@ import { useState } from 'react';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BRANCHES, GRADES, CHAPTERS } from '../../lib/studentTypes';
-import { getFaCount, getPcmCount, reconcileFa } from '../../lib/studentFaLogic';
+import { getFaCount, getPcmCount, getWorkbookCount, reconcileFa } from '../../lib/studentFaLogic';
 import { apiFetch } from '../../lib/api';
 
 const inp: React.CSSProperties = { width:'100%', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', fontSize:13, background:'var(--bg)', color:'var(--text)', outline:'none', boxSizing:'border-box' };
@@ -18,14 +18,15 @@ function toIsoDate(val: string): string {
 }
 
 export default function EditStudentModal({ student, onClose, onSave }) {
-  const [form, setForm] = useState({ ...student, enrollmentDate: toIsoDate(student.enrollmentDate) });
+  const [form, setForm] = useState({ ...student, enrollmentDate: toIsoDate(student.enrollmentDate), dob: toIsoDate(student.dob) });
 
   function set(field, value) {
     setForm(prev => {
       const next = { ...prev, [field]: value };
       if (field === 'grade' || field === 'chapter') {
-        next.faAttended = reconcileFa(prev.faAttended, getFaCount(next.grade, next.chapter));
-        next.pcmAttended = reconcileFa(prev.pcmAttended, getPcmCount(next.grade, next.chapter));
+        next.faAttended       = reconcileFa(prev.faAttended,                  getFaCount(next.grade, next.chapter));
+        next.pcmAttended      = reconcileFa(prev.pcmAttended,                 getPcmCount(next.grade, next.chapter));
+        next.workbookAttended = reconcileFa(prev.workbookAttended || [],     getWorkbookCount(next.grade, next.chapter));
       }
       return next;
     });
@@ -49,6 +50,7 @@ export default function EditStudentModal({ student, onClose, onSave }) {
 
   const faCount = getFaCount(form.grade, form.chapter);
   const pcmCount = getPcmCount(form.grade, form.chapter);
+  const workbookCount = getWorkbookCount(form.grade, form.chapter);
   const chNum = parseInt(form.chapter.replace('C', ''), 10);
 
   return (
@@ -110,9 +112,15 @@ export default function EditStudentModal({ student, onClose, onSave }) {
               );
             })()}
           </div>
-          <div>
-            <label style={lbl}>Enrollment Date</label>
-            <input type="date" style={inp} value={form.enrollmentDate} onChange={e => set('enrollmentDate', e.target.value)} />
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div>
+              <label style={lbl}>Enrollment Date</label>
+              <input type="date" style={inp} value={form.enrollmentDate} onChange={e => set('enrollmentDate', e.target.value)} />
+            </div>
+            <div>
+              <label style={lbl}>Date of Birth</label>
+              <input type="date" style={inp} value={form.dob || ''} onChange={e => set('dob', e.target.value)} />
+            </div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
             <div>
@@ -130,8 +138,9 @@ export default function EditStudentModal({ student, onClose, onSave }) {
           </div>
           <div style={{ background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)', borderRadius:10, padding:12 }}>
             <p style={{ fontSize:11, fontWeight:700, color:'#6366f1', margin:'0 0 6px', textTransform:'uppercase' }}>Progress Preview — {form.grade} at {form.chapter}</p>
-            <p style={{ fontSize:12, color:'#6366f1', margin:'0 0 4px' }}>FA: <strong>{faCount}</strong> checkbox{faCount !== 1 ? 'es' : ''}{chNum < 12 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C12)</span>}</p>
-            <p style={{ fontSize:12, color:'#f59e0b', margin:0 }}>PCM: <strong>{pcmCount}</strong> checkbox{pcmCount !== 1 ? 'es' : ''}{chNum < 10 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C10)</span>}</p>
+            <p style={{ fontSize:12, color:'#6366f1', margin:'0 0 4px' }}>FA: <strong>{faCount}</strong> checkbox{faCount !== 1 ? 'es' : ''}{chNum < 9 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C9)</span>}</p>
+            <p style={{ fontSize:12, color:'#f59e0b', margin:'0 0 4px' }}>PCM: <strong>{pcmCount}</strong> checkbox{pcmCount !== 1 ? 'es' : ''}{chNum < 9 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C9)</span>}</p>
+            <p style={{ fontSize:12, color:'#10b981', margin:0 }}>Workbook: <strong>{workbookCount}</strong> checkbox{workbookCount !== 1 ? 'es' : ''}{form.grade !== 'G1' && chNum < 9 && <span style={{ color:'#10b981', marginLeft:6 }}>(unlocks at C9)</span>}</p>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
             <div>

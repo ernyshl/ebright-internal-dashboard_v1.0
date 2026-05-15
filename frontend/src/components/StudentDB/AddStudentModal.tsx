@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { BRANCHES, GRADES, CHAPTERS } from '../../lib/studentTypes';
-import { getFaCount, getPcmCount } from '../../lib/studentFaLogic';
+import { getFaCount, getPcmCount, getWorkbookCount } from '../../lib/studentFaLogic';
+import { getAgeGroup, getAgeGroupColor } from '../../lib/ageGroup';
 import { parseExcelFile, generateId } from '../../lib/studentExcelParser';
 import { usePreviewUpload, useConfirmUpload } from '../../hooks/useStudentUpload';
 import type { PreviewResponse, ConfirmResponse } from '../../api/studentUpload';
@@ -12,7 +13,7 @@ const inp = { fontSize:13, border:'1px solid var(--border)', borderRadius:8, pad
 const SORTED_BRANCHES = [...BRANCHES].sort();
 
 function emptyForm() {
-  return { name:'', gender:'Male', status:'Active', branch:'AMP', coachName:'', enrollmentDate:'', grade:'G1', chapter:'C1', guardianName:'', guardianMobile:'' };
+  return { name:'', gender:'Male', status:'Active', branch:'AMP', coachName:'', enrollmentDate:'', dob:'', grade:'G1', chapter:'C1', guardianName:'', guardianMobile:'' };
 }
 
 /* ─── Bulk Upload Tab ─── */
@@ -100,7 +101,7 @@ function BulkUploadTab({ onBulkComplete, onClose }: { onBulkComplete: (counts: C
             <table style={{ minWidth:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead>
                 <tr style={{ background:'var(--bg)' }}>
-                  {['#','Name','Gender','Branch','Coach Name','Enrollment Date','Status','Grade','Chapter','FA Count','Guardian Name','Guardian Mobile',''].map(h => (
+                  {['#','Name','Gender','Branch','DOB','Age Group','Coach Name','Enrollment Date','Status','Grade','Chapter','FA Count','Guardian Name','Guardian Mobile',''].map(h => (
                     <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -112,6 +113,18 @@ function BulkUploadTab({ onBulkComplete, onClose }: { onBulkComplete: (counts: C
                     <td style={{ padding:'8px 12px', fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{row.name}</td>
                     <td style={{ padding:'8px 12px', color:'var(--muted)', whiteSpace:'nowrap', fontSize:11 }}>{row.gender}</td>
                     <td style={{ padding:'8px 12px' }}><select value={row.branch} onChange={e => updateRow(row.tempId,'branch',e.target.value)} style={sel}>{SORTED_BRANCHES.map(b=><option key={b} value={b}>{b}</option>)}</select></td>
+                    <td style={{ padding:'8px 12px', whiteSpace:'nowrap', fontSize:11, color: row.dob ? 'var(--text)' : 'var(--muted)', fontStyle: row.dob ? 'normal' : 'italic' }}>{row.dob || '—'}</td>
+                    {(() => {
+                      const ag = getAgeGroup(row.dob || '');
+                      const c = getAgeGroupColor(ag);
+                      return (
+                        <td style={{ padding:'8px 12px', whiteSpace:'nowrap' }}>
+                          {ag
+                            ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:700, background:c.bg, color:c.fg }}>{ag}</span>
+                            : <span style={{ color:'var(--muted)', fontStyle:'italic', fontSize:11 }}>—</span>}
+                        </td>
+                      );
+                    })()}
                     <td style={{ padding:'8px 12px' }}><input type="text" value={row.coachName||''} placeholder="—" onChange={e => updateRow(row.tempId,'coachName',e.target.value)} style={{ ...sel, width:120 }} /></td>
                     <td style={{ padding:'8px 12px', color:'var(--muted)', whiteSpace:'nowrap', fontSize:11 }}>{row.enrollmentDate||'—'}</td>
                     <td style={{ padding:'8px 12px' }}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:99, fontWeight:600, background: row.status==='Active'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.12)', color: row.status==='Active'?'#16a34a':'#dc2626' }}>{row.status}</span></td>
@@ -144,7 +157,7 @@ function BulkUploadTab({ onBulkComplete, onClose }: { onBulkComplete: (counts: C
       <div style={{ background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)', borderRadius:10, padding:16, fontSize:12 }}>
         <p style={{ fontWeight:700, color:'#6366f1', margin:'0 0 10px' }}>What will be extracted from the "Students" sheet:</p>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-          {[['Column B','Name'],['Column C','Gender'],['Column M','Enrollment Date'],['Column N','Status'],['Column Q','Guardian Name'],['Column S','Guardian Mobile']].map(([col,label]) => (
+          {[['Column B','Name'],['Column C','Gender'],['Column D','Date of Birth'],['Column M','Enrollment Date'],['Column N','Status'],['Column Q','Guardian Name'],['Column S','Guardian Mobile']].map(([col,label]) => (
             <span key={col} style={{ background:'rgba(99,102,241,0.15)', borderRadius:6, padding:'4px 10px', color:'#6366f1' }}>{col} → {label}</span>
           ))}
         </div>
@@ -178,8 +191,9 @@ function ManualEntryTab({ onAdd, onClose }) {
   const [success, setSuccess] = useState(false);
   const [error, setError]     = useState('');
 
-  const faCount  = getFaCount(form.grade, form.chapter);
-  const pcmCount = getPcmCount(form.grade, form.chapter);
+  const faCount       = getFaCount(form.grade, form.chapter);
+  const pcmCount      = getPcmCount(form.grade, form.chapter);
+  const workbookCount = getWorkbookCount(form.grade, form.chapter);
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -188,19 +202,21 @@ function ManualEntryTab({ onAdd, onClose }) {
   function handleSubmit() {
     if (!form.name.trim()) { setError('Name is required.'); return; }
     const student = {
-      id:             generateId(),
-      name:           form.name.trim(),
-      gender:         form.gender,
-      status:         form.status,
-      branch:         form.branch,
-      coachName:      String(form.coachName || '').trim(),
-      enrollmentDate: form.enrollmentDate,
-      grade:          form.grade,
-      chapter:        form.chapter,
-      faAttended:     Array(faCount).fill(false),
-      pcmAttended:    Array(pcmCount).fill(false),
-      guardianName:   String(form.guardianName || '').trim(),
-      guardianMobile: String(form.guardianMobile || '').trim(),
+      id:               generateId(),
+      name:             form.name.trim(),
+      gender:           form.gender,
+      status:           form.status,
+      branch:           form.branch,
+      coachName:        String(form.coachName || '').trim(),
+      enrollmentDate:   form.enrollmentDate,
+      dob:              form.dob,
+      grade:            form.grade,
+      chapter:          form.chapter,
+      faAttended:       Array(faCount).fill(false),
+      pcmAttended:      Array(pcmCount).fill(false),
+      workbookAttended: Array(workbookCount).fill(false),
+      guardianName:     String(form.guardianName || '').trim(),
+      guardianMobile:   String(form.guardianMobile || '').trim(),
     };
     onAdd([student]);
     setForm(emptyForm());
@@ -280,6 +296,16 @@ function ManualEntryTab({ onAdd, onClose }) {
           <input
             type="date" value={form.enrollmentDate}
             onChange={e => set('enrollmentDate', e.target.value)}
+            style={inp}
+          />
+        </div>
+
+        {/* Date of Birth */}
+        <div style={fieldWrap}>
+          <label style={labelStyle}>Date of Birth <span style={{ color:'var(--muted)', fontWeight:400 }}>(optional)</span></label>
+          <input
+            type="date" value={form.dob || ''}
+            onChange={e => set('dob', e.target.value)}
             style={inp}
           />
         </div>
