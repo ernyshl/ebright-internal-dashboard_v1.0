@@ -111,11 +111,13 @@ router.get('/', async (req, res, next) => {
                 ) AS completed_programs,
                 COALESCE(bsc.cnt, 0)::int AS student_count,
                 (ctc.branch_staff_id IS NOT NULL) AS training_confirmed,
-                ctc.confirmed_at                  AS training_confirmed_at
+                ctc.confirmed_at                  AS training_confirmed_at,
+                (pft.branch_staff_id IS NOT NULL) AS potential_ft
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
          LEFT JOIN branch_student_counts bsc ON bsc.branch = bs."branch"
          LEFT JOIN public.coach_training_completion ctc ON ctc.branch_staff_id = bs.id
+         LEFT JOIN public.coach_potential_ft_flag pft ON pft.branch_staff_id = bs.id
          ${where}
          ORDER BY name ASC
          LIMIT $${idx} OFFSET $${idx + 1}`,
