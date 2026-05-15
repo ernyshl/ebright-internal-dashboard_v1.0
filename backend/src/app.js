@@ -39,6 +39,7 @@ const { guardianBackfillRouter } = require('./routes/guardianBackfill');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
 const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
 const { salestrailRouter } = require('./routes/salestrail');
+const { hikEventsRouter } = require('./routes/hikEvents');
 
 const jwt = require('jsonwebtoken');
 
@@ -110,6 +111,11 @@ function createApp() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
+  // Hikvision device event push — mounted BEFORE express.json so the raw XML
+  // body isn't consumed. No JWT auth (the scanner can't carry one); uses HTTP
+  // Basic via env HIK_PUSH_USER / HIK_PUSH_PASS.
+  app.use('/api/hik-events', hikEventsRouter);
+
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

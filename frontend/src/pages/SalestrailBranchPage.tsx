@@ -4,6 +4,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
+type CallFilter = 'all' | 'answered' | 'missed' | 'no_answer';
+
 function fmtDuration(secs: number): string {
   if (!secs) return '0s';
   const h = Math.floor(secs / 3600);
@@ -29,12 +31,20 @@ interface CallRow {
   source_detail: string | null;
 }
 
+const FILTER_LABELS: Record<CallFilter, string> = {
+  all:       'All Calls',
+  answered:  'Answered',
+  missed:    'Missed (BM)',
+  no_answer: 'No Answer (Customer)',
+};
+
 export function SalestrailBranchPage() {
   const { userId } = useParams<{ userId: string }>();
   const [searchParams] = useSearchParams();
   const periodQuery = searchParams.get('period') || 'date_from=&date_to=';
   const branchName = searchParams.get('name') || 'Branch';
 
+  const [callFilter, setCallFilter] = useState<CallFilter>('all');
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -61,6 +71,11 @@ export function SalestrailBranchPage() {
     }
   }
 
+  function handleCardClick(f: CallFilter) {
+    setCallFilter(prev => prev === f ? 'all' : f);
+    setPlayingId(null);
+  }
+
   const q = useQuery({
     queryKey: ['salestrail', 'calls', userId, periodQuery],
     queryFn: () => apiFetch(`/api/salestrail/calls?user_id=${userId}&${periodQuery}`),
@@ -75,6 +90,20 @@ export function SalestrailBranchPage() {
   const inbound = calls.filter(c => c.inbound).length;
   const withRecording = calls.filter(c => c.recording_uri).length;
   const totalDuration = calls.reduce((s, c) => s + parseInt(c.duration || '0'), 0);
+
+  const filteredCalls =
+    callFilter === 'answered'  ? calls.filter(c => c.answered) :
+    callFilter === 'missed'    ? calls.filter(c => !c.answered && c.inbound) :
+    callFilter === 'no_answer' ? calls.filter(c => !c.answered && !c.inbound) :
+    calls;
+
+  const cardStyle = (color: string, filter: CallFilter): React.CSSProperties => ({
+    '--stat-color': color,
+    cursor: filter === 'all' ? undefined : 'pointer',
+    outline: callFilter === filter && filter !== 'all' ? `2px solid ${color}` : '2px solid transparent',
+    outlineOffset: 2,
+    transition: 'outline 0.15s',
+  } as React.CSSProperties);
 
   return (
     <div className="leadsBreakdownPage">
@@ -99,30 +128,30 @@ export function SalestrailBranchPage() {
         <div className="errorText">Failed to load call data.</div>
       ) : (
         <>
-          {/* Summary */}
+          {/* Summary cards — click Missed/NoAnswer/Answered to filter the table */}
           <div className="summaryStats" style={{ marginBottom: 24 }}>
-            <div className="statCard" style={{ '--stat-color': '#3b82f6' } as React.CSSProperties}>
+            <div className="statCard" style={cardStyle('#3b82f6', 'all')} onClick={() => setCallFilter('all')}>
               <div className="statCardIcon">📞</div>
               <div className="statCardContent">
                 <div className="statCardValue">{calls.length}</div>
                 <div className="statCardTitle">Total Calls</div>
               </div>
             </div>
-            <div className="statCard" style={{ '--stat-color': '#10b981' } as React.CSSProperties}>
+            <div className="statCard" style={cardStyle('#10b981', 'answered')} onClick={() => handleCardClick('answered')}>
               <div className="statCardIcon">✅</div>
               <div className="statCardContent">
                 <div className="statCardValue">{answered}</div>
                 <div className="statCardTitle">Answered</div>
               </div>
             </div>
-            <div className="statCard" style={{ '--stat-color': '#ef4444' } as React.CSSProperties}>
+            <div className="statCard" style={cardStyle('#ef4444', 'missed')} onClick={() => handleCardClick('missed')}>
               <div className="statCardIcon">📵</div>
               <div className="statCardContent">
                 <div className="statCardValue">{missed}</div>
                 <div className="statCardTitle">Missed (BM)</div>
               </div>
             </div>
-            <div className="statCard" style={{ '--stat-color': '#f97316' } as React.CSSProperties}>
+            <div className="statCard" style={cardStyle('#f97316', 'no_answer')} onClick={() => handleCardClick('no_answer')}>
               <div className="statCardIcon">🔇</div>
               <div className="statCardContent">
                 <div className="statCardValue">{noAnswer}</div>
@@ -165,6 +194,27 @@ export function SalestrailBranchPage() {
             </div>
           ) : (
             <div className="section">
+              {/* Active filter indicator */}
+              {callFilter !== 'all' && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  marginBottom: 12, padding: '8px 14px',
+                  background: 'var(--surface-muted, #f1f5f9)',
+                  borderRadius: 8, fontSize: 13,
+                }}>
+                  <span style={{ fontWeight: 600 }}>
+                    Filtering: {FILTER_LABELS[callFilter]} — {filteredCalls.length} of {calls.length} calls
+                  </span>
+                  <button
+                    className="btn btnSmall"
+                    style={{ fontSize: 12, padding: '2px 10px' }}
+                    onClick={() => setCallFilter('all')}
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              )}
+
               <div className="branchTableWrap">
                 <table className="branchTable">
                   <thead>
@@ -179,7 +229,7 @@ export function SalestrailBranchPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {calls.map((call) => {
+                    {filteredCalls.map((call) => {
                       const dur = parseInt(call.duration || '0');
                       const displayNumber = call.phonebook_name || call.formatted_number || call.number || '—';
                       const isPlaying = playingId === call.call_id;
