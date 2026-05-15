@@ -15,7 +15,7 @@
 --
 -- Rollback: re-run backend/sql/_pre-2026-05-04-master_leads_powerbi.sql.
 
-CREATE OR REPLACE VIEW master_leads_powerbi AS
+CREATE OR REPLACE VIEW public.master_leads_powerbi AS
  SELECT 'Meta'::text AS lead_source,
     (((ml.raw_data ->> 'created_time'::text)::timestamp with time zone) AT TIME ZONE 'Asia/Kuala_Lumpur'::text) AS submitted_at,
         CASE
@@ -27,18 +27,26 @@ CREATE OR REPLACE VIEW master_leads_powerbi AS
             ELSE COALESCE(bm.region, bm2.region)
         END AS region,
     1 AS sibling_index
-   FROM meta_leads ml
-     LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(( SELECT (fd.value -> 'values'::text) ->> 0
+   FROM public.meta_leads ml
+     LEFT JOIN public.branch_mapping bm ON lower(bm.keyword) = lower(( SELECT (fd.value -> 'values'::text) ->> 0
            FROM jsonb_array_elements(ml.raw_data -> 'field_data'::text) fd(value)
           WHERE (fd.value ->> 'name'::text) ~~* '%branch%'::text
          LIMIT 1))
      LEFT JOIN LATERAL (
        SELECT official_name, region
-       FROM branch_mapping
+       FROM public.branch_mapping
        WHERE lower(ml.form_name) ~~* ('%' || lower(keyword) || '%')
        ORDER BY length(keyword) DESC
        LIMIT 1
      ) bm2 ON true
+  WHERE ml.form_id NOT IN (
+    '1340893944558816',
+    '962001166451222',
+    '2348260765657799',
+    '1612711170159262',
+    '980007897687157',
+    '1587042685753487'
+  )
 UNION ALL
  SELECT 'TikTok'::text AS lead_source,
         CASE

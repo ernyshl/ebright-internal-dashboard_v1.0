@@ -21,43 +21,50 @@ if (ALLOWED_CHAT_IDS.length === 0) {
   console.warn('[telegramBot] TELEGRAM_ALLOWED_CHATS not set — webhook will ignore all messages');
 }
 
+// Mirrors leads.js VALID_BRANCHES — only count leads from real branches.
+const VALID_BRANCHES = [
+  'Online', 'Subang Taipan', 'Sri Petaling', 'Setia Alam', 'Kota Damansara',
+  'Putrajaya', 'Ampang', 'Cyberjaya', 'Klang', 'Denai Alam', 'Bandar Baru Bangi',
+  'Danau Kota', 'Shah Alam', 'Bandar Tun Hussein Onn', 'Eco Grandeur',
+  'Bandar Seri Putra', 'Rimbayu', 'Kajang', 'Kota Warisan', 'Taman Sri Gombak',
+  'Dataran Puchong Utama', 'Tropicana Sungai Buloh', 'Puncak Jalil',
+];
+
+const LEAD_SOURCE_CASE = `
+  CASE
+    WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
+    WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
+    WHEN LOWER(TRIM(lead_source)) = 'trial class form' THEN 'Website (Conversion)'
+    WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
+    WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
+    WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
+    WHEN LOWER(TRIM(lead_source)) = 'website' THEN 'Website (Organic)'
+    ELSE 'Others'
+  END
+`;
+
 function fmtRM(n) {
   return `RM ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-async function getLeadsToday() {
-  // Without siblings — mirrors Branch Distribution Summary + Lead Sources.
+async function getLeadsByDate(offsetDays = 0) {
   const { rows } = await pool.query(`
-    SELECT
-      CASE
-        WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
-        WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
-        WHEN LOWER(TRIM(lead_source)) = 'trial class form' THEN 'Website (Conversion)'
-        WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
-        WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
-        WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
-        WHEN LOWER(TRIM(lead_source)) = 'website' THEN 'Website (Organic)'
-        ELSE 'Others'
-      END as source,
-      COUNT(*) as count
+    SELECT ${LEAD_SOURCE_CASE} as source, COUNT(*) as count
     FROM master_leads_powerbi
-    WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+    WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+          = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - $2::int
       AND sibling_index = 1
+      AND TRIM(clean_branch) = ANY($1::text[])
     GROUP BY 1
     ORDER BY count DESC;
-  `);
+  `, [VALID_BRANCHES, offsetDays]);
   return rows;
 }
 
+async function getLeadsToday()     { return getLeadsByDate(0); }
+async function getLeadsYesterday() { return getLeadsByDate(1); }
+
 async function getSpendBreakdown() {
-  // Mirrors backend/src/routes/marketing.js: dashboard reads spend from
-  // meta_spend (4 ad accounts) + google_spend. The tiktok_spend table is NOT
-  // used by the marketing dashboard — TikTok numbers there come from
-  // META_TT_ID inside meta_spend, so the bot mirrors the same source.
-  // Earlier MAX(spend) GROUP BY account_id was wrong: meta_spend has multiple
-  // campaigns per account, so MAX collapsed them to one campaign's value.
-  // SUM is correct because the unique constraint (account_id, campaign_name,
-  // data_date) prevents the duplicate-row race we originally guarded against.
   const FB_ACCOUNTS = [
     process.env.META_MAIN_FB_ID,
     process.env.META_SARA_ID,
@@ -87,6 +94,33 @@ async function getSpendBreakdown() {
 async function getSpendToday() {
   const { total } = await getSpendBreakdown();
   return total;
+}
+
+async function getSpendYesterday() {
+  const FB_ACCOUNTS = [
+    process.env.META_MAIN_FB_ID,
+    process.env.META_SARA_ID,
+    process.env.META_ONLINE_ID,
+  ].filter(Boolean);
+  const TT_ACCOUNT = process.env.META_TT_ID || '';
+  const { rows } = await pool.query(`
+    SELECT
+      COALESCE((SELECT SUM(spend) FROM meta_spend
+         WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
+           AND account_id = ANY($1::text[])
+       ), 0) AS meta,
+      COALESCE((SELECT SUM(spend) FROM meta_spend
+         WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
+           AND account_id = $2
+       ), 0) AS tiktok,
+      COALESCE((SELECT SUM(spend) FROM google_spend
+         WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
+       ), 0) AS google
+  `, [FB_ACCOUNTS, TT_ACCOUNT]);
+  const meta = Number(rows[0]?.meta || 0);
+  const google = Number(rows[0]?.google || 0);
+  const tiktok = Number(rows[0]?.tiktok || 0);
+  return meta + google + tiktok;
 }
 
 async function getLeadsByBranch() {
@@ -126,21 +160,33 @@ async function getLeadsByRegion() {
   return rows;
 }
 
-function buildReportMessage(leads, spend) {
+function buildReportMessage(leads, spend, { isYesterday = false } = {}) {
   const sources = ['Meta', 'TikTok', 'Website (Conversion)', 'Roadshow', 'Self Generated Lead', 'Walk In', 'Website (Organic)', 'Others'];
   const map = {};
   let total = 0;
   for (const r of leads) { map[r.source] = Number(r.count); total += Number(r.count); }
 
   const cpl = total > 0 ? spend / total : 0;
-  const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-  let msg = `📊 *Ebright Daily Report*\n📅 ${now}\n\n*Today's Leads*\n━━━━━━━━━━━━━━━━━━\n`;
+  let dateStr;
+  if (isYesterday) {
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+    d.setDate(d.getDate() - 1);
+    dateStr = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } else {
+    dateStr = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  const leadsLabel = isYesterday ? "Yesterday's Leads" : "Today's Leads";
+  const totalLabel = isYesterday ? 'Total Leads Yesterday' : 'Total Leads Today';
+  const spendLabel = isYesterday ? 'Total Spend Yesterday' : 'Total Spend Today';
+
+  let msg = `📊 *Ebright Daily Report*\n📅 ${dateStr}\n\n*${leadsLabel}*\n━━━━━━━━━━━━━━━━━━\n`;
   for (const s of sources) msg += `${s}: *${map[s] || 0}*\n`;
   msg += `━━━━━━━━━━━━━━━━━━\nTOTAL: *${total}*\n\n`;
   msg += `*Executive Summary*\n━━━━━━━━━━━━━━━━━━\n`;
-  msg += `Total Leads Today: *${total}*\n`;
-  msg += `Total Spend Today: *${fmtRM(spend)}*\n`;
+  msg += `${totalLabel}: *${total}*\n`;
+  msg += `${spendLabel}: *${fmtRM(spend)}*\n`;
   msg += `Cost Per Lead: *${fmtRM(cpl)}*`;
   return msg;
 }
@@ -158,9 +204,6 @@ async function sendTelegramMessage(chatId, text) {
 // Telegram webhook handler
 router.post('/webhook', async (req, res) => {
   try {
-    // Validate Telegram webhook secret token when configured.
-    // Set TELEGRAM_WEBHOOK_SECRET in env and pass it as secret_token when
-    // registering the webhook: POST /setWebhook { url, secret_token }.
     if (WEBHOOK_SECRET) {
       const incoming = req.headers['x-telegram-bot-api-secret-token'];
       if (incoming !== WEBHOOK_SECRET) {
@@ -174,7 +217,6 @@ router.post('/webhook', async (req, res) => {
     const chatId = String(message.chat.id);
     const text = message.text.trim().toLowerCase();
 
-    // Security: only respond to allowed chat IDs
     if (!ALLOWED_CHAT_IDS.includes(chatId)) {
       return res.json({ ok: true });
     }
@@ -182,6 +224,11 @@ router.post('/webhook', async (req, res) => {
     if (text === '/report' || text === '/today' || text === '/start') {
       const [leads, spend] = await Promise.all([getLeadsToday(), getSpendToday()]);
       await sendTelegramMessage(chatId, buildReportMessage(leads, spend));
+    }
+
+    else if (text === '/ytdreport' || text === '/yesterday') {
+      const [leads, spend] = await Promise.all([getLeadsYesterday(), getSpendYesterday()]);
+      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, { isYesterday: true }));
     }
 
     else if (text === '/branch' || text === '/branches') {
@@ -213,7 +260,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     else if (text === '/help') {
-      const msg = `🤖 *Ebright Dashboard Bot*\n\nAvailable commands:\n/report — Full daily report\n/branch — Leads by branch\n/region — Leads by region\n/spend — Today's ad spend\n/help — Show this message`;
+      const msg = `🤖 *Ebright Dashboard Bot*\n\nAvailable commands:\n/report — Today's full report\n/ytdreport — Yesterday's full report\n/branch — Leads by branch\n/region — Leads by region\n/spend — Today's ad spend\n/help — Show this message`;
       await sendTelegramMessage(chatId, msg);
     }
 
