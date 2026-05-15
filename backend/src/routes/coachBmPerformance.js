@@ -82,11 +82,19 @@ router.get('/', async (req, res, next) => {
                 bs."gender",
                 bs."phone",
                 bs."branch",
-                bs.start_date,
+                bs."role",
+                bs."trainingStartDate" AS training_start_date,
+                bs."trainingEndDate"   AS training_end_date,
                 bs."contract",
                 bs."status",
                 CASE
                   WHEN bs."contract" IS NULL OR TRIM(bs."contract") = '' THEN ARRAY[]::text[]
+                  WHEN bs."role" = 'BM' THEN
+                    CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
+                      WHEN 15 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR']
+                      WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
+                      ELSE ARRAY[]::text[]
+                    END
                   ELSE
                     ARRAY['CCP'] ||
                     CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
@@ -101,10 +109,13 @@ router.get('/', async (req, res, next) => {
                     WHERE cpc.branch_staff_id = bs.id),
                   ARRAY[]::text[]
                 ) AS completed_programs,
-                COALESCE(bsc.cnt, 0)::int AS student_count
+                COALESCE(bsc.cnt, 0)::int AS student_count,
+                (ctc.branch_staff_id IS NOT NULL) AS training_confirmed,
+                ctc.confirmed_at                  AS training_confirmed_at
          FROM hrfs."BranchStaff" bs
          LEFT JOIN name_lookup nl ON nl."nickname" = bs."nickname"
          LEFT JOIN branch_student_counts bsc ON bsc.branch = bs."branch"
+         LEFT JOIN public.coach_training_completion ctc ON ctc.branch_staff_id = bs.id
          ${where}
          ORDER BY name ASC
          LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -143,6 +154,7 @@ router.get('/stats', async (req, res, next) => {
       `WITH parsed AS (
          SELECT
            bs.id,
+           bs."role",
            NULLIF(regexp_replace(COALESCE(bs."contract", ''), '[^0-9]', '', 'g'), '')::int AS months,
            bs."contract" AS raw_contract
          FROM hrfs."BranchStaff" bs
@@ -151,32 +163,34 @@ router.get('/stats', async (req, res, next) => {
        SELECT
          COUNT(*)::int AS total,
          -- assigned counts
-         COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> '')::int AS assigned_ccp,
-         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                    AS assigned_weekly_training,
-         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                    AS assigned_toastmasters,
-         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                    AS assigned_tprr,
-         COUNT(*) FILTER (WHERE months = 18)::int                                           AS assigned_atcl_diploma,
+         COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> ''
+                              AND "role" <> 'BM')::int                                    AS assigned_ccp,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS assigned_weekly_training,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS assigned_toastmasters,
+         COUNT(*) FILTER (WHERE months IN (15, 18))::int                                  AS assigned_tprr,
+         COUNT(*) FILTER (WHERE months = 18)::int                                         AS assigned_atcl_diploma,
          -- completed counts (only count completion if program is currently assigned)
          COUNT(*) FILTER (WHERE raw_contract IS NOT NULL AND TRIM(raw_contract) <> ''
+                              AND "role" <> 'BM'
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'CCP'))::int                  AS completed_ccp,
+                                             AND cpc.program = 'CCP'))::int                AS completed_ccp,
          COUNT(*) FILTER (WHERE months IN (15, 18)
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'Weekly Training'))::int      AS completed_weekly_training,
+                                             AND cpc.program = 'Weekly Training'))::int    AS completed_weekly_training,
          COUNT(*) FILTER (WHERE months IN (15, 18)
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'Toastmasters'))::int         AS completed_toastmasters,
+                                             AND cpc.program = 'Toastmasters'))::int       AS completed_toastmasters,
          COUNT(*) FILTER (WHERE months IN (15, 18)
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'TPRR'))::int                 AS completed_tprr,
+                                             AND cpc.program = 'TPRR'))::int               AS completed_tprr,
          COUNT(*) FILTER (WHERE months = 18
                               AND EXISTS (SELECT 1 FROM coach_program_completion cpc
                                            WHERE cpc.branch_staff_id = parsed.id
-                                             AND cpc.program = 'ATCL Diploma'))::int         AS completed_atcl_diploma
+                                             AND cpc.program = 'ATCL Diploma'))::int       AS completed_atcl_diploma
        FROM parsed`,
       params
     );
@@ -272,6 +286,12 @@ router.put('/:branchStaffId/completion', async (req, res, next) => {
       `SELECT
          CASE
            WHEN bs."contract" IS NULL OR TRIM(bs."contract") = '' THEN ARRAY[]::text[]
+           WHEN bs."role" = 'BM' THEN
+             CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
+               WHEN 15 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR']
+               WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
+               ELSE ARRAY[]::text[]
+             END
            ELSE
              ARRAY['CCP'] ||
              CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
@@ -313,6 +333,83 @@ router.put('/:branchStaffId/completion', async (req, res, next) => {
     }
 
     return res.json({ ok: true, branch_staff_id: branchStaffId, program, completed });
+  } catch (err) { return next(err); }
+});
+
+// PUT /api/coach-bm-performance/:branchStaffId/training-completion
+//
+// Body: { confirmed: boolean }
+//
+// Records (or removes) academy's confirmation that the coach/BM has
+// completed their initial 1-week training.
+//
+// Guards:
+//   1. Row exists, is Active, and is a coach or BM.
+//   2. For confirmed=true ONLY: trainingStartDate IS NOT NULL AND
+//      NOW() >= trainingStartDate + 7 days. The 7-day rule mirrors the
+//      UI's enabled-state condition. Untick (confirmed=false) is always
+//      allowed regardless of date — covers the case where HR corrects
+//      the training start date after academy already confirmed.
+//
+// confirmed=true  → INSERT ... ON CONFLICT DO UPDATE (refresh timestamp)
+// confirmed=false → DELETE (idempotent)
+router.put('/:branchStaffId/training-completion', async (req, res, next) => {
+  try {
+    const branchStaffId = parseInt(req.params.branchStaffId, 10);
+    if (!Number.isInteger(branchStaffId) || branchStaffId <= 0) {
+      return res.status(400).json({ error: 'Invalid branchStaffId' });
+    }
+
+    const { confirmed } = req.body || {};
+    if (typeof confirmed !== 'boolean') {
+      return res.status(400).json({ error: 'confirmed must be boolean' });
+    }
+
+    // Gate computed in Postgres so the 7-day comparison is timezone-safe
+    // regardless of whether trainingStartDate is `date`, `timestamp`, or
+    // `timestamptz`. Doing this in JS (Date.now() - new Date(col)) would
+    // misinterpret bare `date` columns as UTC midnight and shave hours
+    // off the elapsed window in non-UTC zones.
+    const { rows: staffRows } = await pool.query(
+      `SELECT bs."trainingStartDate" IS NOT NULL                            AS has_training_start,
+              bs."trainingStartDate" <= NOW() - INTERVAL '7 days'           AS gate_passed
+         FROM hrfs."BranchStaff" bs
+        WHERE bs.id = $1
+          AND bs."status" = 'Active'
+          AND (bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
+      [branchStaffId]
+    );
+    if (!staffRows.length) {
+      return res.status(404).json({ error: 'Coach or BM not found' });
+    }
+
+    if (confirmed) {
+      if (!staffRows[0].has_training_start) {
+        return res.status(422).json({ error: 'Training start date not set' });
+      }
+      if (!staffRows[0].gate_passed) {
+        return res.status(422).json({ error: 'Training period not yet elapsed (7 days)' });
+      }
+
+      const userId = req.user.sub;
+      await pool.query(
+        `INSERT INTO public.coach_training_completion
+           (branch_staff_id, confirmed_at, confirmed_by)
+         VALUES ($1, NOW(), $2)
+         ON CONFLICT (branch_staff_id) DO UPDATE SET
+           confirmed_at = NOW(),
+           confirmed_by = EXCLUDED.confirmed_by`,
+        [branchStaffId, userId]
+      );
+    } else {
+      await pool.query(
+        `DELETE FROM public.coach_training_completion
+         WHERE branch_staff_id = $1`,
+        [branchStaffId]
+      );
+    }
+
+    return res.json({ ok: true, branch_staff_id: branchStaffId, confirmed });
   } catch (err) { return next(err); }
 });
 
