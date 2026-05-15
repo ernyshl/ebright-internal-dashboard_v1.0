@@ -272,7 +272,7 @@ export function CoachBmPerformancePage() {
               <thead>
                 <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
                   {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Potential FT Coach','Programs','No. of Lessons','No. of Students'].map(h => (
-                    <th key={h} style={th}>{h}</th>
+                    <th key={h} style={h === 'Name' ? { ...th, textAlign:'left' as const } : th}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -289,8 +289,8 @@ export function CoachBmPerformancePage() {
                 ) : records.map((r, idx) => (
                   <tr key={r.id} style={{ borderTop:'1px solid var(--border)' }}>
                     <td style={{ ...td, color:'var(--muted)' }}>{pageStart + idx + 1}</td>
-                    <td style={td}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                    <td style={{ ...td, textAlign:'left' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                         <span style={{ fontWeight:600, color:'var(--text)', whiteSpace:'nowrap' }}>{r.name}</span>
                         <span style={{ fontSize:10, padding:'2px 7px', borderRadius:99, fontWeight:600, background:r.status==='Active'?'rgba(34,197,94,0.15)':'rgba(239,68,68,0.12)', color:r.status==='Active'?'#16a34a':'#dc2626' }}>{r.status}</span>
                       </div>
