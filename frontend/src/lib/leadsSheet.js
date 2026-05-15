@@ -22,7 +22,9 @@ export const BRANCH_TO_PIPELINE = {
   'Kajang TTDI Grove':       '20 KTG',
   'Kota Warisan':            '19 KW',
   'Taman Sri Gombak':        '18 TSG',
-  'Dataran Puchong Utama':   '21 DPU',
+  'Dataran Puchong Utama':   '23 PU',
+  'Tropicana Sungai Buloh':  '21 TSB',
+  'Puncak Jalil':            '22 PJL',
 };
 
 const SHEET_ID = '1o011OFPYmR0Y36tHRf6UEqMaJwjGoO0ntpXUEsPTI3w';
@@ -49,13 +51,15 @@ export const PIPELINE_REGION = {
   '18 TSG':  'Region B',
   '19 KW':   'Region C',
   '20 KTG':  'Region B',
-  '21 DPU':  'Region C',  // Dataran Puchong Utama
+  '21 TSB': 'Region A',
+  '22 PJL': 'Region B',
+  '23 PU':  'Region C',  // Dataran Puchong Utama
 };
 
 export const REGION_PIPELINES = {
-  'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY'],
-  'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG'],
-  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '21 DPU'],
+  'Region A': ['02 ST', '04 SA', '09 KLG', '10 DA', '13 SHA', '15 EGR', '17 RBY', '21 TSB'],
+  'Region B': ['03 SP', '05 KD', '07 AMP', '12 DK', '14 BTHO', '18 TSG', '20 KTG', '22 PJL'],
+  'Region C': ['01 ONL', '06 PJY', '08 CJY', '11 BBB', '16 BSP', '19 KW', '23 PU'],
 };
 
 export const ALL_PIPELINES = Object.keys(PIPELINE_REGION).sort();
@@ -82,7 +86,9 @@ export const PIPELINE_TO_BRANCH = {
   '18 TSG':  'Taman Sri Gombak',
   '19 KW':   'Kota Warisan',
   '20 KTG':  'Kajang TTDI Grove',
-  '21 DPU':  'Dataran Puchong Utama',
+  '21 TSB': 'Tropicana Sungai Buloh',
+  '22 PJL': 'Puncak Jalil',
+  '23 PU':  'Dataran Puchong Utama',
 };
 
 function parseDate(str) {

@@ -4,12 +4,14 @@ const { pool } = require('../db');
 const { getTableNames } = require('../utils/tableNames');
 const { computeAgeGroup } = require('../utils/ageGroup');
 const { logCreate, logDelete, logArchive, logEdit } = require('../services/studentAuditLog');
+const { requireAuth } = require('../middleware/auth');
 
 function userEmailOf(req) {
   return req.user?.email || req.user?.deviceName || 'anonymous';
 }
 
 const router = express.Router();
+router.use(requireAuth);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

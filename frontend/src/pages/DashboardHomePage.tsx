@@ -8,18 +8,6 @@ export function DashboardHomePage() {
 
   const visibleDashboards = getAccessibleDashboards(permissions, dashboards);
 
-  // Google Analytics report URLs
-  const gaReports = [
-    {
-      label: '📊 Organic Leads',
-      url: 'https://analytics.google.com/analytics/web/?authuser=3#/analysis/a374453486p512266664/edit/lrRZTnaTTJOgtAqkM8uTKQ'
-    },
-    {
-      label: '📈 Paid Campaign Performance',
-      url: 'https://analytics.google.com/analytics/web/?authuser=3#/analysis/a374453486p512266664/edit/P0KMghcdQV2gTzEYdrR97g'
-    }
-  ];
-
   const departmentData: any[] = [
     {
       id: 'operations_dept',
@@ -43,8 +31,6 @@ export function DashboardHomePage() {
         { label: 'FA Dashboard', path: '/fa-dashboard-testing', dashboard: 'academy' },
         { label: 'PCM Dashboard', path: '/pcm-dashboard', dashboard: 'academy' },
         { label: 'OKR Dashboard', path: '/okr-attendance', dashboard: 'academy' },
-        { label: 'Branch Revenue & Renewals', path: '/academy/branch-revenue-renewals', dashboard: 'academy' },
-        { label: 'Renewal by Branch', path: '/academy/renewal-by-branch', dashboard: 'academy' }
       ]
     },
     {
@@ -63,7 +49,9 @@ export function DashboardHomePage() {
       icon: '💰',
       color: '#10b981',
       links: [
-        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' }
+        { label: 'Branch Ranking', path: '/branch-ranking', dashboard: 'finance' },
+        { label: 'Branch Revenue & Renewals', path: '/finance/branch-revenue-renewals', dashboard: 'finance' },
+        { label: 'Renewal by Branch', path: '/finance/renewal-by-branch', dashboard: 'finance' }
       ]
     },
     {
@@ -84,8 +72,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'Marketing Performance', path: '/marketing-performance', dashboard: 'marketing' },
         { label: 'Enrolment by Platform', path: '/platform-breakdown', dashboard: 'marketing' }
-      ],
-      gaReports: gaReports
+      ]
     },
     {
       id: 'department',
@@ -117,30 +104,6 @@ export function DashboardHomePage() {
         { label: 'Attendance', path: '/hr-attendance', dashboard: 'hr_db' },
         { label: 'Hiring Data', path: '/hr-hiring', dashboard: 'hr_db' },
         { label: 'Recruitment Funnel', path: '/hr-recruitment-funnel', dashboard: 'hr_db' },
-      ]
-    },
-    {
-      id: 'hr_crud',
-      name: 'CRUD HR Data',
-      icon: '📋',
-      color: '#a855f7',
-      links: [
-        { label: 'Staff List', path: '/hr-staff-list', dashboard: 'hr_crud' },
-        { label: 'MC (Medical Certificate)', path: '/hr-mc', dashboard: 'hr_crud' },
-        { label: 'Annual Leave', path: '/hr-annual-leave', dashboard: 'hr_crud' },
-      ]
-    },
-    {
-      id: 'hr_testing',
-      name: 'HR Testing Data',
-      icon: '🧪',
-      color: '#14b8a6',
-      links: [
-        { label: 'Overview v2', path: '/hrfs-overview-v2', dashboard: 'hr_testing' },
-        { label: 'Attendance Dashboard', path: '/hrfs-attendance-dashboard', dashboard: 'hr_testing' },
-        { label: 'Attendance Log', path: '/hrfs-attendance', dashboard: 'hr_testing' },
-        { label: 'Branch Staff', path: '/hrfs-branch-staff', dashboard: 'hr_testing' },
-        { label: 'Leave Transactions', path: '/hrfs-leave-transactions', dashboard: 'hr_testing' },
       ]
     },
     {

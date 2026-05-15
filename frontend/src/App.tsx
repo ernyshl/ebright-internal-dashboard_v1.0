@@ -107,17 +107,17 @@ export default function App() {
           <Route path="/dashboard" element={
             <RequirePermission dashboard="operations"><LookerDashboardPage /></RequirePermission>
           } />
-          <Route path="/academy/renewal-by-branch" element={
-            <RequirePermission dashboard="academy"><FinanceRenewalByBranchPage /></RequirePermission>
-          } />
           <Route path="/finance/renewal-by-branch" element={
-            <Navigate to="/academy/renewal-by-branch" replace />
+            <RequirePermission dashboard="finance"><FinanceRenewalByBranchPage /></RequirePermission>
           } />
-          <Route path="/academy/branch-revenue-renewals" element={
-            <RequirePermission dashboard="academy"><AcademyBranchRevenueRenewalsPage /></RequirePermission>
+          <Route path="/academy/renewal-by-branch" element={
+            <Navigate to="/finance/renewal-by-branch" replace />
           } />
           <Route path="/finance/branch-revenue-renewals" element={
-            <Navigate to="/academy/branch-revenue-renewals" replace />
+            <RequirePermission dashboard="finance"><AcademyBranchRevenueRenewalsPage /></RequirePermission>
+          } />
+          <Route path="/academy/branch-revenue-renewals" element={
+            <Navigate to="/finance/branch-revenue-renewals" replace />
           } />
           <Route path="/department" element={
             <RequirePermission dashboard="department"><DepartmentDashboardPage /></RequirePermission>

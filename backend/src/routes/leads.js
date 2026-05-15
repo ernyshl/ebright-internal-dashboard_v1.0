@@ -4,173 +4,164 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
+const VALID_BRANCHES = [
+  'Online', 'Subang Taipan', 'Sri Petaling', 'Setia Alam', 'Kota Damansara',
+  'Putrajaya', 'Ampang', 'Cyberjaya', 'Klang', 'Denai Alam', 'Bandar Baru Bangi',
+  'Danau Kota', 'Shah Alam', 'Bandar Tun Hussein Onn', 'Eco Grandeur',
+  'Bandar Seri Putra', 'Rimbayu', 'Kajang', 'Kota Warisan', 'Taman Sri Gombak',
+  'Dataran Puchong Utama', 'Tropicana Sungai Buloh', 'Puncak Jalil',
+];
+
 router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing', 'tv']), async (_req, res, next) => {
   try {
-    // All date comparisons use Asia/Kuala_Lumpur (UTC+8)
-    const TZ = `'Asia/Kuala_Lumpur'`;
-    const today     = `(NOW() AT TIME ZONE ${TZ})::date`;
-    const asDate    = `(submitted_at AT TIME ZONE ${TZ})::date`;
-
-    // A) Lead source breakdown — without siblings (sibling_index = 1 = primary lead row)
-    const queryTotal = `
-      SELECT
-        CASE
-          WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
-          WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
-          WHEN LOWER(TRIM(lead_source)) = 'trial class form' THEN 'Trial Class Form'
-          WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
-          WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
-          WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
-          WHEN LOWER(TRIM(lead_source)) = 'website' THEN 'Website'
-          ELSE 'Others'
-        END as lead_source,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-      FROM master_leads_powerbi
-      WHERE sibling_index = 1
-      GROUP BY 1
-      ORDER BY count_30_days DESC;
-    `;
-
-    // B) Regions — mapped from clean_branch to Region A / B / C
-    const queryRegion = `
-      SELECT *
-      FROM (
+    // Single scan of master_leads_powerbi — all six sections derived from one MATERIALIZED CTE.
+    // bm2 LATERAL in the view already short-circuits; this eliminates 5 additional full scans.
+    const query = `
+      WITH today AS (
+        SELECT (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date AS d
+      ),
+      base AS MATERIALIZED (
         SELECT
+          TRIM(clean_branch)                                           AS branch,
+          LOWER(TRIM(clean_branch)) LIKE '%online%'                   AS is_online,
+          sibling_index,
+          (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date       AS sub_date,
+          TRIM(lead_source)                                            AS raw_lead_source,
+          LOWER(TRIM(lead_source))                                     AS ls,
           CASE
-            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Bandar Rimbayu','Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan'
-            ]) THEN 'Region A'
-            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Danau Kota','Kota Damansara','Ampang','Sri Petaling',
-              'Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak'
-            ]) THEN 'Region B'
-            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY[
-              'Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya',
-              'Bandar Seri Putra','Dataran Puchong Utama'
-            ]) OR LOWER(TRIM(clean_branch)) LIKE '%online%' THEN 'Region C'
+            WHEN TRIM(lead_source) = 'Meta'                                               THEN 'Meta'
+            WHEN TRIM(lead_source) = 'TikTok'                                             THEN 'TikTok'
+            WHEN LOWER(TRIM(lead_source)) = 'trial class form'                            THEN 'Trial Class Form'
+            WHEN LOWER(TRIM(lead_source)) = 'roadshow'                                   THEN 'Roadshow'
+            WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
+            WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in')    THEN 'Walk In'
+            WHEN LOWER(TRIM(lead_source)) = 'website'                                    THEN 'Website'
+            ELSE 'Others'
+          END                                                          AS lead_source_cat,
+          CASE
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan','Tropicana Sungai Buloh']) THEN 'Region A'
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang','Taman Sri Gombak','Puncak Jalil']) THEN 'Region B'
+            WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra','Dataran Puchong Utama'])
+              OR LOWER(TRIM(clean_branch)) LIKE '%online%'            THEN 'Region C'
             ELSE NULL
-          END AS region,
-          COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-          COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-        FROM master_leads_powerbi
-        WHERE clean_branch IS NOT NULL AND TRIM(clean_branch) != ''
+          END                                                          AS region
+        FROM master_leads_powerbi, today
+        WHERE TRIM(clean_branch) = ANY($1)
+      ),
+
+      -- A) Lead source breakdown (primary rows only)
+      _src AS (
+        SELECT
+          lead_source_cat AS lead_source,
+          COUNT(*) FILTER (WHERE sub_date = d)                        AS count_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1)                    AS count_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days')   AS count_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days')  AS count_30_days
+        FROM base, today
+        WHERE sibling_index = 1
         GROUP BY 1
-      ) sub
-      WHERE region IS NOT NULL
-      ORDER BY region;
-    `;
+      ),
 
-    // C) Branch breakdown
-    const queryBranch = `
-      SELECT * FROM (
+      -- B) Region breakdown
+      _rgn AS (
         SELECT
-          'Online' as region,
-          'Online' as lead_source,
-          'Online' as clean_branch,
-          COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-          COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-        FROM master_leads_powerbi
-        WHERE LOWER(TRIM(clean_branch)) LIKE '%online%'
-        GROUP BY 1, 2, 3
+          region,
+          COUNT(*) FILTER (WHERE sub_date = d)                        AS count_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1)                    AS count_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days')   AS count_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days')  AS count_30_days
+        FROM base, today
+        WHERE region IS NOT NULL
+        GROUP BY 1
+      ),
 
-        UNION ALL
-
+      -- C) Branch breakdown (Online row + per-branch rows)
+      _brn_online AS (
         SELECT
-          'All Regions' as region,
-          'All Sources' as lead_source,
-          TRIM(clean_branch) as clean_branch,
-          COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-          COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-          COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-        FROM master_leads_powerbi
-        WHERE
-          clean_branch IS NOT NULL
-          AND TRIM(clean_branch) != ''
-          AND LOWER(TRIM(clean_branch)) NOT LIKE '%online%'
-          AND LOWER(TRIM(clean_branch)) NOT LIKE 'unspecified'
-          AND LOWER(TRIM(clean_branch)) NOT LIKE 'unknown branch'
-          AND LOWER(TRIM(clean_branch)) NOT LIKE '%test%'
-        GROUP BY TRIM(clean_branch)
-      ) combined
-      ORDER BY count_30_days DESC;
-    `;
+          'Online'      AS region,
+          'Online'      AS lead_source,
+          'Online'      AS clean_branch,
+          COUNT(*) FILTER (WHERE sub_date = d)                        AS count_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1)                    AS count_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days')   AS count_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days')  AS count_30_days
+        FROM base, today
+        WHERE is_online
+      ),
+      _brn_physical AS (
+        SELECT
+          'All Regions' AS region,
+          'All Sources' AS lead_source,
+          branch        AS clean_branch,
+          COUNT(*) FILTER (WHERE sub_date = d)                        AS count_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1)                    AS count_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days')   AS count_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days')  AS count_30_days
+        FROM base, today
+        WHERE NOT is_online
+        GROUP BY branch
+      ),
 
-    // D) Roadshow group counts
-    const queryRoadshow = `
-      SELECT
-        COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days
-      FROM master_leads_powerbi
-      WHERE LOWER(TRIM(lead_source)) IN (
-        'roadshow',
-        'self generated lead', 'self-generated lead', 'selfgenerated lead',
-        'sgl', 's.g.l',
-        'others', 'other',
-        'walk in', 'walk-in', 'walkin', 'walk_in'
-      );
-    `;
+      -- D) Roadshow group — now scoped to VALID_BRANCHES (blank branches excluded)
+      _rds AS (
+        SELECT
+          COUNT(*) FILTER (WHERE sub_date = d AND ls IN ('roadshow','self generated lead','self-generated lead','selfgenerated lead','sgl','s.g.l','others','other','walk in','walk-in','walkin','walk_in'))       AS count_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1 AND ls IN ('roadshow','self generated lead','self-generated lead','selfgenerated lead','sgl','s.g.l','others','other','walk in','walk-in','walkin','walk_in')) AS count_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days'  AND ls IN ('roadshow','self generated lead','self-generated lead','selfgenerated lead','sgl','s.g.l','others','other','walk in','walk-in','walkin','walk_in')) AS count_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days' AND ls IN ('roadshow','self generated lead','self-generated lead','selfgenerated lead','sgl','s.g.l','others','other','walk in','walk-in','walkin','walk_in')) AS count_30_days
+        FROM base, today
+      ),
 
-    // E) Grand total — without siblings, matches the Lead Sources section
-    const queryGrandTotal = `
-      SELECT
-        COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1) AS count_yesterday,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days') AS count_7_days,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days') AS count_30_days,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today} AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_today,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today} - 1 AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_yesterday,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '7 days' AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_7_days,
-        COUNT(*) FILTER (WHERE ${asDate} >= ${today} - INTERVAL '30 days' AND LOWER(TRIM(clean_branch)) LIKE '%online%') AS count_online_30_days
-      FROM master_leads_powerbi
-      WHERE sibling_index = 1;
-    `;
+      -- E) Grand total (primary rows only)
+      _grd AS (
+        SELECT
+          COUNT(*) FILTER (WHERE sub_date = d)                                         AS count_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1)                                     AS count_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days')                    AS count_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days')                   AS count_30_days,
+          COUNT(*) FILTER (WHERE sub_date = d        AND is_online)                    AS count_online_today,
+          COUNT(*) FILTER (WHERE sub_date = d - 1    AND is_online)                    AS count_online_yesterday,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '7 days'  AND is_online)     AS count_online_7_days,
+          COUNT(*) FILTER (WHERE sub_date >= d - INTERVAL '30 days' AND is_online)     AS count_online_30_days
+        FROM base, today
+        WHERE sibling_index = 1
+      ),
 
-    // F) Others breakdown — show distinct raw lead_source values that fall into 'Others'
-    const queryOthersDetail = `
-      SELECT
-        TRIM(lead_source) AS raw_lead_source,
-        COUNT(*) FILTER (WHERE ${asDate} = ${today}) AS count_today,
-        COUNT(*) AS count_total
-      FROM master_leads_powerbi
-      WHERE LOWER(TRIM(lead_source)) NOT IN (
-        'meta', 'tiktok', 'trial class form', 'roadshow',
-        'self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l',
-        'walk in','walk-in','walkin','walk_in',
-        'website'
+      -- F) Others detail — top-20 raw lead_source values that map to 'Others'
+      _oth AS (
+        SELECT
+          raw_lead_source,
+          COUNT(*) FILTER (WHERE sub_date = d) AS count_today,
+          COUNT(*)                              AS count_total
+        FROM base, today
+        WHERE lead_source_cat = 'Others'
+          AND raw_lead_source IS NOT NULL
+          AND raw_lead_source != ''
+        GROUP BY raw_lead_source
+        ORDER BY count_today DESC, count_total DESC
+        LIMIT 20
       )
-      AND lead_source IS NOT NULL
-      AND TRIM(lead_source) != ''
-      GROUP BY TRIM(lead_source)
-      ORDER BY count_today DESC, count_total DESC
-      LIMIT 20;
+
+      SELECT
+        (SELECT json_agg(row_to_json(s) ORDER BY s.count_30_days DESC) FROM _src s)          AS total,
+        (SELECT json_agg(row_to_json(r) ORDER BY r.region)             FROM _rgn r)           AS regions,
+        (SELECT json_agg(row_to_json(b) ORDER BY b.count_30_days DESC)
+           FROM (SELECT * FROM _brn_online UNION ALL SELECT * FROM _brn_physical) b)          AS branches,
+        (SELECT row_to_json(d) FROM _rds d)                                                   AS roadshow,
+        (SELECT row_to_json(g) FROM _grd g)                                                   AS grand_total,
+        (SELECT json_agg(row_to_json(o)) FROM _oth o)                                         AS others_detail;
     `;
 
-    const [resTotal, resRegion, resBranch, resRoadshow, resGrandTotal, resOthersDetail] = await Promise.all([
-      pool.query(queryTotal),
-      pool.query(queryRegion),
-      pool.query(queryBranch),
-      pool.query(queryRoadshow),
-      pool.query(queryGrandTotal),
-      pool.query(queryOthersDetail),
-    ]);
+    const { rows } = await pool.query(query, [VALID_BRANCHES]);
+    const r = rows[0];
 
     return res.json({
-      total: resTotal.rows,
-      regions: resRegion.rows,
-      branches: resBranch.rows,
-      roadshow: resRoadshow.rows[0],
-      grandTotal: resGrandTotal.rows[0],
-      othersDetail: resOthersDetail.rows,
+      total:        r.total        || [],
+      regions:      r.regions      || [],
+      branches:     r.branches     || [],
+      roadshow:     r.roadshow     || {},
+      grandTotal:   r.grand_total  || {},
+      othersDetail: r.others_detail || [],
     });
   } catch (err) {
     return next(err);

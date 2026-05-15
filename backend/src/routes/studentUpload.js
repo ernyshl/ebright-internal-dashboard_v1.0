@@ -2,8 +2,10 @@ const express = require('express');
 const { z } = require('zod');
 const { categorizeUpload } = require('../services/uploadComparison');
 const { executeUpload } = require('../services/uploadExecution');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 const excelRowSchema = z.object({
   name: z.string().min(1, 'name is required'),
