@@ -225,8 +225,15 @@ export function CoachBmPerformancePage() {
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{r.gender || '—'}</td>
                     <td style={{ ...td, color: r.phone ? 'var(--text)' : 'var(--muted)', whiteSpace:'nowrap' }}>{r.phone || '—'}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{r.branch || '—'}</span></td>
-                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.start_date)}</td>
+                    <td style={td}>
+                      {r.role
+                        ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(244,63,94,0.1)', color:'#f43f5e', whiteSpace:'nowrap' }}>{r.role}</span>
+                        : <span style={{ color:'var(--muted)' }}>—</span>}
+                    </td>
+                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.training_start_date)}</td>
+                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.training_end_date)}</td>
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>
+                    <td style={{ ...td, color:'var(--muted)' }}>{/* Training Completed — added in Task 7 */}—</td>
                     <td style={td}>
                       {r.programs.length === 0 ? (
                         <span style={{ color:'var(--muted)' }}>—</span>
