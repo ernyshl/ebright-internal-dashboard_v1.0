@@ -415,4 +415,71 @@ router.put('/:branchStaffId/training-completion', async (req, res, next) => {
   } catch (err) { return next(err); }
 });
 
+// PUT /api/coach-bm-performance/:branchStaffId/potential-ft
+//
+// Body: { flagged: boolean }
+//
+// Records (or removes) academy's flag that a PT Coach is a candidate
+// for FT promotion.
+//
+// Guards:
+//   1. Row exists, is Active, and is a coach or BM.
+//   2. For flagged=true ONLY: role must be 'PT - Coach' (exact match).
+//      Untick (flagged=false) is always allowed regardless of role —
+//      covers the case where HR corrects role from PT to FT after a
+//      flag was set.
+//
+// flagged=true  → INSERT ... ON CONFLICT DO UPDATE (refresh timestamp)
+// flagged=false → DELETE (idempotent)
+router.put('/:branchStaffId/potential-ft', async (req, res, next) => {
+  try {
+    const branchStaffId = parseInt(req.params.branchStaffId, 10);
+    if (!Number.isInteger(branchStaffId) || branchStaffId <= 0) {
+      return res.status(400).json({ error: 'Invalid branchStaffId' });
+    }
+
+    const { flagged } = req.body || {};
+    if (typeof flagged !== 'boolean') {
+      return res.status(400).json({ error: 'flagged must be boolean' });
+    }
+
+    const { rows: staffRows } = await pool.query(
+      `SELECT bs."role" AS role
+         FROM hrfs."BranchStaff" bs
+        WHERE bs.id = $1
+          AND bs."status" = 'Active'
+          AND (bs."role" ILIKE '%coach%' OR bs."role" = 'BM')`,
+      [branchStaffId]
+    );
+    if (!staffRows.length) {
+      return res.status(404).json({ error: 'Coach or BM not found' });
+    }
+
+    if (flagged) {
+      if (staffRows[0].role !== 'PT - Coach') {
+        return res.status(422).json({ error: 'Only PT Coaches can be flagged' });
+      }
+
+      const userId = req.user.sub;
+      await pool.query(
+        `INSERT INTO public.coach_potential_ft_flag
+           (branch_staff_id, flagged_at, flagged_by)
+         VALUES ($1, NOW(), $2)
+         ON CONFLICT (branch_staff_id) DO UPDATE SET
+           flagged_at = NOW(),
+           flagged_by = EXCLUDED.flagged_by`,
+        [branchStaffId, userId]
+      );
+    } else {
+      await pool.query(
+        `DELETE FROM public.coach_potential_ft_flag
+         WHERE branch_staff_id = $1`,
+        [branchStaffId]
+      );
+    }
+
+    return res.json({ ok: true, branch_staff_id: branchStaffId, flagged });
+  } catch (err) { return next(err); }
+});
+
 module.exports = { coachBmPerformanceRouter: router };
