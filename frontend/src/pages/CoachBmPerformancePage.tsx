@@ -23,12 +23,16 @@ type CoachRow = {
   gender: string | null;
   phone: string | null;
   branch: string | null;
-  start_date: string | null;
+  role: string | null;
+  training_start_date: string | null;
+  training_end_date: string | null;
   contract: string | null;
   status: string | null;
   programs: string[];
   completed_programs: string[];
   student_count: number;
+  training_confirmed: boolean;
+  training_confirmed_at: string | null;
 };
 
 function fmtStartDate(raw: string | null): string {
@@ -36,6 +40,16 @@ function fmtStartDate(raw: string | null): string {
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw; // fall back to raw text — start_date is inconsistent in BranchStaff
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const TRAINING_GATE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function trainingGate(trainingStartDate: string | null): { unlocked: boolean; availableOn: Date | null } {
+  if (!trainingStartDate) return { unlocked: false, availableOn: null };
+  const start = new Date(trainingStartDate);
+  if (isNaN(start.getTime())) return { unlocked: false, availableOn: null };
+  const availableOn = new Date(start.getTime() + TRAINING_GATE_MS);
+  return { unlocked: Date.now() >= availableOn.getTime(), availableOn };
 }
 
 export function CoachBmPerformancePage() {
@@ -82,6 +96,37 @@ export function CoachBmPerformancePage() {
             if (completed) set.add(program); else set.delete(program);
             return { ...r, completed_programs: Array.from(set) };
           }),
+        });
+      }
+      return { previous, queryKey };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous && ctx?.queryKey) {
+        queryClient.setQueryData(ctx.queryKey, ctx.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformance'] });
+      queryClient.invalidateQueries({ queryKey: ['coachBmPerformanceStats'] });
+    },
+  });
+
+  const toggleTrainingConfirmation = useMutation({
+    mutationFn: ({ id, confirmed }: { id: number; confirmed: boolean }) =>
+      apiFetch(`/api/coach-bm-performance/${id}/training-completion`, {
+        method: 'PUT',
+        body: { confirmed },
+      }),
+    onMutate: async ({ id, confirmed }) => {
+      await queryClient.cancelQueries({ queryKey: ['coachBmPerformance'] });
+      const queryKey = ['coachBmPerformance', branchFilter, searchQuery, page];
+      const previous = queryClient.getQueryData<any>(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, {
+          ...previous,
+          records: previous.records.map((r: CoachRow) =>
+            r.id === id ? { ...r, training_confirmed: confirmed } : r
+          ),
         });
       }
       return { previous, queryKey };
@@ -195,14 +240,14 @@ export function CoachBmPerformancePage() {
             <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                  {['No.','Name','Gender','Phone','Branch','Start Date','Contract Period','Programs','No. of Lessons','No. of Students'].map(h => (
+                  {['No.','Name','Gender','Phone','Branch','Role','Training Start Date','Training End Date','Contract Period','Training Completed','Programs','No. of Lessons','No. of Students'].map(h => (
                     <th key={h} style={th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={10} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                  <tr><td colSpan={13} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                       <span style={{ fontSize:36 }}>🎯</span>
                       <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
@@ -222,8 +267,39 @@ export function CoachBmPerformancePage() {
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{r.gender || '—'}</td>
                     <td style={{ ...td, color: r.phone ? 'var(--text)' : 'var(--muted)', whiteSpace:'nowrap' }}>{r.phone || '—'}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{r.branch || '—'}</span></td>
-                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.start_date)}</td>
+                    <td style={td}>
+                      {r.role
+                        ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(244,63,94,0.1)', color:'#f43f5e', whiteSpace:'nowrap' }}>{r.role}</span>
+                        : <span style={{ color:'var(--muted)' }}>—</span>}
+                    </td>
+                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.training_start_date)}</td>
+                    <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{fmtStartDate(r.training_end_date)}</td>
                     <td style={{ ...td, color: r.contract ? 'var(--text)' : 'var(--muted)' }}>{r.contract || '—'}</td>
+                    <td style={td}>
+                      {(() => {
+                        if (!r.training_start_date) {
+                          return <span title="Training start date not set" style={{ color:'var(--muted)' }}>—</span>;
+                        }
+                        const gate = trainingGate(r.training_start_date);
+                        // Disabled when within the 7-day window AND not already confirmed.
+                        // Already-confirmed rows stay toggleable so academy can untick if they made a mistake.
+                        const disabled = !gate.unlocked && !r.training_confirmed;
+                        const tooltip = r.training_confirmed
+                          ? (r.training_confirmed_at ? `Confirmed on ${fmtStartDate(r.training_confirmed_at)}` : 'Confirmed')
+                          : (!gate.unlocked ? `Available on ${gate.availableOn?.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })}` : undefined);
+                        return (
+                          <label title={tooltip} style={{ display:'inline-flex', alignItems:'center', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}>
+                            <input
+                              type="checkbox"
+                              checked={r.training_confirmed}
+                              disabled={disabled}
+                              onChange={() => toggleTrainingConfirmation.mutate({ id: r.id, confirmed: !r.training_confirmed })}
+                              style={{ accentColor: '#10b981', cursor: disabled ? 'not-allowed' : 'pointer' }}
+                            />
+                          </label>
+                        );
+                      })()}
+                    </td>
                     <td style={td}>
                       {r.programs.length === 0 ? (
                         <span style={{ color:'var(--muted)' }}>—</span>
