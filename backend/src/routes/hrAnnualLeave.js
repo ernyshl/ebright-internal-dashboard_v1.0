@@ -39,7 +39,7 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
        SELECT
          lt.id,
          COALESCE(bs.name, rn.name_from_lt, lt."EmployeeCode") AS name,
-         bs.position,
+         bs.role AS position,
          bs.branch AS department_branch,
          lt."LeaveDate"::date AS al_date,
          lt."Days" AS al_duration
