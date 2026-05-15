@@ -282,6 +282,12 @@ router.put('/:branchStaffId/completion', async (req, res, next) => {
       `SELECT
          CASE
            WHEN bs."contract" IS NULL OR TRIM(bs."contract") = '' THEN ARRAY[]::text[]
+           WHEN bs."role" = 'BM' THEN
+             CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
+               WHEN 15 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR']
+               WHEN 18 THEN ARRAY['Weekly Training', 'Toastmasters', 'TPRR', 'ATCL Diploma']
+               ELSE ARRAY[]::text[]
+             END
            ELSE
              ARRAY['CCP'] ||
              CASE NULLIF(regexp_replace(bs."contract", '[^0-9]', '', 'g'), '')::int
