@@ -50,7 +50,7 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
          ON bs.id = m.branchstaff_id
          OR (m.branchstaff_id IS NULL
              AND rn.name_from_lt IS NOT NULL
-             AND UPPER(bs.name) = UPPER(rn.name_from_lt))
+             AND UPPER(TRIM(bs.name)) = UPPER(TRIM(rn.name_from_lt)))
        WHERE lt."LeaveTypeCode" = 'AL'
          AND lt."ApplyStatus" = 'A'
          AND lt."LeaveDate"::date >= CURRENT_DATE
