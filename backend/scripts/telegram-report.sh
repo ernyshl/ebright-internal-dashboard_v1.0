@@ -59,6 +59,7 @@ SELECT
   COALESCE((SELECT SUM(spend) FROM meta_spend
      WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
        AND account_id IN ('${META_MAIN_FB_ID}','${META_ONLINE_ID}','${META_TT_ID}')
+       AND UPPER(campaign_name) NOT LIKE '%FRANCHISE%'
    ), 0)
   +
   COALESCE((SELECT SUM(spend) FROM google_spend
@@ -97,11 +98,24 @@ broadcast() {
   echo "Report sent to ${sent} chat(s) at $(date)"
 }
 
+# Sara Recruitment leads — identified by presence of 'position' or 'education'
+# field keys in raw_data, which are exclusive to Sara's recruitment forms.
+SARA_LEADS_SQL="
+SELECT COUNT(*) FROM meta_leads
+WHERE (lead_created_time AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+      = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+  AND EXISTS (
+    SELECT 1 FROM jsonb_array_elements(raw_data->'field_data') f
+    WHERE f->>'name' ILIKE '%position%' OR f->>'name' ILIKE '%education%'
+  );
+"
+
 # Execute queries — capture exit code without aborting on `set -e` so we can
 # fall through to a 'Data unavailable' broadcast if the DB call fails.
 DB_FAILED=0
 LEADS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -F'|' -c \"$LEADS_SQL\"" 2>/dev/null) || DB_FAILED=1
 SPEND_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$SPEND_SQL\"" 2>/dev/null) || DB_FAILED=1
+SARA_LEADS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$SARA_LEADS_SQL\"" 2>/dev/null) || true
 
 if [ "$DB_FAILED" -eq 1 ]; then
   broadcast "⚠️ *Ebright Report — Data unavailable*
@@ -131,13 +145,18 @@ while IFS='|' read -r source count; do
   esac
 done <<< "$LEADS_RESULT"
 
+# Parse Sara recruitment leads
+SARA_LEADS=$(echo "$SARA_LEADS_RESULT" | tr -d '[:space:]')
+SARA_LEADS=${SARA_LEADS:-0}
+
 # Parse spend
 TOTAL_SPEND=$(echo "$SPEND_RESULT" | tr -d '[:space:]')
 TOTAL_SPEND=${TOTAL_SPEND:-0}
 
-# Calculate CPL
-if [ "$TOTAL" -gt 0 ]; then
-  CPL=$(echo "scale=2; $TOTAL_SPEND / $TOTAL" | bc 2>/dev/null || echo "0")
+# Calculate CPL — only paid-channel leads (Meta + TikTok + Website Conversion)
+PAID_LEADS=$((META + TIKTOK + WEBSITE_CONV))
+if [ "$PAID_LEADS" -gt 0 ]; then
+  CPL=$(echo "scale=2; $TOTAL_SPEND / $PAID_LEADS" | bc 2>/dev/null || echo "0")
 else
   CPL="0"
 fi
@@ -162,6 +181,10 @@ Website (Organic): *${WEBSITE_ORG}*
 Others: *${OTHERS}*
 ━━━━━━━━━━━━━━━━━━
 TOTAL: *${TOTAL}*
+
+*Recruitment Leads*
+━━━━━━━━━━━━━━━━━━
+TOTAL: *${SARA_LEADS}*
 
 *Executive Summary*
 ━━━━━━━━━━━━━━━━━━

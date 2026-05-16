@@ -67,7 +67,6 @@ async function getLeadsYesterday() { return getLeadsByDate(1); }
 async function getSpendBreakdown() {
   const FB_ACCOUNTS = [
     process.env.META_MAIN_FB_ID,
-    process.env.META_SARA_ID,
     process.env.META_ONLINE_ID,
   ].filter(Boolean);
   const TT_ACCOUNT = process.env.META_TT_ID || '';
@@ -76,6 +75,7 @@ async function getSpendBreakdown() {
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
            AND account_id = ANY($1::text[])
+           AND campaign_name NOT ILIKE '%franchise%'
        ), 0) AS meta,
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
@@ -99,7 +99,6 @@ async function getSpendToday() {
 async function getSpendYesterday() {
   const FB_ACCOUNTS = [
     process.env.META_MAIN_FB_ID,
-    process.env.META_SARA_ID,
     process.env.META_ONLINE_ID,
   ].filter(Boolean);
   const TT_ACCOUNT = process.env.META_TT_ID || '';
@@ -108,6 +107,7 @@ async function getSpendYesterday() {
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
            AND account_id = ANY($1::text[])
+           AND campaign_name NOT ILIKE '%franchise%'
        ), 0) AS meta,
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
@@ -166,7 +166,8 @@ function buildReportMessage(leads, spend, { isYesterday = false } = {}) {
   let total = 0;
   for (const r of leads) { map[r.source] = Number(r.count); total += Number(r.count); }
 
-  const cpl = total > 0 ? spend / total : 0;
+  const paidLeads = (map['Meta'] || 0) + (map['TikTok'] || 0) + (map['Website (Conversion)'] || 0);
+  const cpl = paidLeads > 0 ? spend / paidLeads : 0;
 
   let dateStr;
   if (isYesterday) {
