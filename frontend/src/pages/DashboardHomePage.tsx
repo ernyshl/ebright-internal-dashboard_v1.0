@@ -3,7 +3,7 @@ import { usePermissions, canAccess, getAccessibleDashboards } from '../lib/permi
 
 export function DashboardHomePage() {
   const navigate = useNavigate();
-  const { permissions, dashboards, isLoading } = usePermissions();
+  const { permissions, dashboards, isLoading, isSuperAdmin } = usePermissions();
 
 
   const visibleDashboards = getAccessibleDashboards(permissions, dashboards);
@@ -177,22 +177,11 @@ export function DashboardHomePage() {
     }))
     .filter(dept => dept.links.length > 0 || !!dept.gaReports);
 
-  if (isLoading) {
-    return (
-      <div className="dashboardHomePage">
-        <div className="dashboardHomeHeader">
-          <h1 className="pageHeaderTitle">Welcome to Ebright Dashboard</h1>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="dashboardHomePage">
       <div className="dashboardHomeHeader">
         <h1 className="pageHeaderTitle">Welcome to Ebright Dashboard</h1>
-        <p>{visibleDashboards.length} accessible dashboards</p>
+        <p>{isLoading ? 'Loading...' : `${visibleDashboards.length} accessible dashboards`}</p>
       </div>
 
       <div className="dashboardHomeGrid">
@@ -249,6 +238,22 @@ export function DashboardHomePage() {
             </div>
           </div>
         ))}
+        {isSuperAdmin && (
+          <div
+            className="dashboardHomeCard"
+            style={{ '--card-color': '#6366f1' } as React.CSSProperties}
+          >
+            <div className="dashboardHomeCardHeader">
+              <span className="dashboardHomeCardIcon">🧬</span>
+              <h2>Adam Testing</h2>
+            </div>
+            <div className="dashboardHomeCardLinks">
+              <button className="dashboardHomeLink" onClick={() => navigate('/adam-testing')}>
+                DB Overview, Tables & Optimization
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
