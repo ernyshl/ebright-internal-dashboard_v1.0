@@ -64,6 +64,19 @@ async function getLeadsByDate(offsetDays = 0) {
 async function getLeadsToday()     { return getLeadsByDate(0); }
 async function getLeadsYesterday() { return getLeadsByDate(1); }
 
+async function getSaraLeads(offsetDays = 0) {
+  const { rows } = await pool.query(`
+    SELECT COUNT(*) as count FROM meta_leads
+    WHERE (lead_created_time AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+          = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - $1::int
+      AND EXISTS (
+        SELECT 1 FROM jsonb_array_elements(raw_data->'field_data') f
+        WHERE f->>'name' ILIKE '%position%' OR f->>'name' ILIKE '%education%'
+      );
+  `, [offsetDays]);
+  return Number(rows[0]?.count || 0);
+}
+
 async function getSpendBreakdown() {
   const FB_ACCOUNTS = [
     process.env.META_MAIN_FB_ID,
@@ -160,7 +173,7 @@ async function getLeadsByRegion() {
   return rows;
 }
 
-function buildReportMessage(leads, spend, { isYesterday = false } = {}) {
+function buildReportMessage(leads, spend, saraLeads = 0, { isYesterday = false } = {}) {
   const sources = ['Meta', 'TikTok', 'Website (Conversion)', 'Roadshow', 'Self Generated Lead', 'Walk In', 'Website (Organic)', 'Others'];
   const map = {};
   let total = 0;
@@ -185,6 +198,7 @@ function buildReportMessage(leads, spend, { isYesterday = false } = {}) {
   let msg = `📊 *Ebright Daily Report*\n📅 ${dateStr}\n\n*${leadsLabel}*\n━━━━━━━━━━━━━━━━━━\n`;
   for (const s of sources) msg += `${s}: *${map[s] || 0}*\n`;
   msg += `━━━━━━━━━━━━━━━━━━\nTOTAL: *${total}*\n\n`;
+  msg += `*Recruitment Leads*\n━━━━━━━━━━━━━━━━━━\nTOTAL: *${saraLeads}*\n\n`;
   msg += `*Executive Summary*\n━━━━━━━━━━━━━━━━━━\n`;
   msg += `${totalLabel}: *${total}*\n`;
   msg += `${spendLabel}: *${fmtRM(spend)}*\n`;
@@ -223,13 +237,13 @@ router.post('/webhook', async (req, res) => {
     }
 
     if (text === '/report' || text === '/today' || text === '/start') {
-      const [leads, spend] = await Promise.all([getLeadsToday(), getSpendToday()]);
-      await sendTelegramMessage(chatId, buildReportMessage(leads, spend));
+      const [leads, spend, saraLeads] = await Promise.all([getLeadsToday(), getSpendToday(), getSaraLeads(0)]);
+      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, saraLeads));
     }
 
     else if (text === '/ytdreport' || text === '/yesterday') {
-      const [leads, spend] = await Promise.all([getLeadsYesterday(), getSpendYesterday()]);
-      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, { isYesterday: true }));
+      const [leads, spend, saraLeads] = await Promise.all([getLeadsYesterday(), getSpendYesterday(), getSaraLeads(1)]);
+      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, saraLeads, { isYesterday: true }));
     }
 
     else if (text === '/branch' || text === '/branches') {
