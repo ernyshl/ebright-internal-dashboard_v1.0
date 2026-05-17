@@ -15,7 +15,11 @@ router.get('/ranking', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od
     const params = [];
 
     if (rolling_days) {
-      params.push(parseInt(rolling_days));
+      const days = parseInt(rolling_days, 10);
+      if (!Number.isFinite(days) || days < 1 || days > 3650) {
+        return res.status(400).json({ error: 'Invalid rolling_days' });
+      }
+      params.push(days);
       dateFilter = `AND start_time_utc >= NOW() - ($1 || ' days')::INTERVAL`;
     } else if (date_from && date_to) {
       params.push(date_from, date_to);
@@ -64,7 +68,11 @@ router.get('/calls', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od',
     let dateFilter = '';
 
     if (rolling_days) {
-      params.push(parseInt(rolling_days));
+      const days = parseInt(rolling_days, 10);
+      if (!Number.isFinite(days) || days < 1 || days > 3650) {
+        return res.status(400).json({ error: 'Invalid rolling_days' });
+      }
+      params.push(days);
       dateFilter = `AND start_time_utc >= NOW() - ($2 || ' days')::INTERVAL`;
     } else if (date_from && date_to) {
       params.push(date_from, date_to);
@@ -85,6 +93,43 @@ router.get('/calls', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od',
 
     const result = await pool.query(query, params);
     return res.json({ calls: result.rows });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// Recording health per branch (last 30 days, SIM answered calls > 5s only)
+router.get('/recording-health', requireAuth, requireRole(['super_admin', 'ceo', 'rm', 'od', 'marketing', 'tv']), async (req, res, next) => {
+  try {
+    const query = `
+      SELECT
+        user_id,
+        COUNT(*) FILTER (WHERE answered = true AND source_detail = 'SIM' AND duration > 5) AS sim_answered,
+        COUNT(*) FILTER (WHERE answered = true AND source_detail = 'SIM' AND duration > 5
+                         AND (recording_uri IS NULL OR recording_uri = ''))             AS sim_no_rec,
+        ROUND(
+          COUNT(*) FILTER (WHERE answered = true AND source_detail = 'SIM' AND duration > 5
+                           AND (recording_uri IS NULL OR recording_uri = ''))::numeric
+          / NULLIF(COUNT(*) FILTER (WHERE answered = true AND source_detail = 'SIM' AND duration > 5), 0)
+          * 100, 1
+        ) AS pct_missing
+      FROM salestrail_cr
+      WHERE start_time_utc >= NOW() - INTERVAL '30 days'
+      GROUP BY user_id
+      HAVING COUNT(*) FILTER (WHERE answered = true AND source_detail = 'SIM' AND duration > 5) >= 5
+    `;
+    const result = await pool.query(query);
+    const health = result.rows.map(r => {
+      const pct = parseFloat(r.pct_missing ?? '0');
+      return {
+        user_id:      r.user_id,
+        sim_answered: parseInt(r.sim_answered),
+        sim_no_rec:   parseInt(r.sim_no_rec),
+        pct_missing:  pct,
+        status:       pct >= 50 ? 'BROKEN' : pct >= 20 ? 'PARTIAL' : 'OK',
+      };
+    });
+    return res.json({ health });
   } catch (err) {
     return next(err);
   }

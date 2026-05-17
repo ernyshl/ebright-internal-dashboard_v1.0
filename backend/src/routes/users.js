@@ -15,7 +15,7 @@ router.get('/', requireAuth, requireRole(['super_admin']), async (_req, res, nex
   try {
     const { rows } = await pool.query(
       `SELECT id, email, full_name, role, is_active, created_at, updated_at
-       FROM users
+       FROM public.users
        ORDER BY created_at DESC`
     );
     return res.json({ users: rows });
@@ -40,14 +40,14 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
     const { email, password, fullName, role } = CreateUserSchema.parse(req.body);
 
     // Check if email already exists
-    const existing = await pool.query('SELECT id FROM users WHERE lower(email) = lower($1)', [email]);
+    const existing = await pool.query('SELECT id FROM public.users WHERE lower(email) = lower($1)', [email]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'A user with this email already exists' });
     }
 
     const hash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
-      `INSERT INTO users (email, full_name, role, password_hash)
+      `INSERT INTO public.users (email, full_name, role, password_hash)
        VALUES ($1, $2, $3, $4)
        RETURNING id, email, full_name, role, is_active, created_at`,
       [email, fullName, role, hash]
@@ -63,7 +63,7 @@ router.post('/', requireAuth, requireRole(['super_admin']), async (req, res, nex
 router.patch('/:id/toggle', requireAuth, requireRole(['super_admin']), async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `UPDATE users SET is_active = NOT is_active, updated_at = now()
+      `UPDATE public.users SET is_active = NOT is_active, updated_at = now()
        WHERE id = $1
        RETURNING id, email, full_name, role, is_active`,
       [req.params.id]
@@ -93,7 +93,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     const data = UpdateUserSchema.parse(req.body);
 
     // Check if user exists
-    const existing = await pool.query('SELECT id, email FROM users WHERE id = $1', [id]);
+    const existing = await pool.query('SELECT id, email FROM public.users WHERE id = $1', [id]);
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -106,7 +106,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     if (data.email) {
       // Check if email is already taken by another user
       const emailCheck = await pool.query(
-        'SELECT id FROM users WHERE lower(email) = lower($1) AND id != $2',
+        'SELECT id FROM public.users WHERE lower(email) = lower($1) AND id != $2',
         [data.email, id]
       );
       if (emailCheck.rows.length > 0) {
@@ -146,7 +146,7 @@ router.put('/:id', requireAuth, requireRole(['super_admin']), async (req, res, n
     values.push(id);
 
     const { rows } = await pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, email, full_name, role, is_active`,
+      `UPDATE public.users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, email, full_name, role, is_active`,
       values
     );
 

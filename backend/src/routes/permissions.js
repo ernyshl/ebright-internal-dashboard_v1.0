@@ -14,7 +14,7 @@ router.get('/', requireAuth, async (req, res, next) => {
 
     // Get user-specific permissions
     const { rows: customPerms } = await pool.query(
-      'SELECT dashboard, can_view FROM user_permissions WHERE user_id = $1',
+      'SELECT dashboard, can_view FROM public.user_permissions WHERE user_id = $1',
       [userId]
     );
 
@@ -56,12 +56,12 @@ router.get('/all', requireAuth, requireRole(['super_admin']), async (req, res, n
   try {
     // Get all users with their custom permissions
     const { rows: users } = await pool.query(
-      `SELECT id, email, full_name, role FROM users ORDER BY created_at DESC`
+      `SELECT id, email, full_name, role FROM public.users ORDER BY created_at DESC`
     );
 
     // Get all custom permissions
     const { rows: allPerms } = await pool.query(
-      'SELECT user_id, dashboard, can_view FROM user_permissions'
+      'SELECT user_id, dashboard, can_view FROM public.user_permissions'
     );
 
     // Build user permissions map
@@ -112,7 +112,7 @@ router.put('/:userId', requireAuth, requireRole(['super_admin']), async (req, re
     const { dashboard, allowed } = SetPermissionsSchema.parse(req.body);
 
     // Check if user exists
-    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    const userCheck = await pool.query('SELECT id FROM public.users WHERE id = $1', [userId]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -125,7 +125,7 @@ router.put('/:userId', requireAuth, requireRole(['super_admin']), async (req, re
 
     // Upsert permission
     await pool.query(
-      `INSERT INTO user_permissions (user_id, dashboard, can_view)
+      `INSERT INTO public.user_permissions (user_id, dashboard, can_view)
        VALUES ($1, $2, $3)
        ON CONFLICT (user_id, dashboard) DO UPDATE SET can_view = $3, updated_at = now()`,
       [userId, dashboard, allowed]
@@ -143,7 +143,7 @@ router.delete('/:userId/:dashboard', requireAuth, requireRole(['super_admin']), 
     const { userId, dashboard } = req.params;
 
     await pool.query(
-      'DELETE FROM user_permissions WHERE user_id = $1 AND dashboard = $2',
+      'DELETE FROM public.user_permissions WHERE user_id = $1 AND dashboard = $2',
       [userId, dashboard]
     );
 

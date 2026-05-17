@@ -36,6 +36,7 @@ const { archivedStudentsRouter } = require('./routes/archivedStudents');
 const { studentUploadRouter } = require('./routes/studentUpload');
 const { studentAttendanceRouter } = require('./routes/studentAttendance');
 const { guardianBackfillRouter } = require('./routes/guardianBackfill');
+const { studentChangeLogRouter } = require('./routes/studentChangeLog');
 const { branchPerformanceRouter } = require('./routes/branchPerformance');
 const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
 const { salestrailRouter } = require('./routes/salestrail');
@@ -107,7 +108,7 @@ function createApp() {
   }));
 
   app.use(cors({
-    origin: true,
+    origin: env.CORS_ORIGIN,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -180,6 +181,7 @@ function createApp() {
   app.use('/api/student-attendance', applyRoleBasedRateLimit, studentAttendanceRouter);
   app.use('/api/coach-bm-performance', applyRoleBasedRateLimit, coachBmPerformanceRouter);
   app.use('/api/guardian-backfill', applyRoleBasedRateLimit, guardianBackfillRouter);
+  app.use('/api/student-change-log', applyRoleBasedRateLimit, studentChangeLogRouter);
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
   app.use('/api/salestrail', applyRoleBasedRateLimit, salestrailRouter);
   app.use('/api/nl-to-ct', applyRoleBasedRateLimit, nlToCtRouter);

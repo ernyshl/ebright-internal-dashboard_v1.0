@@ -1,20 +1,55 @@
 const express = require('express');
-const { pool, leadsPool } = require('../db');
+const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
-// GET /api/hr-mc/dashboard — MC records from -7 days to today
-// Source: ebrightleads_db.public.hr_mc (via leadsPool).
+// GET /api/hr-mc/dashboard — approved SL (sick leave) from -7 days to today.
+// Source: hrfs."LeaveTransaction" FDW → ebright_hrfs.public.LeaveTransaction,
+// fed hourly from the Autocount Payroll API by leave_import.py. The CRUD
+// endpoints below still operate on the older public.hr_mc table — it's a
+// manual log, no longer the dashboard's source of truth.
+//
+// Name + role + branch resolution mirrors /api/hr-annual-leave/dashboard:
+// LT.EmployeeName → name_lookup CTE → autocount_employee_map → name-match,
+// with bs.role exposed as `position` for frontend compatibility.
 router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
-    const { rows } = await leadsPool.query(
-      `SELECT id, name, position, department_branch, mc_date, reason
-       FROM hr_mc
-       WHERE mc_date >= CURRENT_DATE - INTERVAL '7 days'
-         AND mc_date <= CURRENT_DATE
-       ORDER BY mc_date DESC`
+    const { rows } = await pool.query(
+      `WITH name_lookup AS (
+         SELECT DISTINCT ON ("EmployeeCode") "EmployeeCode", "EmployeeName"
+         FROM hrfs."LeaveTransaction"
+         WHERE "EmployeeName" IS NOT NULL AND TRIM("EmployeeName") <> ''
+         ORDER BY "EmployeeCode", created_at DESC
+       ),
+       resolved_name AS (
+         SELECT lt.id AS lt_id,
+                COALESCE(NULLIF(TRIM(lt."EmployeeName"), ''), nl."EmployeeName") AS name_from_lt
+         FROM hrfs."LeaveTransaction" lt
+         LEFT JOIN name_lookup nl ON nl."EmployeeCode" = lt."EmployeeCode"
+       )
+       SELECT
+         lt.id,
+         COALESCE(bs.name, rn.name_from_lt, lt."EmployeeCode") AS name,
+         bs.role AS position,
+         bs.branch AS department_branch,
+         lt."LeaveDate"::date AS mc_date,
+         lt."ApplyReason" AS reason
+       FROM hrfs."LeaveTransaction" lt
+       LEFT JOIN resolved_name rn ON rn.lt_id = lt.id
+       LEFT JOIN public.autocount_employee_map m ON m.autocount_code = lt."EmployeeCode"
+       LEFT JOIN hrfs."BranchStaff" bs
+         ON bs.id = m.branchstaff_id
+         OR (m.branchstaff_id IS NULL
+             AND rn.name_from_lt IS NOT NULL
+             AND UPPER(TRIM(bs.name)) = UPPER(TRIM(rn.name_from_lt)))
+       WHERE lt."LeaveTypeCode" = 'SL'
+         AND lt."ApplyStatus" = 'A'
+         AND lt."LeaveDate"::date >= CURRENT_DATE - INTERVAL '7 days'
+         AND lt."LeaveDate"::date <= CURRENT_DATE
+         AND (bs.status IS NULL OR bs.status <> 'Inactive')
+       ORDER BY lt."LeaveDate" DESC`
     );
     return res.json({ records: rows });
   } catch (err) { return next(err); }

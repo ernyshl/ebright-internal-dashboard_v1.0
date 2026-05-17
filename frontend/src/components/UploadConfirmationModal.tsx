@@ -19,8 +19,8 @@ const SECTIONS: Array<{
 }> = [
   { key: 'new',          title: n => `${n} student${n === 1 ? '' : 's'} will be added (new)`,                                   hint: 'Inserted as fresh records with empty progress.',                                            color: '#16a34a', bg: 'rgba(34,197,94,0.10)'   },
   { key: 'restore',      title: n => `${n} student${n === 1 ? '' : 's'} will be restored from Archive`,                         hint: 'Existing FA / PCM history will be preserved.',                                              color: '#2563eb', bg: 'rgba(59,130,246,0.10)'  },
-  { key: 'guardianFill', title: n => `${n} student${n === 1 ? '' : 's'} will have guardian info filled`,                        hint: 'Only empty guardian_name / guardian_mobile fields. Grade, FA, PCM, etc. NOT touched.',      color: '#7c3aed', bg: 'rgba(124,58,237,0.10)'  },
-  { key: 'matched',      title: n => `${n} student${n === 1 ? '' : 's'} will be skipped (already complete)`,                    hint: 'Name + guardian info already on file. No changes.',                                          color: '#64748b', bg: 'rgba(100,116,139,0.10)' },
+  { key: 'guardianFill', title: n => `${n} student${n === 1 ? '' : 's'} will have guardian / DOB info filled`,                  hint: 'Only empty guardian_name / guardian_mobile / dob fields. Grade, FA, PCM, etc. NOT touched.', color: '#7c3aed', bg: 'rgba(124,58,237,0.10)'  },
+  { key: 'matched',      title: n => `${n} student${n === 1 ? '' : 's'} will be skipped (already complete)`,                    hint: 'Name + guardian info + DOB already on file. No changes.',                                    color: '#64748b', bg: 'rgba(100,116,139,0.10)' },
   { key: 'archive',      title: n => `${n} student${n === 1 ? '' : 's'} will be moved to Archive`,                              hint: 'These students are not in the new file. Their progress is kept.',                          color: '#d97706', bg: 'rgba(245,158,11,0.10)'  },
 ];
 

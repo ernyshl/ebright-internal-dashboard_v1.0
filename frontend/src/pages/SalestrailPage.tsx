@@ -89,6 +89,14 @@ interface RankRow {
   answer_rate: string;
 }
 
+interface RecHealth {
+  user_id: string;
+  sim_answered: number;
+  sim_no_rec: number;
+  pct_missing: number;
+  status: 'OK' | 'PARTIAL' | 'BROKEN';
+}
+
 interface ModalCallRow {
   call_id: string;
   user_id: string;
@@ -115,6 +123,17 @@ export function SalestrailPage() {
     queryFn: () => apiFetch(`/api/salestrail/ranking?${periodQuery}`),
     refetchInterval: 120_000,
   });
+
+  const healthQ = useQuery({
+    queryKey: ['salestrail', 'recording-health'],
+    queryFn: () => apiFetch('/api/salestrail/recording-health'),
+    staleTime: 5 * 60_000,
+  });
+
+  const healthMap: Record<string, RecHealth> = {};
+  for (const h of (healthQ.data?.health ?? []) as RecHealth[]) {
+    healthMap[h.user_id] = h;
+  }
 
   const modalQ = useQuery({
     queryKey: ['salestrail', 'all-calls', activeFilter, periodQuery],
@@ -250,6 +269,7 @@ export function SalestrailPage() {
                       <th className="textRight">Inbound</th>
                       <th className="textRight">Avg Duration</th>
                       <th className="textRight">Total Talk Time</th>
+                      <th className="textCenter">Recording</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -312,6 +332,26 @@ export function SalestrailPage() {
                           <td className="textRight">{inbound}</td>
                           <td className="textRight" style={{ color: 'var(--muted)', fontSize: 13 }}>{fmtDuration(avgSec)}</td>
                           <td className="textRight" style={{ color: 'var(--muted)', fontSize: 13 }}>{fmtDuration(totalSec)}</td>
+                          <td className="textCenter">
+                            {(() => {
+                              const h = healthMap[row.user_id];
+                              if (!h) return <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>;
+                              const palette = {
+                                OK:      { bg: '#d1fae5', color: '#065f46' },
+                                PARTIAL: { bg: '#fef3c7', color: '#92400e' },
+                                BROKEN:  { bg: '#fee2e2', color: '#991b1b' },
+                              };
+                              const c = palette[h.status];
+                              return (
+                                <span
+                                  title={`${h.pct_missing}% of SIM calls missing recording (last 30d, ${h.sim_no_rec}/${h.sim_answered})`}
+                                  style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: c.bg, color: c.color, cursor: 'help' }}
+                                >
+                                  {h.status}
+                                </span>
+                              );
+                            })()}
+                          </td>
                         </tr>
                       );
                     })}

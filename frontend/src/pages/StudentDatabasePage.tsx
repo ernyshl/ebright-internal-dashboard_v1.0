@@ -3,13 +3,15 @@ import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import { BackButton } from '../components/BackButton';
 import { BRANCHES } from '../lib/studentTypes';
-import { getFaCount, getPcmCount, reconcileFa, faSummary } from '../lib/studentFaLogic';
+import { getFaCount, getPcmCount, getWorkbookCount, reconcileFa, faSummary } from '../lib/studentFaLogic';
+import { getAgeGroup, getAgeGroupColor } from '../lib/ageGroup';
 import { useAcademy } from '../context/AcademyContext';
 import { apiFetch } from '../lib/api';
 import AddStudentModal from '../components/StudentDB/AddStudentModal';
 import EditStudentModal from '../components/StudentDB/EditStudentModal';
 import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
 import ArchiveConfirmModal from '../components/StudentDB/ArchiveConfirmModal';
+import HistoryPanel from '../components/StudentDB/HistoryPanel';
 
 function toIsoDate(val: string): string {
   if (!val) return '';
@@ -18,7 +20,7 @@ function toIsoDate(val: string): string {
 }
 
 function sanitizeForPut(s: any) {
-  return { ...s, enrollmentDate: toIsoDate(s.enrollmentDate) };
+  return { ...s, enrollmentDate: toIsoDate(s.enrollmentDate), dob: toIsoDate(s.dob) };
 }
 
 const th = { padding:'10px 14px', textAlign:'left' as const, fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase' as const, whiteSpace:'nowrap' as const, letterSpacing:0.5 };
@@ -38,6 +40,7 @@ export function StudentDatabasePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'students' | 'history'>('students');
   const [deleteAllBranch, setDeleteAllBranch] = useState('All');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -97,12 +100,12 @@ export function StudentDatabasePage() {
   }, [setStudents]);
 
   // ── After smart bulk upload completes — refresh list & show summary ──────
-  const handleBulkUploadComplete = useCallback(async (counts: { added: number; restored: number; skipped: number; guardianFilled: number; archived: number }) => {
+  const handleBulkUploadComplete = useCallback(async (counts: { added: number; restored: number; skipped: number; guardianFilled: number; dobFilled?: number; archived: number }) => {
     try {
       const res = await apiFetch('/api/student-records');
       if (res.data) setStudents(res.data);
     } catch { /* keep local state if refetch fails */ }
-    setSuccessMsg(`✅ Upload complete — Added ${counts.added}, Restored ${counts.restored}, Guardian filled ${counts.guardianFilled ?? 0}, Skipped ${counts.skipped}, Archived ${counts.archived}.`);
+    setSuccessMsg(`✅ Upload complete — Added ${counts.added}, Restored ${counts.restored}, Guardian filled ${counts.guardianFilled ?? 0}, DOB filled ${counts.dobFilled ?? 0}, Skipped ${counts.skipped}, Archived ${counts.archived}.`);
     setTimeout(() => setSuccessMsg(''), 7000);
   }, [setStudents]);
 
@@ -110,8 +113,9 @@ export function StudentDatabasePage() {
   const updateStudent = useCallback(async (updated: any) => {
     const reconciled = {
       ...updated,
-      faAttended:  reconcileFa(updated.faAttended,  getFaCount(updated.grade, updated.chapter)),
-      pcmAttended: reconcileFa(updated.pcmAttended, getPcmCount(updated.grade, updated.chapter)),
+      faAttended:       reconcileFa(updated.faAttended,       getFaCount(updated.grade, updated.chapter)),
+      pcmAttended:      reconcileFa(updated.pcmAttended,      getPcmCount(updated.grade, updated.chapter)),
+      workbookAttended: reconcileFa(updated.workbookAttended || [], getWorkbookCount(updated.grade, updated.chapter)),
     };
     try {
       const res = await apiFetch(`/api/student-records/${updated.id}`, { method: 'PUT', body: sanitizeForPut(reconciled) });
@@ -205,12 +209,51 @@ export function StudentDatabasePage() {
     });
   }, [setStudents]);
 
+  // ── Toggle Workbook checkbox ──────────────────────────────────────────────
+  const toggleWorkbook = useCallback((studentId: number, index: number) => {
+    setStudents((prev: any[]) => {
+      const next = prev.map(s => {
+        if (s.id !== studentId) return s;
+        const arr = Array.isArray(s.workbookAttended) ? [...s.workbookAttended] : [];
+        arr[index] = !arr[index];
+        return { ...s, workbookAttended: arr };
+      });
+      const reconciled = next.find(s => s.id === studentId);
+      if (reconciled) apiFetch(`/api/student-records/${studentId}`, { method: 'PUT', body: sanitizeForPut(reconciled) }).catch(() => {});
+      return next;
+    });
+  }, [setStudents]);
+
   function exportToExcel() {
+    // Turn a boolean array (e.g. [true, false, true]) into "G1, G3"
+    const attendedList = (arr: any) =>
+      Array.isArray(arr) && arr.length > 0
+        ? arr.map((checked, i) => checked ? `G${i + 1}` : null).filter(Boolean).join(', ')
+        : '';
+    const totalStr = (arr: any) => {
+      if (!Array.isArray(arr) || arr.length === 0) return '0/0';
+      return `${arr.filter(Boolean).length}/${arr.length}`;
+    };
     const data = displayed.map((s, i) => ({
-      'No.': i+1, 'Name': s.name, 'Gender': s.gender, 'Branch': s.branch,
-      'Enrollment Date': s.enrollmentDate, 'Grade': s.grade, 'Chapter': s.chapter, 'Status': s.status,
-      'FA Attended': s.faAttended.filter(Boolean).length, 'FA Total': s.faAttended.length,
-      'PCM Attended': s.pcmAttended.filter(Boolean).length, 'PCM Total': s.pcmAttended.length,
+      'No.':               i + 1,
+      'Name':              s.name,
+      'Gender':            s.gender,
+      'Branch':            s.branch,
+      'DOB':               s.dob || '',
+      'Age Group':         getAgeGroup(s.dob || ''),
+      'Coach Name':        s.coachName || '',
+      'Enrollment Date':   s.enrollmentDate,
+      'Grade':             s.grade,
+      'Chapter':           s.chapter,
+      'Status':            s.status,
+      'FA Attended':       attendedList(s.faAttended),
+      'FA Total':          totalStr(s.faAttended),
+      'PCM Attended':      attendedList(s.pcmAttended),
+      'PCM Total':         totalStr(s.pcmAttended),
+      'Workbook Attended': attendedList(s.workbookAttended),
+      'Workbook Total':    totalStr(s.workbookAttended),
+      'Guardian Name':     s.guardianName  || '',
+      'Guardian Mobile':   s.guardianMobile || '',
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -245,6 +288,27 @@ export function StudentDatabasePage() {
           ✅ {successMsg}
         </div>
       )}
+
+      {/* Tab toggle */}
+      <div style={{ display:'flex', gap:4, background:'var(--panel)', border:'1px solid var(--border)', borderRadius:10, padding:4, marginBottom:14, width:'fit-content' }}>
+        {[
+          { key: 'students' as const, label: '📚 Students',  icon: '📚' },
+          { key: 'history'  as const, label: '📋 History',   icon: '📋' },
+        ].map(t => {
+          const active = activeTab === t.key;
+          return (
+            <button key={t.key} onClick={() => setActiveTab(t.key)}
+              style={{ fontSize:13, padding:'8px 18px', borderRadius:8, border:'none', cursor:'pointer', fontWeight:700,
+                       background: active ? '#4f46e5' : 'transparent',
+                       color: active ? '#fff' : 'var(--text)' }}>
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'history' ? <HistoryPanel /> : (<>
+
 
       {/* Summary Stats — left side panel (Students/Active) + right detail grid (FA/PCM rows) */}
       {(() => {
@@ -325,14 +389,14 @@ export function StudentDatabasePage() {
           <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                {['No.','Name','Gender','Branch','Coach Name','Enrollment Date','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Guardian Name','Guardian Mobile','Actions'].map(h => (
+                {['No.','Name','Gender','Branch','DOB','Age Group','Coach Name','Enrollment Date','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Workbook Progress','Total Workbook','Guardian Name','Guardian Mobile','Actions'].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {displayed.length === 0 ? (
-                <tr><td colSpan={14} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                <tr><td colSpan={18} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                     <span style={{ fontSize:36 }}>{q ? '🔍' : '🎓'}</span>
                     <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
@@ -357,6 +421,18 @@ export function StudentDatabasePage() {
                     </td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.gender}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:600, background:'rgba(99,102,241,0.1)', color:'#6366f1' }}>{student.branch}</span></td>
+                    <td style={{ ...td, whiteSpace:'nowrap', color: student.dob ? 'var(--text)' : 'var(--muted)', fontStyle: student.dob ? 'normal' : 'italic' }}>{student.dob || '—'}</td>
+                    {(() => {
+                      const ag = getAgeGroup(student.dob || '');
+                      const c = getAgeGroupColor(ag);
+                      return (
+                        <td style={{ ...td, whiteSpace:'nowrap' }}>
+                          {ag
+                            ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:6, fontWeight:700, background:c.bg, color:c.fg }}>{ag}</span>
+                            : <span style={{ color:'var(--muted)', fontStyle:'italic' }}>—</span>}
+                        </td>
+                      );
+                    })()}
                     <td style={{ ...td, whiteSpace:'nowrap', color: student.coachName ? 'var(--text)' : 'var(--muted)', fontStyle: student.coachName ? 'normal' : 'italic' }}>{student.coachName || '—'}</td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.enrollmentDate||'—'}</td>
                     <td style={td}><span style={{ fontSize:11, padding:'4px 8px', borderRadius:6, fontWeight:600, background:'rgba(139,92,246,0.1)', color:'#7c3aed', whiteSpace:'nowrap' }}>{student.grade} — {student.chapter}</span></td>
@@ -388,6 +464,28 @@ export function StudentDatabasePage() {
                       </div>
                     </td>
                     <td style={td}><span style={{ fontSize:14, fontWeight:700, color:pcm.total===0?'var(--muted)':pcm.attended===pcm.total?'#16a34a':'#f59e0b' }}>{pcm.attended}/{pcm.total}</span></td>
+
+                    {/* Workbook checkboxes */}
+                    {(() => {
+                      const wb = Array.isArray(student.workbookAttended) ? student.workbookAttended : [];
+                      const wbSummary = faSummary(wb);
+                      return (
+                        <>
+                          <td style={{ ...td, borderLeft:'1px solid var(--border)' }}>
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:4, minWidth:80 }}>
+                              {wb.length===0 ? <span style={{ color:'var(--muted)', fontSize:11, fontStyle:'italic' }}>—</span>
+                               : wb.map((checked: boolean, i: number) => (
+                                <label key={i} style={{ display:'flex', alignItems:'center', gap:2, cursor:'pointer' }}>
+                                  <input type="checkbox" checked={checked} onChange={() => toggleWorkbook(student.id,i)} style={{ accentColor:'#10b981', cursor:'pointer' }} />
+                                  <span style={{ fontSize:10, color:'var(--muted)' }}>G{i+1}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </td>
+                          <td style={td}><span style={{ fontSize:14, fontWeight:700, color:wbSummary.total===0?'var(--muted)':wbSummary.attended===wbSummary.total?'#16a34a':'#10b981' }}>{wbSummary.attended}/{wbSummary.total}</span></td>
+                        </>
+                      );
+                    })()}
 
                     {/* Guardian */}
                     <td style={{ ...td, borderLeft:'1px solid var(--border)', whiteSpace:'nowrap', color: student.guardianName ? 'var(--text)' : 'var(--muted)', fontStyle: student.guardianName ? 'normal' : 'italic' }}>{student.guardianName || '—'}</td>
@@ -514,6 +612,7 @@ export function StudentDatabasePage() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 }

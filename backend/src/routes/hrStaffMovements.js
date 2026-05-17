@@ -17,16 +17,17 @@ const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 //     (snake on the start side, camel on the end side) by the upstream HR
 //     system. We filter on a strict ISO regex before casting so empty strings
 //     / malformed values don't blow up the cast.
-//   • position can be NULL; role is reliably populated with values like
-//     'PT - Coach', 'INT', so we fall back to role when position is missing.
+//   • role is 100% populated with values like 'PT - Coach', 'INT', 'BM', 'CEO';
+//     surface it as `position` for frontend compatibility (same trick as the
+//     AL tile).
 //   • department can be sparse. We fall back to branch (always present).
 const ISO_DATE = String.raw`^\d{4}-\d{2}-\d{2}$`;
 
 const SELECT_COLS = `
   id,
   name,
-  COALESCE(NULLIF(TRIM(position), ''), NULLIF(TRIM(role), ''))  AS position,
-  COALESCE(NULLIF(TRIM(department), ''), branch)                 AS department_branch,
+  role  AS position,
+  COALESCE(NULLIF(TRIM(department), ''), branch)  AS department_branch,
   NULLIF(TRIM(start_date), '')  AS start_date,
   NULLIF(TRIM("endDate"),  '')  AS end_date
 `;
@@ -114,8 +115,8 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 
     const { rows: signedStaff } = await leadsPool.query(
       `SELECT id, name,
-              COALESCE(NULLIF(TRIM(position), ''), NULLIF(TRIM(role), '')) AS position,
-              COALESCE(NULLIF(TRIM(department), ''), branch)                AS department_branch,
+              role AS position,
+              COALESCE(NULLIF(TRIM(department), ''), branch)  AS department_branch,
               ${SIGNED_DATE_PARSED}::text AS signed_date,
               NULLIF(TRIM(start_date),  '') AS start_date,
               ${BUCKET_SQL} AS bucket

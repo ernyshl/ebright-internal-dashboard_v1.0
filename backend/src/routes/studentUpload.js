@@ -2,8 +2,10 @@ const express = require('express');
 const { z } = require('zod');
 const { categorizeUpload } = require('../services/uploadComparison');
 const { executeUpload } = require('../services/uploadExecution');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
+router.use(requireAuth);
 
 const excelRowSchema = z.object({
   name: z.string().min(1, 'name is required'),
@@ -46,14 +48,17 @@ router.post('/preview-upload', async (req, res, next) => {
     const { rows, branch } = previewSchema.parse(req.body);
     const categorized = await categorizeUpload(rows, branch);
 
-    // From the matched bucket, count how many would actually get guardian fields filled.
+    // From the matched bucket, count how many would actually get guardian or DOB fields filled.
     const guardianFillNames = [];
+    const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
     for (const item of categorized.matched) {
       const e = item?.excel || {};
       const d = item?.db    || {};
       const needsName   = isBlank(d.guardian_name)   && !isBlank(e.guardianName);
       const needsMobile = isBlank(d.guardian_mobile) && !isBlank(e.guardianMobile);
-      if (needsName || needsMobile) guardianFillNames.push(e.name);
+      const dbDobBlank  = d.dob === null || d.dob === undefined;
+      const needsDob    = dbDobBlank && !isBlank(e.dob) && ISO_DATE.test(String(e.dob).trim());
+      if (needsName || needsMobile || needsDob) guardianFillNames.push(e.name);
     }
 
     return res.json({
@@ -83,7 +88,8 @@ router.post('/preview-upload', async (req, res, next) => {
 router.post('/confirm-upload', async (req, res, next) => {
   try {
     const { categorized, branch } = confirmSchema.parse(req.body);
-    const result = await executeUpload(categorized, branch);
+    const userEmail = req.user?.email || req.user?.deviceName || 'anonymous';
+    const result = await executeUpload(categorized, branch, userEmail);
     return res.json(result);
   } catch (err) {
     if (err instanceof z.ZodError) return next(err);

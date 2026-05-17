@@ -148,7 +148,23 @@ export function OkrTableView({ onSelect }: Props) {
   const isThisWeek = weekDate === thisWeekMonday();
   const isLastWeek = weekDate === lastWeekMonday();
 
-  const hStyle = (): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none' });
+  // Sticky header — stays visible as you scroll the table rows. Top offset must
+  // clear the AppLayout .topbar (position: sticky; top: 0; ~60px tall), otherwise
+  // the topbar overlaps the header and clips multi-line column labels.
+  // Background must be set inline (not via Tailwind class on <thead>) because
+  // sticky cells need their own opaque background to hide rows scrolling under.
+  const hStyle = (): React.CSSProperties => ({
+    cursor: 'pointer',
+    userSelect: 'none',
+    position: 'sticky',
+    top: 60,
+    zIndex: 2,
+    background: '#f3f4f6', // matches bg-gray-100
+  });
+  const hStyleHi = (): React.CSSProperties => ({
+    ...hStyle(),
+    background: '#e5e7eb', // matches bg-gray-200 for emphasized columns
+  });
 
   return (
     <div className="branchRankingPage">
@@ -229,7 +245,7 @@ export function OkrTableView({ onSelect }: Props) {
       ) : isError ? (
         <div className="errorText">Failed to load OKR records.</div>
       ) : (
-        <div className="card overflow-x-auto">
+        <div className="card">
           <table className="brRankBarTable w-full text-left border-collapse">
             <thead className="bg-gray-100">
               <tr>
@@ -239,9 +255,9 @@ export function OkrTableView({ onSelect }: Props) {
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('absent')}   title="Sort by absent">Absent{arrow('absent')}</th>
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('frozen')}   title="Sort by frozen">Frozen{arrow('frozen')}</th>
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('replaced')} title="Sort by replaced">Replaced{arrow('replaced')}</th>
-                <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('total')} title="Sort by total attendance">Total Attendance{arrow('total')}</th>
+                <th className="p-3 border font-bold text-center" style={hStyleHi()} onClick={() => handleSort('total')} title="Sort by total attendance">Total Attendance{arrow('total')}</th>
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('active')}   title="Sort by active students">Active{arrow('active')}</th>
-                <th className="p-3 border font-bold text-center bg-gray-200" style={hStyle()} onClick={() => handleSort('rate')} title="Sort by attendance rate">Attendance Rate{arrow('rate')}</th>
+                <th className="p-3 border font-bold text-center" style={hStyleHi()} onClick={() => handleSort('rate')} title="Sort by attendance rate">Attendance Rate{arrow('rate')}</th>
                 <th className="p-3 border font-semibold text-right" style={hStyle()} onClick={() => handleSort('rateFreeze')} title="Sort by rate w/ freeze">Rate w/ Freeze{arrow('rateFreeze')}</th>
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('notEnrolled')}    title="1a) Not Enrolled to Any Lesson">1a) Not Enrolled{arrow('notEnrolled')}</th>
                 <th className="p-3 border font-semibold text-center" style={hStyle()} onClick={() => handleSort('outstandingInv')} title="1b) With Outstanding Invoice">1b) Outstanding Inv.{arrow('outstandingInv')}</th>

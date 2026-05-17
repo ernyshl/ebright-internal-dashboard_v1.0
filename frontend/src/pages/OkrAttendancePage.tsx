@@ -18,6 +18,7 @@ import { WeeklyKpiCards } from '../components/okr/WeeklyKpiCards';
 import { OkrTableView } from '../components/okr/OkrTableView';
 import { OkrBranchDetailPanel } from '../components/okr/OkrBranchDetailPanel';
 import { OkrRegionView } from '../components/okr/OkrRegionView';
+import { OkrTotalStudentsView } from '../components/okr/OkrTotalStudentsView';
 import { WeeklyRankingTable } from '../components/okr/WeeklyRankingTable';
 import { USE_MOCK, MOCK_WEEK } from '../lib/okr/mock';
 
@@ -27,6 +28,7 @@ const TABS = [
   { id: 'history',   label: 'History',    icon: '📋' },
   { id: 'table',     label: 'Table',      icon: '🏆' },
   { id: 'region',    label: 'Region',     icon: '🌐' },
+  { id: 'totalstudents', label: 'Total Students', icon: '👥' },
 ];
 
 export function OkrAttendancePage() {
@@ -902,6 +904,11 @@ export function OkrAttendancePage() {
           REGION TAB — per-region attendance comparison + trend
       ══════════════════════════════════════ */}
       {activeTab === 'region' && <OkrRegionView />}
+
+      {/* ══════════════════════════════════════
+          TOTAL STUDENTS TAB
+      ══════════════════════════════════════ */}
+      {activeTab === 'totalstudents' && <OkrTotalStudentsView />}
     </div>
   );
 }

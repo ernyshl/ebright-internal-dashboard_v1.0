@@ -9,8 +9,9 @@ async function categorizeUpload(excelRows, branch) {
   const deduped = dedupeExcelRows(Array.isArray(excelRows) ? excelRows : []);
 
   const studentRes = await pool.query(
-    `SELECT id, name, status, gender, branch, enrollment_date, grade_chapter,
+    `SELECT id, name, status, gender, branch, enrollment_date, dob, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm,
+            workbook_progress_json, total_workbook,
             guardian_name, guardian_mobile, coach_name
        FROM ${studentsTbl}
       WHERE LOWER(TRIM(branch)) = LOWER(TRIM($1))`,
@@ -20,6 +21,7 @@ async function categorizeUpload(excelRows, branch) {
   const archivedRes = await pool.query(
     `SELECT no, student_id, name, gender, branch, enrollment_date, grade_chapter,
             fa_progress_json, total_fa, pcm_progress_json, total_pcm,
+            workbook_progress_json, total_workbook,
             status, date_of_birth, guardian_name, guardian_mobile, guardian_email, coach_name
        FROM ${archivedTbl}
       WHERE LOWER(TRIM(branch)) = LOWER(TRIM($1))`,

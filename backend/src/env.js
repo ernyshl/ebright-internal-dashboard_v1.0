@@ -65,6 +65,9 @@ const EnvSchema = z.object({
   TELEGRAM_ALLOWED_CHATS: z.string().optional(),
   TELEGRAM_REPORT_CHATS: z.string().optional(),
   TELEGRAM_ALERT_CHATS: z.string().optional(),
+  // Set this and pass it as secret_token when registering the webhook with
+  // Telegram so only genuine Telegram pushes are accepted.
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);

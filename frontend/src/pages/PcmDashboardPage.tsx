@@ -131,15 +131,8 @@ function BranchCard({ branch, filtered, prevData }: any) {
           <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center', padding: '5px 6px 3px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.08)' }}>
             PCM Invited
           </div>
-          <div style={{ display: 'flex', flex: 1 }}>
-            <div style={{ flex: 1, textAlign: 'center', padding: '5px 4px', borderRight: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{branch.invited}</div>
-              <div style={{ fontSize: 9, color: 'var(--textSecondary)', lineHeight: 1.2 }}>18–19<br/>Apr</div>
-            </div>
-            <div style={{ flex: 1, textAlign: 'center', padding: '5px 4px' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>0</div>
-              <div style={{ fontSize: 9, color: 'var(--textSecondary)', lineHeight: 1.2 }}>25–26<br/>Apr</div>
-            </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{branch.invited}</div>
           </div>
         </div>
       </div>

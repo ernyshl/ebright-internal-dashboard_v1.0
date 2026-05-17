@@ -6,12 +6,18 @@ function chapterNum(chapter) {
 
 export function getFaCount(grade, chapter) {
   const level = GRADE_LEVEL[grade] || 1;
-  return chapterNum(chapter) < 12 ? Math.max(0, level - 1) : level;
+  return chapterNum(chapter) < 9 ? Math.max(0, level - 1) : level;
 }
 
 export function getPcmCount(grade, chapter) {
   const level = GRADE_LEVEL[grade] || 1;
-  return chapterNum(chapter) < 10 ? Math.max(0, level - 1) : level;
+  return chapterNum(chapter) < 9 ? Math.max(0, level - 1) : level;
+}
+
+export function getWorkbookCount(grade, chapter) {
+  if (grade === 'G1') return 1;
+  const level = GRADE_LEVEL[grade] || 1;
+  return chapterNum(chapter) < 9 ? Math.max(0, level - 1) : level;
 }
 
 export function reconcileFa(current, newCount) {

@@ -14,7 +14,7 @@ const BRANCH_CODE_TO_FULL_NAME = {
   CJY:  'Ebright Cyberjaya',
   DA:   'Ebright Denai Alam',
   DK:   'Ebright Danau Kota',
-  DPU:  'Ebright Dataran Puchong Utama',
+  PU:   'Ebright Dataran Puchong Utama',
   EGR:  'Ebright Eco Grandeur',
   KD:   'Ebright Kota Damansara',
   KLG:  'Ebright Klang',

@@ -14,12 +14,13 @@ export async function parseExcelFile(file, defaultBranch = 'ONL') {
     if (!name) continue;
     const genderRaw = String(row[2] ?? '').trim().toLowerCase();
     const gender = genderRaw === 'female' || genderRaw === 'f' ? 'Female' : 'Male';
+    const dob = String(row[3] ?? '').trim();
     const enrollmentDate = String(row[12] ?? '').trim();
     const statusRaw = String(row[13] ?? '').trim().toLowerCase();
     const status = statusRaw === 'inactive' ? 'Inactive' : 'Active';
     const guardianName = String(row[16] ?? '').trim();
     const guardianMobile = String(row[18] ?? '').trim();
-    results.push({ name, gender, enrollmentDate, status, grade: 'G1', chapter: 'C1', branch: defaultBranch, guardianName, guardianMobile });
+    results.push({ name, gender, dob, enrollmentDate, status, grade: 'G1', chapter: 'C1', branch: defaultBranch, guardianName, guardianMobile });
   }
   return results;
 }

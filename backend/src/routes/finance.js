@@ -134,9 +134,13 @@ financeRouter.get('/branch-ranking', async (req, res, next) => {
 // docs/superpowers/specs/2026-05-05-finance-renewals-table-design.md
 financeRouter.get('/renewal-by-branch', async (req, res, next) => {
   try {
-    const { month, year } = req.query;
-    const startDate = `${year}-${month}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    const m = parseInt(req.query.month, 10);
+    const y = parseInt(req.query.year, 10);
+    if (!Number.isFinite(m) || !Number.isFinite(y) || m < 1 || m > 12 || y < 2000 || y > 2100) {
+      return res.status(400).json({ error: 'Invalid month or year' });
+    }
+    const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    const endDate = new Date(y, m, 0).toISOString().split('T')[0];
 
     // Drive off branch_map_autocount so every branch that can appear in
     // AutoCount-sourced renewals shows up, even with zero rows for the month.

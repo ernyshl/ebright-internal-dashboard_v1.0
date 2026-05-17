@@ -9,7 +9,7 @@ const ALLOWED_ROLES = ['super_admin', 'ceo', 'od', 'rm', 'academy', 'hr'];
 router.get('/branches', requireAuth, requireRole(ALLOWED_ROLES), async (_req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT DISTINCT branch FROM branch_okr_attendance ORDER BY branch`
+      `SELECT DISTINCT branch FROM public.branch_okr_attendance ORDER BY branch`
     );
     return res.json({ branches: result.rows.map(r => r.branch) });
   } catch (err) { return next(err); }
@@ -54,7 +54,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
 
       const result = await pool.query(
         `SELECT DISTINCT ON (branch) *
-         FROM branch_okr_attendance
+         FROM public.branch_okr_attendance
          WHERE week_date >= $1::date AND week_date <= $2::date + INTERVAL '6 days'
            ${branchClause}
          ORDER BY branch ASC, updated_at DESC
@@ -71,7 +71,7 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     if (branch) { conditions.push(`branch = $${idx++}`); params.push(branch); }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await pool.query(
-      `SELECT * FROM branch_okr_attendance ${where} ORDER BY week_date DESC, branch ASC LIMIT $${idx}`,
+      `SELECT * FROM public.branch_okr_attendance ${where} ORDER BY week_date DESC, branch ASC LIMIT $${idx}`,
       [...params, Number(limit)]
     );
     return res.json({ records: result.rows.map(formatRowDates) });
@@ -84,7 +84,7 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
     const b = { ...req.body, week_date: toWednesday(req.body.week_date) };
 
     const result = await pool.query(
-      `INSERT INTO branch_okr_attendance (
+      `INSERT INTO public.branch_okr_attendance (
         branch, week_date,
         total_online_attendance, online_conversion_rate, avg_online_trial_pax, total_onl_attendance,
         wed_absent, wed_attended, wed_frozen, wed_replaced,
@@ -172,7 +172,7 @@ router.post('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next)
 router.delete('/:id', requireAuth, requireRole(['super_admin', 'ceo', 'od']), async (req, res, next) => {
   try {
     const { id } = req.params;
-    await pool.query(`DELETE FROM branch_okr_attendance WHERE id = $1`, [Number(id)]);
+    await pool.query(`DELETE FROM public.branch_okr_attendance WHERE id = $1`, [Number(id)]);
     return res.json({ ok: true });
   } catch (err) { return next(err); }
 });

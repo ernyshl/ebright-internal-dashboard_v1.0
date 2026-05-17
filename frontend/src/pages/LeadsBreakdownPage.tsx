@@ -5,8 +5,8 @@ import { apiFetch } from '../lib/api';
 import { BackButton } from '../components/BackButton';
 
 const REGION_BRANCHES = {
-  'Region A': ['Bandar Rimbayu', 'Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
-  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak'],
+  'Region A': ['Bandar Rimbayu', 'Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan', 'Tropicana Sungai Buloh'],
+  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak', 'Puncak Jalil'],
   'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
 };
 
@@ -26,7 +26,8 @@ function HourlyTargetCard({ currentLeads }) {
     return () => clearInterval(id);
   }, []);
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+  const nowMinutes = klTime.getHours() * 60 + klTime.getMinutes();
   const checkpoints = HOURLY_TARGETS.map(t => ({ ...t, totalMinutes: t.hour * 60 + t.minute }));
   const previous = [...checkpoints].reverse().find(c => nowMinutes >= c.totalMinutes);
   const next = checkpoints.find(c => nowMinutes < c.totalMinutes);
@@ -426,7 +427,7 @@ export function LeadsBreakdownPage() {
             <p className="sectionSubtitle">Hourly target + headline lead counts</p>
           </div>
           <div className="summaryStatsRow">
-            <HourlyTargetCard currentLeads={todayTotal} />
+            <HourlyTargetCard currentLeads={todayTotal - onlineToday} />
             <div className="summaryStats">
             <StatCard
               title="Total Leads (30d)"
@@ -480,8 +481,8 @@ export function LeadsBreakdownPage() {
                   tooltip: { title: 'Meta', desc: 'Leads from Meta campaigns where the lead filled in an instant form on Facebook, Instagram, or Threads.' } },
                 { key: 'TikTok', icon: null, img: '/tiktok_logo.svg', color: '#010101',
                   tooltip: { title: 'TikTok', desc: 'Leads from TikTok campaigns where the lead filled in an instant form on TikTok.' } },
-                { key: 'Trial Class Form', icon: '🌐', img: null, color: '#3b82f6', sublabel: '(Conversion)', displayName: 'Website',
-                  tooltip: { title: 'Website (Conversion)', desc: 'Leads from conversion campaigns (Meta/TikTok) where the lead filled in the form on the website.', url: 'https://www.ebright.my/trial-classes' } },
+                { key: 'Trial Class Form', icon: '📋', img: null, color: '#3b82f6',
+                  tooltip: { title: 'Trial Class Form', desc: 'Leads from conversion campaigns (Meta/TikTok) where the lead filled in the form on the website.', url: 'https://www.ebright.my/trial-classes' } },
                 { key: 'Roadshow', icon: '🎪', img: null, color: '#f97316',
                   tooltip: { title: 'Roadshow', desc: 'Leads from contacts collected during showcase, festival roadshows, and/or promotional events.', url: 'https://www.ebright.my/trial-class-roadshow' } },
                 { key: 'Self Generated Lead', icon: '🤝', img: null, color: '#10b981',

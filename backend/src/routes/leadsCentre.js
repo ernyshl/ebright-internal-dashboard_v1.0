@@ -4,10 +4,18 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+const VALID_BRANCHES = [
+  'Online', 'Subang Taipan', 'Sri Petaling', 'Setia Alam', 'Kota Damansara',
+  'Putrajaya', 'Ampang', 'Cyberjaya', 'Klang', 'Denai Alam', 'Bandar Baru Bangi',
+  'Danau Kota', 'Shah Alam', 'Bandar Tun Hussein Onn', 'Eco Grandeur',
+  'Bandar Seri Putra', 'Rimbayu', 'Kajang', 'Kota Warisan', 'Taman Sri Gombak',
+  'Dataran Puchong Utama', 'Tropicana Sungai Buloh', 'Puncak Jalil',
+];
+
 const REGION_BRANCHES = {
-  'Region A': ['Bandar Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
-  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang Perdana', 'Kajang', 'Taman Sri Gombak'],
-  'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Dataran Puchong Utama', 'Online'],
+  'Region A': ['Rimbayu', 'Klang', 'Shah Alam', 'Setia Alam', 'Denai Alam', 'Eco Grandeur', 'Subang Taipan'],
+  'Region B': ['Danau Kota', 'Kota Damansara', 'Ampang', 'Sri Petaling', 'Bandar Tun Hussein Onn', 'Kajang', 'Taman Sri Gombak'],
+  'Region C': ['Putrajaya', 'Kota Warisan', 'Bandar Baru Bangi', 'Cyberjaya', 'Bandar Seri Putra', 'Online'],
 };
 
 // `master_leads_base` stopped being populated in Jan 2026 and `master_leads_powerbi`
@@ -42,7 +50,7 @@ const LEADS_SRC = `(
     END AS raw_branch_text,
     NULL::text AS region,
     (((ml.raw_data->>'created_time')::timestamptz) AT TIME ZONE 'Asia/Kuala_Lumpur') AS submitted_at
-  FROM meta_leads ml
+  FROM public.meta_leads ml
   LEFT JOIN branch_mapping bm
     ON lower(bm.keyword) = lower((
       SELECT (fd.value->'values')->>0
@@ -82,7 +90,7 @@ const LEADS_SRC = `(
       THEN ((left(sp.raw_data->>'created_time', 19))::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Kuala_Lumpur'
       ELSE sp.created_at::timestamp
     END AS submitted_at
-  FROM social_posts sp
+  FROM crm.social_posts sp
   LEFT JOIN branch_mapping bm
     ON lower(bm.keyword) = lower(COALESCE(
       sp.raw_data->>'Please choose your preferred branch',
@@ -128,9 +136,9 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
     } = req.query;
 
     const offset = (Number(page) - 1) * Number(limit);
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
+    const conditions = [`TRIM(clean_branch) = ANY($1)`];
+    const params = [VALID_BRANCHES];
+    let paramIndex = 2;
 
     // Search filter (multiple fields)
     if (search) {
@@ -223,9 +231,9 @@ router.get('/', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od
 router.get('/export', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr']), async (req, res, next) => {
   try {
     const { search = '', lead_source = '', region = '', branch = '', date_from = '', date_to = '' } = req.query;
-    const conditions = [];
-    const params = [];
-    let idx = 1;
+    const conditions = [`TRIM(clean_branch) = ANY($1)`];
+    const params = [VALID_BRANCHES];
+    let idx = 2;
 
     if (search) {
       const sanitizedSearch = sanitizeSearchTerm(search);
@@ -286,15 +294,9 @@ router.get('/email-source', requireAuth, requireRole(['super_admin', 'ceo', 'mar
 router.get('/nl-by-source', requireAuth, requireRole(['super_admin', 'ceo', 'marketing', 'od', 'rm', 'hr', 'tv']), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '' } = req.query;
-    const conditions = [
-      `clean_branch IS NOT NULL`,
-      `TRIM(clean_branch) != ''`,
-      `LOWER(TRIM(clean_branch)) != 'unspecified'`,
-      `LOWER(TRIM(clean_branch)) != 'unknown branch'`,
-      `LOWER(TRIM(clean_branch)) NOT LIKE '%test%'`,
-    ];
-    const params = [];
-    let idx = 1;
+    const conditions = [`TRIM(clean_branch) = ANY($1)`];
+    const params = [VALID_BRANCHES];
+    let idx = 2;
     if (date_from) { conditions.push(`submitted_at::date >= $${idx++}::date`); params.push(date_from); }
     if (date_to)   { conditions.push(`submitted_at::date <= $${idx++}::date`); params.push(date_to); }
     const where = `WHERE ${conditions.join(' AND ')}`;
@@ -328,15 +330,9 @@ router.get('/nl-by-branch', requireAuth, requireRole(['super_admin', 'ceo', 'mar
   try {
     const { date_from = '', date_to = '' } = req.query;
 
-    const conditions = [
-      `clean_branch IS NOT NULL`,
-      `TRIM(clean_branch) != ''`,
-      `LOWER(TRIM(clean_branch)) != 'unspecified'`,
-      `LOWER(TRIM(clean_branch)) != 'unknown branch'`,
-      `LOWER(TRIM(clean_branch)) NOT LIKE '%test%'`,
-    ];
-    const params = [];
-    let idx = 1;
+    const conditions = [`TRIM(clean_branch) = ANY($1)`];
+    const params = [VALID_BRANCHES];
+    let idx = 2;
 
     if (date_from) {
       conditions.push(`submitted_at::date >= $${idx++}::date`);

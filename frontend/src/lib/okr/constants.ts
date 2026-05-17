@@ -1,6 +1,7 @@
 export const REGIONS = {
   A: [
-    { name: 'Rimbayu',       code: 'RBY', num: 17 },
+    { name: 'Rimbayu',              code: 'RBY', num: 17 },
+    { name: 'Tropicana Sungai Buloh', code: 'TSB', num: 21 },
     { name: 'Klang',         code: 'KLG', num:  9 },
     { name: 'Shah Alam',     code: 'SHA', num: 13 },
     { name: 'Setia Alam',    code: 'SA',  num:  3 },
@@ -16,6 +17,7 @@ export const REGIONS = {
     { name: 'Bandar Tun Hussein Onn', code: 'BTHO', num: 14 },
     { name: 'Kajang TTDI Groove',     code: 'KTG',  num: 20 },
     { name: 'Taman Sri Gombak',       code: 'TSG',  num: 18 },
+    { name: 'Puncak Jalil',           code: 'PJL',  num: 22 },
   ],
   C: [
     { name: 'Putrajaya',             code: 'PJY', num:  6 },
@@ -23,7 +25,7 @@ export const REGIONS = {
     { name: 'Bandar Baru Bangi',     code: 'BBB', num: 11 },
     { name: 'Cyberjaya',             code: 'CJY', num:  8 },
     { name: 'Bandar Seri Putra',     code: 'BSP', num: 16 },
-    { name: 'Dataran Puchong Utama', code: 'DPU', num: 21 },
+    { name: 'Dataran Puchong Utama', code: 'PU',  num: 23 },
     { name: 'Online',                code: 'ONL', num:  1 },
   ],
 };
