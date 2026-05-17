@@ -177,6 +177,8 @@ export function DashboardHomePage() {
         { label: 'Branch Performance', path: '/branch-performance', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
         { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
+        { label: 'Testing NL to CT Breakdown', path: '/nl-to-ct', dashboard: 'testing' },
+        { label: 'Manage NL to CT Tabs', path: '/nl-to-ct/manage', dashboard: 'testing' },
       ]
     },
     {
