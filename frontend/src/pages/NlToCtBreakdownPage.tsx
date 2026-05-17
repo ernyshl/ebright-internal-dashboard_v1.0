@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { nlToCtApi, NlToCtTab, TabPayload, BranchData } from '../api/nlToCt';
 import { BRANCHES, TIME_SLOTS, SLOTS_BY_DAY, SlotDef } from '../lib/nlToCtSchema';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 type ViewMode = 'grid' | 'cards' | 'tiles';
 
@@ -178,6 +179,49 @@ function GridView({ payload, onCaptureSlot }: GridViewProps) {
   );
 }
 
+interface CardsViewProps {
+  payload: TabPayload;
+}
+function CardsView({ payload }: CardsViewProps) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+      {payload.branches.map(b => {
+        const chartData = TIME_SLOTS.map(s => {
+          const sd = b.slots.find(x => x.slot_key === s.key);
+          return {
+            label: `${s.day} ${s.time}`,
+            goal: sd?.goal ?? 0,
+            actual: sd?.actual_captured ?? sd?.actual_live ?? 0,
+          };
+        });
+        return (
+          <div key={b.code} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 18 }}>{b.code}</h3>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>NL {b.nl ?? '—'} · CT {b.ct ?? '—'}</span>
+            </div>
+            <div style={{ height: 180 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 4 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="goal" fill="#cfd8e3" name="Goal" />
+                  <Bar dataKey="actual" name="Actual">
+                    {chartData.map((d, i) => (
+                      <Cell key={i} fill={d.actual === 0 ? '#e36b6b' : d.actual >= d.goal ? '#5cb85c' : '#e6c84e'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────
 export function NlToCtBreakdownPage() {
   const qc = useQueryClient();
@@ -278,7 +322,7 @@ export function NlToCtBreakdownPage() {
                   <GridView payload={dataQ.data} onCaptureSlot={setCaptureSlot} />
                 </div>
               )}
-              {view === 'cards' && <p style={{ color: 'var(--muted)' }}>Cards view coming in Task 12.</p>}
+              {view === 'cards' && <CardsView payload={dataQ.data} />}
               {view === 'tiles' && <p style={{ color: 'var(--muted)' }}>Tiles view coming in Task 13.</p>}
             </>
           )}
