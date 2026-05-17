@@ -8,7 +8,11 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 type ViewMode = 'grid' | 'cards' | 'tiles';
 
 function formatWeekDate(iso: string): string {
-  const [y, m, d] = iso.split('-');
+  // Be defensive: backend may return either 'YYYY-MM-DD' or a full ISO
+  // timestamp like '2026-05-12T16:00:00.000Z' (legacy code path).
+  // Extract just the date prefix before splitting.
+  const datePart = (iso || '').split('T')[0];
+  const [y, m, d] = datePart.split('-');
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${d} ${months[Number(m) - 1]} ${y}`;
 }
@@ -99,6 +103,32 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
     return m;
   }, [prev]);
 
+  // Totals row: aggregate NL/CT and per-slot Goal/Actual across all branches.
+  const totals = useMemo(() => {
+    let nl = 0;
+    let ct = 0;
+    const slotGoals: Record<string, number> = {};
+    const slotActuals: Record<string, number> = {};
+    const slotPrevActuals: Record<string, number> = {};
+    for (const s of TIME_SLOTS) { slotGoals[s.key] = 0; slotActuals[s.key] = 0; slotPrevActuals[s.key] = 0; }
+    for (const b of payload.branches) {
+      nl += b.nl ?? 0;
+      ct += b.ct ?? 0;
+      for (const sd of b.slots) {
+        slotGoals[sd.slot_key]   += sd.goal ?? 0;
+        slotActuals[sd.slot_key] += sd.actual_captured ?? sd.actual_live ?? 0;
+      }
+    }
+    if (prev) {
+      for (const b of prev.branches) {
+        for (const sd of b.slots) {
+          slotPrevActuals[sd.slot_key] += sd.actual_captured ?? sd.actual_live ?? 0;
+        }
+      }
+    }
+    return { nl, ct, slotGoals, slotActuals, slotPrevActuals };
+  }, [payload, prev]);
+
   return (
     <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
       <thead>
@@ -151,6 +181,39 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
         </tr>
       </thead>
       <tbody>
+        {/* Totals row */}
+        <tr style={{ background: '#f0f4fb', fontWeight: 700 }}>
+          <td style={{ padding: 4, border: '1px solid #ddd' }}>Total</td>
+          <td style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{totals.nl}</td>
+          <td style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{totals.ct}</td>
+          {TIME_SLOTS.flatMap(slot => {
+            const g = totals.slotGoals[slot.key];
+            const a = totals.slotActuals[slot.key];
+            const tint = cellTint(g, a);
+            const cells = [
+              <td key={`total-${slot.key}-g`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{g}</td>,
+              <td key={`total-${slot.key}-a`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right', background: tint }}>
+                <div>{a}</div>
+                {prev && (() => {
+                  const prevA = totals.slotPrevActuals[slot.key];
+                  const delta = a - prevA;
+                  return (
+                    <div style={{ fontSize: 10, color: '#666', marginTop: 2, fontWeight: 500 }}>
+                      prev {prevA}{' '}
+                      <span style={{ color: delta >= 0 ? '#1f7a1f' : '#8a1f1f' }}>
+                        ({delta >= 0 ? '+' : ''}{delta})
+                      </span>
+                    </div>
+                  );
+                })()}
+              </td>,
+            ];
+            if (slot.hasQaqc) {
+              cells.push(<td key={`total-${slot.key}-q`} style={{ padding: 4, border: '1px solid #ddd' }} />);
+            }
+            return cells;
+          })}
+        </tr>
         {BRANCHES.map(b => {
           const bd = byCode.get(b.code);
           return (

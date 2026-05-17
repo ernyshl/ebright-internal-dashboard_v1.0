@@ -103,7 +103,7 @@ async function buildTabPayload(tabRow) {
 router.get('/tabs', async (_req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, gid, tab_name, week_date, added_by, added_at
+      `SELECT id, gid, tab_name, TO_CHAR(week_date, 'YYYY-MM-DD') AS week_date, added_by, added_at
          FROM nl_to_ct_tabs
         ORDER BY week_date DESC`
     );
@@ -145,7 +145,7 @@ router.post('/tabs', async (req, res, next) => {
       const { rows } = await pool.query(
         `INSERT INTO nl_to_ct_tabs (gid, tab_name, week_date, added_by)
          VALUES ($1, $2, $3, $4)
-         RETURNING id, gid, tab_name, week_date, added_by, added_at`,
+         RETURNING id, gid, tab_name, TO_CHAR(week_date, 'YYYY-MM-DD') AS week_date, added_by, added_at`,
         [gid, tabName, weekDate, req.user.sub]
       );
       res.status(201).json({ tab: rows[0] });
@@ -187,7 +187,7 @@ router.get('/tabs/:id/data', async (req, res, next) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' });
 
     const { rows } = await pool.query(
-      `SELECT id, gid, tab_name, week_date, added_by, added_at
+      `SELECT id, gid, tab_name, TO_CHAR(week_date, 'YYYY-MM-DD') AS week_date, added_by, added_at
          FROM nl_to_ct_tabs
         WHERE id = $1`,
       [id]
@@ -300,7 +300,7 @@ router.get('/tabs/:id/previous-week', async (req, res, next) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' });
 
     const { rows } = await pool.query(
-      `SELECT id, gid, tab_name, week_date, added_by, added_at
+      `SELECT id, gid, tab_name, TO_CHAR(week_date, 'YYYY-MM-DD') AS week_date, added_by, added_at
          FROM nl_to_ct_tabs
         WHERE week_date < (SELECT week_date FROM nl_to_ct_tabs WHERE id = $1)
         ORDER BY week_date DESC

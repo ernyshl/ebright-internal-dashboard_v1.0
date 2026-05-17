@@ -5,7 +5,9 @@ import { nlToCtApi, NlToCtTab } from '../api/nlToCt';
 import { ApiError } from '../lib/api';
 
 function formatWeekDate(iso: string): string {
-  const [y, m, d] = iso.split('-');
+  // Be defensive against legacy timestamps like '2026-05-12T16:00:00.000Z'.
+  const datePart = (iso || '').split('T')[0];
+  const [y, m, d] = datePart.split('-');
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${d} ${months[Number(m) - 1]} ${y}`;
 }
