@@ -232,4 +232,61 @@ router.get('/tabs/:id/data', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── POST /api/nl-to-ct/tabs/:id/capture ──────────────────────────────
+const CaptureBody = z.object({ slot_key: z.string().min(1) });
+
+router.post('/tabs/:id/capture', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' });
+
+    const { slot_key } = CaptureBody.parse(req.body);
+    if (!SLOT_KEYS.has(slot_key)) return res.status(400).json({ error: `Unknown slot_key: ${slot_key}` });
+
+    const { rows: tabRows } = await pool.query(
+      `SELECT id, gid FROM nl_to_ct_tabs WHERE id = $1`,
+      [id]
+    );
+    if (tabRows.length === 0) return res.status(404).json({ error: 'Tab not found' });
+
+    const slot = TIME_SLOTS.find(s => s.key === slot_key);
+    const sheet = await readTab({ spreadsheetId: SPREADSHEET_ID, gid: tabRows[0].gid });
+
+    // Pull the actual_col for each branch row, upsert all 20.
+    const values = [];
+    const placeholders = [];
+    let p = 1;
+    for (const b of BRANCHES) {
+      const rowIdx = b.row - 1;
+      const cell = sheet.rows[rowIdx]?.[colLetterToIndex(slot.actualCol)];
+      const actual = toIntOrNull(cell);
+      // Empty cells are captured as 0 by design (the user is saying "this is
+      // the truth right now"). Non-numeric strings → 0 too.
+      const value = actual == null ? 0 : actual;
+      placeholders.push(`($${p++}, $${p++}, $${p++}, $${p++}, $${p++})`);
+      values.push(id, slot_key, b.code, value, req.user.sub);
+    }
+
+    await pool.query(
+      `INSERT INTO nl_to_ct_captures (tab_id, slot_key, branch_code, actual, captured_by)
+       VALUES ${placeholders.join(', ')}
+       ON CONFLICT (tab_id, slot_key, branch_code)
+       DO UPDATE SET actual = EXCLUDED.actual,
+                     captured_by = EXCLUDED.captured_by,
+                     captured_at = NOW()`,
+      values
+    );
+
+    // Invalidate cache so the immediate follow-up /data read sees fresh
+    // sheet values (and so the user can verify the capture against the live row).
+    cacheInvalidate(SPREADSHEET_ID, tabRows[0].gid);
+
+    const payload = await buildTabPayload(tabRows[0]);
+    res.json(payload);
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ error: 'slot_key is required' });
+    next(err);
+  }
+});
+
 module.exports = { nlToCtRouter: router };
