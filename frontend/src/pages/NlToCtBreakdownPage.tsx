@@ -83,14 +83,21 @@ function cellTint(goal: number | null, actual: number | null): string | undefine
 // ─── Grid view ────────────────────────────────────────────────────────
 interface GridViewProps {
   payload: TabPayload;
+  prev: TabPayload | null;
   onCaptureSlot: (slot: SlotDef) => void;
 }
-function GridView({ payload, onCaptureSlot }: GridViewProps) {
+function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
   const byCode = useMemo(() => {
     const m = new Map<string, BranchData>();
     for (const b of payload.branches) m.set(b.code, b);
     return m;
   }, [payload]);
+
+  const prevByCode = useMemo(() => {
+    const m = new Map<string, BranchData>();
+    if (prev) for (const b of prev.branches) m.set(b.code, b);
+    return m;
+  }, [prev]);
 
   return (
     <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
@@ -159,7 +166,22 @@ function GridView({ payload, onCaptureSlot }: GridViewProps) {
                 const cells = [
                   <td key={`${b.code}-${slot.key}-g`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{goal ?? '—'}</td>,
                   <td key={`${b.code}-${slot.key}-a`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
-                    {displayActual ?? '—'}
+                    <div>{displayActual ?? '—'}</div>
+                    {prev && (() => {
+                      const psd = prevByCode.get(b.code)?.slots.find(s => s.slot_key === slot.key);
+                      const prevA = psd?.actual_captured ?? psd?.actual_live ?? null;
+                      const delta = displayActual != null && prevA != null ? displayActual - prevA : null;
+                      return (
+                        <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
+                          prev {prevA ?? '—'}{' '}
+                          {delta != null && (
+                            <span style={{ color: delta >= 0 ? '#1f7a1f' : '#8a1f1f' }}>
+                              ({delta >= 0 ? '+' : ''}{delta})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>,
                 ];
                 if (slot.hasQaqc) {
@@ -181,17 +203,21 @@ function GridView({ payload, onCaptureSlot }: GridViewProps) {
 
 interface CardsViewProps {
   payload: TabPayload;
+  prev: TabPayload | null;
 }
-function CardsView({ payload }: CardsViewProps) {
+function CardsView({ payload, prev }: CardsViewProps) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
       {payload.branches.map(b => {
+        const prevB = prev?.branches.find(x => x.code === b.code);
         const chartData = TIME_SLOTS.map(s => {
           const sd = b.slots.find(x => x.slot_key === s.key);
+          const psd = prevB?.slots.find(x => x.slot_key === s.key);
           return {
             label: `${s.day} ${s.time}`,
             goal: sd?.goal ?? 0,
             actual: sd?.actual_captured ?? sd?.actual_live ?? 0,
+            prevActual: psd ? (psd.actual_captured ?? psd.actual_live ?? 0) : null,
           };
         });
         return (
@@ -212,6 +238,7 @@ function CardsView({ payload }: CardsViewProps) {
                       <Cell key={i} fill={d.actual === 0 ? '#e36b6b' : d.actual >= d.goal ? '#5cb85c' : '#e6c84e'} />
                     ))}
                   </Bar>
+                  {prev && <Bar dataKey="prevActual" fill="#9a9a9a" name="Last week" />}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -224,24 +251,31 @@ function CardsView({ payload }: CardsViewProps) {
 
 interface TilesViewProps {
   payload: TabPayload;
+  prev: TabPayload | null;
 }
-function TilesView({ payload }: TilesViewProps) {
-  // Aggregate across branches per slot.
+function TilesView({ payload, prev }: TilesViewProps) {
   const slotTotals = TIME_SLOTS.map(s => {
-    let goalSum = 0;
-    let actualSum = 0;
+    let goalSum = 0, actualSum = 0, prevGoalSum = 0, prevActualSum = 0;
     for (const b of payload.branches) {
       const sd = b.slots.find(x => x.slot_key === s.key);
       goalSum   += sd?.goal ?? 0;
       actualSum += sd?.actual_captured ?? sd?.actual_live ?? 0;
     }
+    if (prev) {
+      for (const b of prev.branches) {
+        const sd = b.slots.find(x => x.slot_key === s.key);
+        prevGoalSum   += sd?.goal ?? 0;
+        prevActualSum += sd?.actual_captured ?? sd?.actual_live ?? 0;
+      }
+    }
     const pct = goalSum > 0 ? Math.round((actualSum / goalSum) * 100) : 0;
-    return { slot: s, goalSum, actualSum, pct };
+    const prevPct = prevGoalSum > 0 ? Math.round((prevActualSum / prevGoalSum) * 100) : 0;
+    return { slot: s, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct };
   });
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-      {slotTotals.map(({ slot, goalSum, actualSum, pct }) => (
+      {slotTotals.map(({ slot, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct }) => (
         <div
           key={slot.key}
           style={{
@@ -256,6 +290,11 @@ function TilesView({ payload }: TilesViewProps) {
             {actualSum} <span style={{ fontSize: 14, color: 'var(--muted)' }}>/ {goalSum}</span>
           </div>
           <div style={{ fontSize: 14, color: '#333', marginTop: 4 }}>{pct}%</div>
+          {prev && (
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+              Last week: {prevActualSum}/{prevGoalSum} ({prevPct}%)
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -292,6 +331,16 @@ export function NlToCtBreakdownPage() {
     queryFn: () => nlToCtApi.getData(effectiveId as number),
     enabled: effectiveId != null,
   });
+
+  const [showLast, setShowLast] = useState(false);
+
+  const prevQ = useQuery({
+    queryKey: ['nl-to-ct', 'previous-week', effectiveId],
+    queryFn: () => nlToCtApi.previousWeek(effectiveId as number),
+    enabled: effectiveId != null && showLast,
+    retry: false,
+  });
+  const prevPayload: TabPayload | null = prevQ.data ?? null;
 
   function handleCaptured(next: TabPayload) {
     qc.setQueryData(['nl-to-ct', 'data', next.tab.id], next);
@@ -346,6 +395,17 @@ export function NlToCtBreakdownPage() {
                 </button>
               ))}
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+              <input
+                type="checkbox"
+                checked={showLast}
+                onChange={(e) => setShowLast(e.target.checked)}
+              />
+              Show last week
+              {showLast && prevQ.isError && (
+                <span style={{ color: '#8a1f1f', fontSize: 12, marginLeft: 4 }}>(no earlier week)</span>
+              )}
+            </label>
           </div>
 
           {dataQ.isLoading && <p>Loading week data…</p>}
@@ -359,11 +419,11 @@ export function NlToCtBreakdownPage() {
               )}
               {view === 'grid' && (
                 <div style={{ overflowX: 'auto' }}>
-                  <GridView payload={dataQ.data} onCaptureSlot={setCaptureSlot} />
+                  <GridView payload={dataQ.data} prev={showLast ? prevPayload : null} onCaptureSlot={setCaptureSlot} />
                 </div>
               )}
-              {view === 'cards' && <CardsView payload={dataQ.data} />}
-              {view === 'tiles' && <TilesView payload={dataQ.data} />}
+              {view === 'cards' && <CardsView payload={dataQ.data} prev={showLast ? prevPayload : null} />}
+              {view === 'tiles' && <TilesView payload={dataQ.data} prev={showLast ? prevPayload : null} />}
             </>
           )}
         </>
