@@ -36,10 +36,10 @@ export interface TabPayload {
 export const nlToCtApi = {
   listTabs: () => apiFetch('/api/nl-to-ct/tabs') as Promise<{ tabs: NlToCtTab[] }>,
 
-  addTab: (gid: string) =>
+  addTab: (gid: string, tabName: string) =>
     apiFetch('/api/nl-to-ct/tabs', {
       method: 'POST',
-      body: { gid },
+      body: { gid, tab_name: tabName },
     }) as Promise<{ tab: NlToCtTab }>,
 
   deleteTab: (id: number) =>

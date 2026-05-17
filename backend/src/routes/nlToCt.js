@@ -112,17 +112,22 @@ router.get('/tabs', async (_req, res, next) => {
 });
 
 // ─── POST /api/nl-to-ct/tabs ──────────────────────────────────────────
-const AddTabBody = z.object({ gid: z.string().regex(/^\d+$/, 'gid must be all digits') });
+// Body: { gid, tab_name }. The user supplies the tab name directly because
+// Google's CSV/htmlview endpoints don't reliably expose per-tab titles.
+const AddTabBody = z.object({
+  gid: z.string().regex(/^\d+$/, 'gid must be all digits'),
+  tab_name: z.string().min(1, 'Tab name is required').max(200),
+});
 
 router.post('/tabs', async (req, res, next) => {
   try {
-    const { gid } = AddTabBody.parse(req.body);
+    const { gid, tab_name } = AddTabBody.parse(req.body);
 
-    // Fetch the tab to learn its title + verify the gid is valid.
-    let tabTitle;
+    // Verify the gid actually resolves to a tab in the spreadsheet —
+    // we don't need its title, but we want to fail fast on a bad gid
+    // rather than store an unreachable row.
     try {
-      const v = await readTab({ spreadsheetId: SPREADSHEET_ID, gid });
-      tabTitle = v.tabTitle;
+      await readTab({ spreadsheetId: SPREADSHEET_ID, gid });
     } catch (err) {
       if (err.code === 'TAB_NOT_FOUND') {
         return res.status(400).json({ error: 'Tab not found. Double-check the gid.' });
@@ -130,13 +135,10 @@ router.post('/tabs', async (req, res, next) => {
       throw err;
     }
 
-    if (!tabTitle) {
-      return res.status(400).json({ error: 'Could not read the tab name. Make sure the sheet is shared as "Anyone with the link can view".' });
-    }
-
-    const weekDate = parseWeekDateFromTabName(tabTitle);
+    const tabName = tab_name.trim();
+    const weekDate = parseWeekDateFromTabName(tabName);
     if (!weekDate) {
-      return res.status(400).json({ error: `Tab name must start with YYYYMMDD (got "${tabTitle}").` });
+      return res.status(400).json({ error: `Tab name must start with YYYYMMDD (got "${tabName}").` });
     }
 
     try {
@@ -144,7 +146,7 @@ router.post('/tabs', async (req, res, next) => {
         `INSERT INTO nl_to_ct_tabs (gid, tab_name, week_date, added_by)
          VALUES ($1, $2, $3, $4)
          RETURNING id, gid, tab_name, week_date, added_by, added_at`,
-        [gid, tabTitle, weekDate, req.user.sub]
+        [gid, tabName, weekDate, req.user.sub]
       );
       res.status(201).json({ tab: rows[0] });
     } catch (err) {
@@ -160,7 +162,7 @@ router.post('/tabs', async (req, res, next) => {
     }
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.issues?.[0]?.message || 'gid must be all digits' });
+      return res.status(400).json({ error: err.issues?.[0]?.message || 'Invalid request' });
     }
     next(err);
   }

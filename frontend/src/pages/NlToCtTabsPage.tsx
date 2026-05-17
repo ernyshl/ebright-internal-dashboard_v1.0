@@ -17,6 +17,7 @@ function formatTimestamp(iso: string): string {
 export function NlToCtTabsPage() {
   const qc = useQueryClient();
   const [gid, setGid] = useState('');
+  const [tabName, setTabName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const tabsQ = useQuery({
@@ -25,9 +26,11 @@ export function NlToCtTabsPage() {
   });
 
   const addM = useMutation({
-    mutationFn: (newGid: string) => nlToCtApi.addTab(newGid),
+    mutationFn: ({ gid: newGid, tabName: newName }: { gid: string; tabName: string }) =>
+      nlToCtApi.addTab(newGid, newName),
     onSuccess: () => {
       setGid('');
+      setTabName('');
       setError(null);
       qc.invalidateQueries({ queryKey: ['nl-to-ct', 'tabs'] });
     },
@@ -45,12 +48,17 @@ export function NlToCtTabsPage() {
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const trimmed = gid.trim();
-    if (!trimmed) {
+    const trimmedGid = gid.trim();
+    const trimmedName = tabName.trim();
+    if (!trimmedGid) {
       setError('Please paste a gid.');
       return;
     }
-    addM.mutate(trimmed);
+    if (!trimmedName) {
+      setError('Please enter the tab name (e.g. "20260513 Target").');
+      return;
+    }
+    addM.mutate({ gid: trimmedGid, tabName: trimmedName });
   }
 
   function handleDelete(t: NlToCtTab) {
@@ -66,7 +74,7 @@ export function NlToCtTabsPage() {
         <BackButton to="/" label="Back to Home" />
         <h1 className="pageHeaderTitle" style={{ marginTop: 16 }}>Manage NL to CT Tabs</h1>
         <p style={{ color: 'var(--muted)', marginTop: 4 }}>
-          Paste the gid (page id) of a new weekly tab in the source Google Sheet. The tab name must start with YYYYMMDD.
+          Paste the gid (page id) of a weekly tab and type the tab name exactly as it appears in the Google Sheet (must start with YYYYMMDD, e.g. "20260513 Target").
         </p>
       </div>
 
@@ -75,8 +83,16 @@ export function NlToCtTabsPage() {
           type="text"
           value={gid}
           onChange={(e) => setGid(e.target.value)}
-          placeholder="e.g. 360979780"
-          style={{ flex: '1 1 240px', padding: '8px 10px', fontSize: 14 }}
+          placeholder="gid (e.g. 360979780)"
+          style={{ flex: '1 1 200px', padding: '8px 10px', fontSize: 14 }}
+          disabled={addM.isPending}
+        />
+        <input
+          type="text"
+          value={tabName}
+          onChange={(e) => setTabName(e.target.value)}
+          placeholder='Tab name (e.g. "20260513 Target")'
+          style={{ flex: '2 1 260px', padding: '8px 10px', fontSize: 14 }}
           disabled={addM.isPending}
         />
         <button className="btn btnPrimary" type="submit" disabled={addM.isPending}>

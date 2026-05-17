@@ -82,29 +82,11 @@ async function csvReadTab({ spreadsheetId, gid }) {
   const text = await res.text();
   const rows = parseCsv(text);
 
-  // The CSV export doesn't include the tab title. Fetch the lightweight
-  // HTML metadata page to recover it — the title sits in <title>…</title>.
-  // We pull it ONCE per cache lifetime so repeated reads are cheap.
-  let tabTitle = null;
-  try {
-    const metaUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/htmlview?gid=${gid}`;
-    const metaRes = await fetch(metaUrl, { signal: AbortSignal.timeout(3_000) });
-    if (metaRes.ok) {
-      const html = await metaRes.text();
-      // The active tab name appears in the document title and in an
-      // attribute on the active tab anchor; the <title> form is reliable.
-      const m = html.match(/<title>([^<]+)<\/title>/i);
-      if (m) {
-        // Google sets the title to "<Sheet Tab Name> - <Spreadsheet Name>".
-        // We want just the leading tab name.
-        tabTitle = m[1].split(' - ')[0].trim();
-      }
-    }
-  } catch {
-    // Non-fatal — caller can still use the rows; tabTitle just stays blank.
-  }
-
-  const value = { tabTitle, rows };
+  // Note: Google's CSV export doesn't include the tab title, and the
+  // htmlview <title> tag returns the *spreadsheet* name (not the tab
+  // name) regardless of gid. So we don't try to discover the tab title
+  // here — callers that need it ask the user directly.
+  const value = { tabTitle: null, rows };
   cacheSet(spreadsheetId, gid, value);
   return value;
 }
