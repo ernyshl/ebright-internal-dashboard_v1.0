@@ -112,7 +112,7 @@ router.get('/tabs', async (_req, res, next) => {
 });
 
 // ─── POST /api/nl-to-ct/tabs ──────────────────────────────────────────
-const AddTabBody = z.object({ gid: z.string().min(1) });
+const AddTabBody = z.object({ gid: z.string().regex(/^\d+$/, 'gid must be all digits') });
 
 router.post('/tabs', async (req, res, next) => {
   try {
@@ -160,7 +160,7 @@ router.post('/tabs', async (req, res, next) => {
     }
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: 'gid is required' });
+      return res.status(400).json({ error: err.issues?.[0]?.message || 'gid must be all digits' });
     }
     next(err);
   }
@@ -262,7 +262,9 @@ router.post('/tabs/:id/capture', async (req, res, next) => {
       const actual = toIntOrNull(cell);
       // Empty cells are captured as 0 by design (the user is saying "this is
       // the truth right now"). Non-numeric strings → 0 too.
-      const value = actual == null ? 0 : actual;
+      // Clamp negatives to 0 — the DB has CHECK (actual >= 0). A typo in
+      // the sheet (e.g. "-3") would otherwise 500 the whole capture.
+      const value = actual == null || actual < 0 ? 0 : actual;
       placeholders.push(`($${p++}, $${p++}, $${p++}, $${p++}, $${p++})`);
       values.push(id, slot_key, b.code, value, req.user.sub);
     }
@@ -305,8 +307,44 @@ router.get('/tabs/:id/previous-week', async (req, res, next) => {
     );
     if (rows.length === 0) return res.status(404).json({ error: 'No previous week registered' });
 
-    const payload = await buildTabPayload(rows[0]);
-    res.json(payload);
+    try {
+      const payload = await buildTabPayload(rows[0]);
+      res.json(payload);
+    } catch (err) {
+      // Same fallback pattern as /data — return frozen captures + a banner
+      // hint so the frontend can distinguish "no prior week" (404) from
+      // "prior week unreachable right now" (200 + sheet_read_error).
+      const { rows: captureRows } = await pool.query(
+        `SELECT slot_key, branch_code, actual, captured_by, captured_at
+           FROM nl_to_ct_captures
+          WHERE tab_id = $1`,
+        [rows[0].id]
+      );
+      const frozen = new Map();
+      for (const c of captureRows) frozen.set(`${c.slot_key}::${c.branch_code}`, c);
+      res.json({
+        tab: rows[0],
+        parameters: Object.fromEntries(TIME_SLOTS.map(s => [s.key, null])),
+        branches: BRANCHES.map(b => ({
+          code: b.code,
+          nl: null,
+          ct: null,
+          slots: TIME_SLOTS.map(slot => {
+            const fz = frozen.get(`${slot.key}::${b.code}`);
+            return {
+              slot_key: slot.key,
+              goal: null,
+              actual_live: null,
+              actual_captured: fz ? fz.actual : null,
+              captured_at: fz ? fz.captured_at : null,
+              captured_by: fz ? fz.captured_by : null,
+              qaqc: null,
+            };
+          }),
+        })),
+        sheet_read_error: err.message || 'Sheet read failed',
+      });
+    }
   } catch (err) { next(err); }
 });
 
