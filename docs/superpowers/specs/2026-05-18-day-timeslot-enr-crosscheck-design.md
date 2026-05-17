@@ -21,11 +21,9 @@ Each cell shows two numbers: `CT | ENR`.
 
 Each number inside a cell is independently clickable:
 
-- **Click CT number** → Lead Centre with `stage=CT&preset=<current>&pipeline=<pip>` (current behavior).
-- **Click ENR number** → Lead Centre with `stage=ENR&preset=<current>&pipeline=<pip>`.
+- **Click CT number** → Lead Centre with `stage=CT&preset=<current>&pipeline=<pip>` (current behavior — Lead Centre filters CT rows by their own `received_at`).
+- **Click ENR number** → Lead Centre with `stage=ENR&preset=<current>&pipeline=<pip>&via_ct=1`. The new `via_ct=1` flag tells the list endpoint to apply the date filter to the **linked CT's** `received_at` rather than the ENR row's `received_at`. This way, the drill-down count matches the dashboard cell exactly: a CT booked today that enrols next week is counted in *today's* ENR cell and *today's* ENR drill-down.
 - The pipe `|` between them is not clickable (muted color).
-
-Note: Lead Centre filters by `received_at`, so clicking ENR with a narrow preset (e.g. "today") may not show every ENR conversion of today's CTs — those happen later. The dashboard count is still accurate; only the drill-down list is preset-bounded. Acceptable for v1.
 
 ### 3. Branch totals beside label
 
@@ -72,6 +70,28 @@ Response shape:
 
 Existing consumers that only read `n` keep working (additive change).
 
+### Backend change — list endpoint
+
+Extend `GET /api/ghl-stages` in [backend/src/routes/ghlStages.js](backend/src/routes/ghlStages.js#L190) to accept a new query param `via_ct=1`. When set:
+
+- The outer date filter on `received_at` is skipped.
+- An EXISTS clause is added: rows are kept only if there is a linked CT row (same `email` + `opportunity_name`) with `stage_key = 'CT'`, `preferred_day <> ''`, `time_slot <> ''`, and `received_at` (KL date) within the supplied `date_from`/`date_to`.
+
+```sql
+EXISTS (
+  SELECT 1 FROM ghl_stages ct
+  WHERE ct.email = ghl_stages.email
+    AND ct.opportunity_name = ghl_stages.opportunity_name
+    AND ct.stage_key = 'CT'
+    AND ct.preferred_day <> ''
+    AND ct.time_slot <> ''
+    AND (ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $X::date
+    AND (ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $Y::date
+)
+```
+
+All other filters (`stage`, `pipeline`, `time_slot`, `search`) continue to apply to the outer row (the ENR row). This means: clicking ENR shows ENR-stage rows whose linked CT was booked in the dashboard date range — count matches the dashboard cell.
+
 ## Frontend changes
 
 ### [frontend/src/pages/DayDistributionPage.tsx](frontend/src/pages/DayDistributionPage.tsx) & [frontend/src/pages/TimeSlotDistributionPage.tsx](frontend/src/pages/TimeSlotDistributionPage.tsx)
@@ -80,7 +100,7 @@ Existing consumers that only read `n` keep working (additive change).
 2. **`MetricCard` renders `ct | enr`** as two clickable spans separated by a muted pipe. Each span calls a separate click handler. Hover affordance only on numbers, not the pipe.
 3. **`Row` accepts** `enrValues` plus a second click handler (`onCellClickEnr`).
 4. **Branch label** changes to `${branchName} [ ${ctTotal} | ${enrTotal} ]`. Totals computed across the row's visible cells (Day: all 5 days; Time Slot: `visibleCodes`).
-5. **`goToLeadCentre`** parameterized by stage: `goToLeadCentre(pip, stage)`.
+5. **`goToLeadCentre`** parameterized by stage: `goToLeadCentre(pip, stage)`. When `stage === 'ENR'`, the function also appends `via_ct=1` so the date filter is applied to the linked CT's `received_at` and the drill-down count matches the dashboard cell.
 
 No new files. No new routes. No schema changes.
 
@@ -103,6 +123,6 @@ Manual verification:
 
 ## Out of scope
 
-- Date-range alignment between ENR drill-down and dashboard count (drill-down stays preset-bounded for v1).
+- Per-cell granularity on drill-down (clicking the Wed cell still shows the whole pipeline row in Lead Centre, not just Wed's CTs — Lead Centre has no `preferred_day` filter today). Filed as a possible follow-up.
 - ENR-only mode / toggle.
 - New columns or pages.
