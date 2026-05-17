@@ -27,24 +27,28 @@ DB_CONTAINER="${DB_CONTAINER:-ebright-dashboard-backend}"
 REPORT_TIME=$(TZ="Asia/Kuala_Lumpur" date '+%I:%M %p')
 REPORT_DATE=$(TZ="Asia/Kuala_Lumpur" date '+%d %b %Y')
 
-# Query leads from master_leads_base (physical snapshot table, not the live view).
-# Avoids race conditions when cron fires mid-sync on meta_leads / social_posts.
+# Query leads from master_leads_powerbi — the live view that correctly converts
+# UTC Meta timestamps to MYT and already excludes Sara recruitment form IDs.
+# master_leads_base had a timezone bug (stored UTC as timestamp-without-tz,
+# then AT TIME ZONE 'MYT' re-interpreted it as MYT, shifting late-UTC leads
+# to the wrong day and undercounting by ~8 leads/day).
 LEADS_SQL="
 SELECT
   CASE
-    WHEN TRIM(source) = 'Meta' THEN 'Meta'
-    WHEN TRIM(source) = 'TikTok' THEN 'TikTok'
-    WHEN LOWER(TRIM(source)) IN ('trial class form','online conversion form') THEN 'Website (Conversion)'
-    WHEN LOWER(TRIM(source)) = 'roadshow' THEN 'Roadshow'
-    WHEN LOWER(TRIM(source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
-    WHEN LOWER(TRIM(source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
-    WHEN LOWER(TRIM(source)) = 'website' THEN 'Website (Organic)'
+    WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
+    WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
+    WHEN LOWER(TRIM(lead_source)) IN ('trial class form','online conversion form') THEN 'Website (Conversion)'
+    WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
+    WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
+    WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
+    WHEN LOWER(TRIM(lead_source)) = 'website' THEN 'Website (Organic)'
     ELSE 'Others'
   END as source,
   COUNT(*) as count
-FROM master_leads_base
-WHERE (submission_date AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
-  AND TRIM(branch) = ANY(ARRAY['Online','Subang Taipan','Sri Petaling','Setia Alam','Kota Damansara','Putrajaya','Ampang','Cyberjaya','Klang','Denai Alam','Bandar Baru Bangi','Danau Kota','Shah Alam','Bandar Tun Hussein Onn','Eco Grandeur','Bandar Seri Putra','Rimbayu','Kajang','Kota Warisan','Taman Sri Gombak','Dataran Puchong Utama','Tropicana Sungai Buloh','Puncak Jalil'])
+FROM master_leads_powerbi
+WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+  AND TRIM(clean_branch) = ANY(ARRAY['Online','Subang Taipan','Sri Petaling','Setia Alam','Kota Damansara','Putrajaya','Ampang','Cyberjaya','Klang','Denai Alam','Bandar Baru Bangi','Danau Kota','Shah Alam','Bandar Tun Hussein Onn','Eco Grandeur','Bandar Seri Putra','Rimbayu','Kajang','Kota Warisan','Taman Sri Gombak','Dataran Puchong Utama','Tropicana Sungai Buloh','Puncak Jalil'])
+  AND sibling_index = 1
 GROUP BY 1
 ORDER BY count DESC;
 "

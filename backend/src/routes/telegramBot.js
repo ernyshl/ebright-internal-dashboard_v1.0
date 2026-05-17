@@ -32,13 +32,13 @@ const VALID_BRANCHES = [
 
 const LEAD_SOURCE_CASE = `
   CASE
-    WHEN TRIM(source) = 'Meta' THEN 'Meta'
-    WHEN TRIM(source) = 'TikTok' THEN 'TikTok'
-    WHEN LOWER(TRIM(source)) IN ('trial class form','online conversion form') THEN 'Website (Conversion)'
-    WHEN LOWER(TRIM(source)) = 'roadshow' THEN 'Roadshow'
-    WHEN LOWER(TRIM(source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
-    WHEN LOWER(TRIM(source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
-    WHEN LOWER(TRIM(source)) = 'website' THEN 'Website (Organic)'
+    WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
+    WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
+    WHEN LOWER(TRIM(lead_source)) IN ('trial class form','online conversion form') THEN 'Website (Conversion)'
+    WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
+    WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
+    WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
+    WHEN LOWER(TRIM(lead_source)) = 'website' THEN 'Website (Organic)'
     ELSE 'Others'
   END
 `;
@@ -50,10 +50,11 @@ function fmtRM(n) {
 async function getLeadsByDate(offsetDays = 0) {
   const { rows } = await pool.query(`
     SELECT ${LEAD_SOURCE_CASE} as source, COUNT(*) as count
-    FROM master_leads_base
-    WHERE (submission_date AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+    FROM master_leads_powerbi
+    WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date
           = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - $2::int
-      AND TRIM(branch) = ANY($1::text[])
+      AND TRIM(clean_branch) = ANY($1::text[])
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY count DESC;
   `, [VALID_BRANCHES, offsetDays]);
@@ -138,15 +139,13 @@ async function getSpendYesterday() {
 async function getLeadsByBranch() {
   const { rows } = await pool.query(`
     SELECT
-      TRIM(branch) as branch,
+      TRIM(clean_branch) as branch,
       COUNT(*) as count
-    FROM master_leads_base
-    WHERE (submission_date AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
-      AND branch IS NOT NULL
-      AND TRIM(branch) != ''
-      AND LOWER(TRIM(branch)) != 'unspecified'
-      AND LOWER(TRIM(branch)) != 'unknown branch'
-      AND LOWER(TRIM(branch)) NOT LIKE '%test%'
+    FROM master_leads_powerbi
+    WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+      AND clean_branch IS NOT NULL
+      AND TRIM(clean_branch) != ''
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY count DESC;
   `);
@@ -157,15 +156,16 @@ async function getLeadsByRegion() {
   const { rows } = await pool.query(`
     SELECT
       CASE
-        WHEN TRIM(branch) ILIKE ANY(ARRAY['Bandar Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan','Tropicana Sungai Buloh']) THEN 'Region A'
-        WHEN TRIM(branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak','Puncak Jalil']) THEN 'Region B'
-        WHEN TRIM(branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra','Dataran Puchong Utama','Online']) THEN 'Region C'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan','Tropicana Sungai Buloh']) THEN 'Region A'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang','Taman Sri Gombak','Puncak Jalil']) THEN 'Region B'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra','Dataran Puchong Utama','Online']) THEN 'Region C'
         ELSE 'Other'
       END as region,
       COUNT(*) as count
-    FROM master_leads_base
-    WHERE (submission_date AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
-      AND branch IS NOT NULL AND TRIM(branch) != ''
+    FROM master_leads_powerbi
+    WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+      AND clean_branch IS NOT NULL AND TRIM(clean_branch) != ''
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY region;
   `);
