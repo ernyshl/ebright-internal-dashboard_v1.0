@@ -289,4 +289,25 @@ router.post('/tabs/:id/capture', async (req, res, next) => {
   }
 });
 
+// ─── GET /api/nl-to-ct/tabs/:id/previous-week ─────────────────────────
+router.get('/tabs/:id/previous-week', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' });
+
+    const { rows } = await pool.query(
+      `SELECT id, gid, tab_name, week_date, added_by, added_at
+         FROM nl_to_ct_tabs
+        WHERE week_date < (SELECT week_date FROM nl_to_ct_tabs WHERE id = $1)
+        ORDER BY week_date DESC
+        LIMIT 1`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'No previous week registered' });
+
+    const payload = await buildTabPayload(rows[0]);
+    res.json(payload);
+  } catch (err) { next(err); }
+});
+
 module.exports = { nlToCtRouter: router };
