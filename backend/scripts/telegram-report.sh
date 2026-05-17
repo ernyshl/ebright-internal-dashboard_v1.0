@@ -193,3 +193,31 @@ Total Spend Today: *${FMT_SPEND}*
 Cost Per Lead: *${FMT_CPL}*"
 
 broadcast "$MESSAGE"
+
+# Save computed numbers to DB cache so /report bot command always returns
+# the same figures that were just broadcast — avoids sync race conditions.
+CACHE_SQL="
+INSERT INTO telegram_report_cache
+  (report_date, meta_count, tiktok_count, website_conv, roadshow, sgl, walkin, website_org, others, total_leads, sara_leads, total_spend, cpl, updated_at)
+VALUES (
+  (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date,
+  ${META}, ${TIKTOK}, ${WEBSITE_CONV}, ${ROADSHOW}, ${SGL}, ${WALKIN}, ${WEBSITE_ORG}, ${OTHERS}, ${TOTAL}, ${SARA_LEADS},
+  ${TOTAL_SPEND}, ${CPL}, NOW()
+)
+ON CONFLICT (report_date) DO UPDATE SET
+  meta_count   = EXCLUDED.meta_count,
+  tiktok_count = EXCLUDED.tiktok_count,
+  website_conv = EXCLUDED.website_conv,
+  roadshow     = EXCLUDED.roadshow,
+  sgl          = EXCLUDED.sgl,
+  walkin       = EXCLUDED.walkin,
+  website_org  = EXCLUDED.website_org,
+  others       = EXCLUDED.others,
+  total_leads  = EXCLUDED.total_leads,
+  sara_leads   = EXCLUDED.sara_leads,
+  total_spend  = EXCLUDED.total_spend,
+  cpl          = EXCLUDED.cpl,
+  updated_at   = NOW();
+"
+docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -q -c \"$CACHE_SQL\"" 2>/dev/null || true
+echo "Cache saved at $(date)"
