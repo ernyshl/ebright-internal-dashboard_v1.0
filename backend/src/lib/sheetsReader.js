@@ -75,7 +75,7 @@ async function csvReadTab({ spreadsheetId, gid }) {
   if (cached) return cached;
 
   const exportUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
-  const res = await fetch(exportUrl);
+  const res = await fetch(exportUrl, { signal: AbortSignal.timeout(10_000) });
   if (res.status === 404) throw Object.assign(new Error('Tab not found'), { code: 'TAB_NOT_FOUND' });
   if (!res.ok) throw new Error(`CSV export failed: ${res.status} ${res.statusText}`);
 
@@ -85,10 +85,10 @@ async function csvReadTab({ spreadsheetId, gid }) {
   // The CSV export doesn't include the tab title. Fetch the lightweight
   // HTML metadata page to recover it — the title sits in <title>…</title>.
   // We pull it ONCE per cache lifetime so repeated reads are cheap.
-  let tabTitle = '';
+  let tabTitle = null;
   try {
     const metaUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/htmlview?gid=${gid}`;
-    const metaRes = await fetch(metaUrl);
+    const metaRes = await fetch(metaUrl, { signal: AbortSignal.timeout(3_000) });
     if (metaRes.ok) {
       const html = await metaRes.text();
       // The active tab name appears in the document title and in an
