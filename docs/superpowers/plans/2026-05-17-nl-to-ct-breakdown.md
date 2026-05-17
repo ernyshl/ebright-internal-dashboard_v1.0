@@ -41,26 +41,20 @@ CREATE TABLE IF NOT EXISTS nl_to_ct_tabs (
   gid        TEXT         NOT NULL UNIQUE,
   tab_name   TEXT         NOT NULL,
   week_date  DATE         NOT NULL UNIQUE,
-  added_by   INTEGER      REFERENCES users(id) ON DELETE SET NULL,
+  added_by   UUID         REFERENCES users(id) ON DELETE SET NULL,
   added_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_nl_to_ct_tabs_week_date_desc
-  ON nl_to_ct_tabs (week_date DESC);
 
 CREATE TABLE IF NOT EXISTS nl_to_ct_captures (
   id           SERIAL       PRIMARY KEY,
   tab_id       INTEGER      NOT NULL REFERENCES nl_to_ct_tabs(id) ON DELETE CASCADE,
   slot_key     TEXT         NOT NULL,
   branch_code  TEXT         NOT NULL,
-  actual       INTEGER      NOT NULL,
-  captured_by  INTEGER      REFERENCES users(id) ON DELETE SET NULL,
+  actual       INTEGER      NOT NULL CHECK (actual >= 0),
+  captured_by  UUID         REFERENCES users(id) ON DELETE SET NULL,
   captured_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   CONSTRAINT nl_to_ct_captures_unique UNIQUE (tab_id, slot_key, branch_code)
 );
-
-CREATE INDEX IF NOT EXISTS idx_nl_to_ct_captures_tab
-  ON nl_to_ct_captures (tab_id);
 ```
 
 - [ ] **Step 2: Add the same DDL to `runMigrations()` in `backend/src/server.js`**
@@ -76,13 +70,9 @@ Find the block ending with the `idx_finance_renewals_refresh_log_status_ran_at` 
       gid        TEXT         NOT NULL UNIQUE,
       tab_name   TEXT         NOT NULL,
       week_date  DATE         NOT NULL UNIQUE,
-      added_by   INTEGER      REFERENCES users(id) ON DELETE SET NULL,
+      added_by   UUID         REFERENCES users(id) ON DELETE SET NULL,
       added_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
     )
-  `);
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_nl_to_ct_tabs_week_date_desc
-      ON nl_to_ct_tabs (week_date DESC)
   `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS nl_to_ct_captures (
@@ -90,15 +80,11 @@ Find the block ending with the `idx_finance_renewals_refresh_log_status_ran_at` 
       tab_id       INTEGER      NOT NULL REFERENCES nl_to_ct_tabs(id) ON DELETE CASCADE,
       slot_key     TEXT         NOT NULL,
       branch_code  TEXT         NOT NULL,
-      actual       INTEGER      NOT NULL,
-      captured_by  INTEGER      REFERENCES users(id) ON DELETE SET NULL,
+      actual       INTEGER      NOT NULL CHECK (actual >= 0),
+      captured_by  UUID         REFERENCES users(id) ON DELETE SET NULL,
       captured_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
       CONSTRAINT nl_to_ct_captures_unique UNIQUE (tab_id, slot_key, branch_code)
     )
-  `);
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_nl_to_ct_captures_tab
-      ON nl_to_ct_captures (tab_id)
   `);
 ```
 
