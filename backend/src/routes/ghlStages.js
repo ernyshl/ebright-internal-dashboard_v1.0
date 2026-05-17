@@ -1,3 +1,4 @@
+const https = require('https');
 const express = require('express');
 const { pool } = require('../db');
 const { env } = require('../env');
@@ -28,6 +29,28 @@ function getStageKey(raw) {
   if (s.includes('show'))       return 'SU';
   if (s.includes('enrolled'))   return 'ENR';
   return null;
+}
+
+// Fire-and-forget Telegram alert for double-fired NL webhooks.
+function sendDoubleFireAlert({ botToken, chatIds, pipelineName, email, leadName, firstSeen, refiredAt }) {
+  if (!botToken || !chatIds.length) return;
+  const fmt = (d) => new Date(d).toLocaleString('en-MY', {
+    timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const text = `⚠️ Double Fire NL Detected\nPipeline: ${pipelineName || 'Unknown'}\nEmail: ${email}\nLead: ${leadName || 'Unknown'}\nFirst seen: ${fmt(firstSeen)}\nRe-fired: ${fmt(refiredAt)}`;
+  for (const chatId of chatIds) {
+    const body = JSON.stringify({ chat_id: chatId, text });
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${botToken}/sendMessage`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, () => {});
+    req.on('error', (err) => console.error('[double-fire alert] telegram error:', err.message));
+    req.write(body);
+    req.end();
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -101,22 +124,32 @@ router.post('/webhook', async (req, res) => {
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
-    // Ignore duplicate fires for the same opportunity at the same stage:
-    // same email + same opportunity_name + same stage_key → already captured.
-    // Different opportunity_name (e.g. siblings under a parent's email
-    // creating distinct opportunities) is allowed through as a new lead.
-    // The full payload is preserved in ghl_webhook_log (action='ignored')
-    // and surfaced via the ghl_ignored_payloads view for later replay.
+    // Duplicate check: same email + opportunity_name + stage_key already exists.
+    // NL double-fires: send a Telegram alert and still proceed to insert (kept for
+    // debugging). All other stages: return 'ignored' as before.
     {
       const { rows: exists } = await pool.query(
-        `SELECT 1 FROM ghl_stages
+        `SELECT received_at, pipeline_name FROM ghl_stages
          WHERE email = $1 AND opportunity_name = $2 AND stage_key = $3
          LIMIT 1`,
         [email, opportunityName, stageKey]
       );
       if (exists.length > 0) {
-        await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+opportunity_name+stage already exists' });
-        return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+opportunity_name+stage)' });
+        if (stageKey === 'NL') {
+          sendDoubleFireAlert({
+            botToken: env.TELEGRAM_BOT_TOKEN,
+            chatIds: (env.TELEGRAM_ALLOWED_CHATS || '').split(',').map(s => s.trim()).filter(Boolean),
+            pipelineName: pipelineName || exists[0].pipeline_name,
+            email,
+            leadName: opportunityName || studentName,
+            firstSeen: exists[0].received_at,
+            refiredAt: new Date(),
+          });
+          // Fall through — let the INSERT/ON CONFLICT UPDATE proceed so the re-fire is recorded.
+        } else {
+          await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+opportunity_name+stage already exists' });
+          return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+opportunity_name+stage)' });
+        }
       }
     }
 
