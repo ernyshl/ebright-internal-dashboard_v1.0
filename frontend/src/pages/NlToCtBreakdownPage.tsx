@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BackButton } from '../components/BackButton';
 import { nlToCtApi, NlToCtTab, TabPayload, BranchData } from '../api/nlToCt';
 import { BRANCHES, TIME_SLOTS, SLOTS_BY_DAY, SlotDef } from '../lib/nlToCtSchema';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 type ViewMode = 'grid' | 'cards' | 'tiles';
 
@@ -251,41 +250,119 @@ interface CardsViewProps {
   prev: TabPayload | null;
 }
 function CardsView({ payload, prev }: CardsViewProps) {
+  // Shared tone palette with the Tiles view for visual consistency.
+  function tone(pct: number) {
+    if (pct >= 100) return { accent: '#16a34a', soft: '#dcfce7' };
+    if (pct >= 70)  return { accent: '#eab308', soft: '#fef9c3' };
+    return { accent: '#dc2626', soft: '#fee2e2' };
+  }
+  function rowTint(goal: number | null, actual: number | null): string {
+    if (actual == null || goal == null) return '#fafafa';
+    if (actual === 0) return '#fef2f2';
+    if (actual >= goal) return '#f0fdf4';
+    return '#fefce8';
+  }
+  const dayName = (d: 'Wed' | 'Thu' | 'Fri') => d === 'Wed' ? 'Wed' : d === 'Thu' ? 'Thu' : 'Fri';
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
       {payload.branches.map(b => {
         const prevB = prev?.branches.find(x => x.code === b.code);
-        const chartData = TIME_SLOTS.map(s => {
+
+        // Per-slot rows + branch-level rollup.
+        let goalSum = 0;
+        let actualSum = 0;
+        const rows = TIME_SLOTS.map((s, idx) => {
           const sd = b.slots.find(x => x.slot_key === s.key);
           const psd = prevB?.slots.find(x => x.slot_key === s.key);
-          return {
-            label: `${s.day} ${s.time}`,
-            goal: sd?.goal ?? 0,
-            actual: sd?.actual_captured ?? sd?.actual_live ?? 0,
-            prevActual: psd ? (psd.actual_captured ?? psd.actual_live ?? 0) : null,
-          };
+          const goal = sd?.goal ?? null;
+          const actual = sd?.actual_captured ?? sd?.actual_live ?? null;
+          const prevA = psd ? (psd.actual_captured ?? psd.actual_live ?? null) : null;
+          goalSum   += goal ?? 0;
+          actualSum += actual ?? 0;
+          const prevIsDifferentDay = idx === 0 || TIME_SLOTS[idx - 1].day !== s.day;
+          return { slot: s, goal, actual, prevA, showDay: prevIsDifferentDay };
         });
+        const pct = goalSum > 0 ? Math.round((actualSum / goalSum) * 100) : 0;
+        const t = tone(pct);
+
         return (
-          <div key={b.code} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-              <h3 style={{ margin: 0, fontSize: 18 }}>{b.code}</h3>
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>NL {b.nl ?? '—'} · CT {b.ct ?? '—'}</span>
+          <div
+            key={b.code}
+            style={{
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: 10,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* Header: branch + overall % */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 14px',
+              borderBottom: '1px solid #f3f4f6',
+            }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', lineHeight: 1.1 }}>{b.code}</div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+                  NL {b.nl ?? '—'} · CT {b.ct ?? '—'}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: t.accent, lineHeight: 1 }}>{pct}%</span>
+                <span style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                  {actualSum}<span style={{ color: '#9ca3af' }}> / {goalSum}</span>
+                </span>
+              </div>
             </div>
-            <div style={{ height: 180 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 4 }}>
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={50} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="goal" fill="#cfd8e3" name="Goal" />
-                  <Bar dataKey="actual" name="Actual">
-                    {chartData.map((d, i) => (
-                      <Cell key={i} fill={d.actual === 0 ? '#e36b6b' : d.actual >= d.goal ? '#5cb85c' : '#e6c84e'} />
-                    ))}
-                  </Bar>
-                  {prev && <Bar dataKey="prevActual" fill="#9a9a9a" name="Last week" />}
-                </BarChart>
-              </ResponsiveContainer>
+
+            {/* Per-slot rows */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {rows.map(r => {
+                const delta = r.actual != null && r.prevA != null ? r.actual - r.prevA : null;
+                return (
+                  <div
+                    key={r.slot.key}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '32px 60px 1fr auto',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 14px',
+                      background: rowTint(r.goal, r.actual),
+                      borderTop: r.showDay ? '1px solid #f3f4f6' : 'none',
+                      fontSize: 12,
+                    }}
+                  >
+                    <span style={{ fontSize: 11, fontWeight: 600, color: r.showDay ? '#374151' : 'transparent' }}>
+                      {dayName(r.slot.day)}
+                    </span>
+                    <span style={{ color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>
+                      {r.slot.time}
+                    </span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#111827' }}>
+                      {r.actual ?? '—'}<span style={{ color: '#9ca3af', fontWeight: 400 }}> / {r.goal ?? '—'}</span>
+                    </span>
+                    {prev && (
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: delta == null ? '#9ca3af' : delta >= 0 ? '#16a34a' : '#dc2626',
+                        fontVariantNumeric: 'tabular-nums',
+                        minWidth: 32,
+                        textAlign: 'right',
+                      }}>
+                        {delta == null ? '—' : `${delta >= 0 ? '▲' : '▼'}${Math.abs(delta)}`}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
