@@ -222,6 +222,46 @@ function CardsView({ payload }: CardsViewProps) {
   );
 }
 
+interface TilesViewProps {
+  payload: TabPayload;
+}
+function TilesView({ payload }: TilesViewProps) {
+  // Aggregate across branches per slot.
+  const slotTotals = TIME_SLOTS.map(s => {
+    let goalSum = 0;
+    let actualSum = 0;
+    for (const b of payload.branches) {
+      const sd = b.slots.find(x => x.slot_key === s.key);
+      goalSum   += sd?.goal ?? 0;
+      actualSum += sd?.actual_captured ?? sd?.actual_live ?? 0;
+    }
+    const pct = goalSum > 0 ? Math.round((actualSum / goalSum) * 100) : 0;
+    return { slot: s, goalSum, actualSum, pct };
+  });
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+      {slotTotals.map(({ slot, goalSum, actualSum, pct }) => (
+        <div
+          key={slot.key}
+          style={{
+            border: '1px solid #ddd',
+            borderRadius: 6,
+            padding: 14,
+            background: pct >= 100 ? '#e6f7e8' : pct >= 70 ? '#fffbe6' : '#fde2e2',
+          }}
+        >
+          <div style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{slot.day} {slot.time}</div>
+          <div style={{ fontSize: 26, fontWeight: 600, marginTop: 4 }}>
+            {actualSum} <span style={{ fontSize: 14, color: 'var(--muted)' }}>/ {goalSum}</span>
+          </div>
+          <div style={{ fontSize: 14, color: '#333', marginTop: 4 }}>{pct}%</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────
 export function NlToCtBreakdownPage() {
   const qc = useQueryClient();
@@ -323,7 +363,7 @@ export function NlToCtBreakdownPage() {
                 </div>
               )}
               {view === 'cards' && <CardsView payload={dataQ.data} />}
-              {view === 'tiles' && <p style={{ color: 'var(--muted)' }}>Tiles view coming in Task 13.</p>}
+              {view === 'tiles' && <TilesView payload={dataQ.data} />}
             </>
           )}
         </>
