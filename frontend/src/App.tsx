@@ -63,6 +63,7 @@ import { HrfsOverviewV2Page } from './pages/HrfsOverviewV2Page';
 import { SalestrailPage } from './pages/SalestrailPage';
 import { SalestrailBranchPage } from './pages/SalestrailBranchPage';
 import { NlToCtTabsPage } from './pages/NlToCtTabsPage';
+import { NlToCtBreakdownPage } from './pages/NlToCtBreakdownPage';
 
 
 export default function App() {
@@ -218,6 +219,9 @@ export default function App() {
           } />
           <Route path="/nl-to-ct/manage" element={
             <RequirePermission dashboard="testing"><NlToCtTabsPage /></RequirePermission>
+          } />
+          <Route path="/nl-to-ct" element={
+            <RequirePermission dashboard="testing"><NlToCtBreakdownPage /></RequirePermission>
           } />
           <Route path="/branch-performance" element={
             <RequirePermission dashboard="testing"><BranchPerformancePage /></RequirePermission>
