@@ -19,11 +19,23 @@ Each cell shows two numbers: `CT | ENR`.
 
 ### 2. Per-cell click behavior
 
-Each number inside a cell is independently clickable:
+Each number inside a cell is independently clickable. The drill-down count in Lead Centre is required to **exactly match** the number on the cell — so the click passes through every dimension that defines the cell (pipeline, preferred_day, time_slot).
 
-- **Click CT number** → Lead Centre with `stage=CT&preset=<current>&pipeline=<pip>` (current behavior — Lead Centre filters CT rows by their own `received_at`).
-- **Click ENR number** → Lead Centre with `stage=ENR&preset=<current>&pipeline=<pip>&via_ct=1`. The new `via_ct=1` flag tells the list endpoint to apply the date filter to the **linked CT's** `received_at` rather than the ENR row's `received_at`. This way, the drill-down count matches the dashboard cell exactly: a CT booked today that enrols next week is counted in *today's* ENR cell and *today's* ENR drill-down.
+- **Click CT number** → Lead Centre with `stage=CT&preset=<current>&pipeline=<pip>` plus, where applicable, `preferred_day=<day>` and `time_slot=<code>`. Lead Centre filters CT rows by their own `received_at`, preferred_day, and time_slot.
+- **Click ENR number** → Lead Centre with `stage=ENR&preset=<current>&pipeline=<pip>&via_ct=1` plus, where applicable, `preferred_day=<day>` and `time_slot=<code>`. The `via_ct=1` flag tells the list endpoint to apply the date filter — *and the preferred_day / time_slot filters* — to the **linked CT** (matched by `email + opportunity_name`) rather than to the ENR row itself. ENR rows often lack day/slot metadata, so without `via_ct` they couldn't be filtered by those fields.
 - The pipe `|` between them is not clickable (muted color).
+
+Cell-to-URL mapping:
+
+| Page | preferred_day param | time_slot param |
+|---|---|---|
+| Day Distribution (per-day cell) | Full day name (`Wednesday`) | — |
+| Day Distribution (branch total label) | — | — |
+| Time Slot Distribution (per-slot cell, "All Days") | — | 4-digit code (`0915`) |
+| Time Slot Distribution (per-slot cell, day filter active) | Full day name | 4-digit code |
+| Time Slot Distribution (branch total label) | Full day name if day filter active | — |
+
+The branch total labels (e.g. `Setia Alam [ 75 | 15 ]`) are clickable too: clicking `75` opens CT for that pipeline; clicking `15` opens ENR with `via_ct=1`. They omit per-cell filters, so they match the row total.
 
 ### 3. Branch totals beside label
 
@@ -72,10 +84,15 @@ Existing consumers that only read `n` keep working (additive change).
 
 ### Backend change — list endpoint
 
-Extend `GET /api/ghl-stages` in [backend/src/routes/ghlStages.js](backend/src/routes/ghlStages.js#L190) to accept a new query param `via_ct=1`. When set:
+Extend `GET /api/ghl-stages` in [backend/src/routes/ghlStages.js](backend/src/routes/ghlStages.js#L190) with two additions:
 
-- The outer date filter on `received_at` is skipped.
-- An EXISTS clause is added: rows are kept only if there is a linked CT row (same `email` + `opportunity_name`) with `stage_key = 'CT'`, `preferred_day <> ''`, `time_slot <> ''`, and `received_at` (KL date) within the supplied `date_from`/`date_to`.
+**(a) New `preferred_day` query param.** Filters rows by exact-match on the `preferred_day` column (e.g. `Wednesday`). Applied directly to the outer row when `via_ct` is not set.
+
+**(b) New `via_ct=1` flag.** When set, three filters move *off* the outer row and *into* an EXISTS subquery against linked CT rows:
+
+- `date_from` / `date_to` → applied to `ct.received_at`, not to the outer row.
+- `preferred_day` (if supplied) → applied to `ct.preferred_day`.
+- `time_slot` (if supplied) → applied to `ct.time_slot` (with the same `LIKE 'code%'` pattern used today).
 
 ```sql
 EXISTS (
@@ -87,10 +104,12 @@ EXISTS (
     AND ct.time_slot <> ''
     AND (ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $X::date
     AND (ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $Y::date
+    [AND ct.preferred_day = $D]   -- only if preferred_day supplied
+    [AND ct.time_slot LIKE $T]    -- only if time_slot supplied
 )
 ```
 
-All other filters (`stage`, `pipeline`, `time_slot`, `search`) continue to apply to the outer row (the ENR row). This means: clicking ENR shows ENR-stage rows whose linked CT was booked in the dashboard date range — count matches the dashboard cell.
+All other filters (`stage`, `pipeline`, `pipelines`, `search`) continue to apply to the outer row. The `pipeline` filter on the outer (ENR) row is safe because ENR carries the same `pipeline_name` as the matching CT — they're per-lead. Net result: clicking the ENR number for "Wednesday 1800 at Setia Alam" returns exactly the ENR rows whose linked CT was Setia Alam, Wednesday, 1800, within the dashboard date range — matching the dashboard cell.
 
 ## Frontend changes
 
@@ -99,8 +118,20 @@ All other filters (`stage`, `pipeline`, `time_slot`, `search`) continue to apply
 1. **Build a parallel ENR map** alongside `dayMap` / `slotMap`, summing `r.n_enr` with the same grouping logic.
 2. **`MetricCard` renders `ct | enr`** as two clickable spans separated by a muted pipe. Each span calls a separate click handler. Hover affordance only on numbers, not the pipe.
 3. **`Row` accepts** `enrValues` plus a second click handler (`onCellClickEnr`).
-4. **Branch label** changes to `${branchName} [ ${ctTotal} | ${enrTotal} ]`. Totals computed across the row's visible cells (Day: all 5 days; Time Slot: `visibleCodes`).
-5. **`goToLeadCentre`** parameterized by stage: `goToLeadCentre(pip, stage)`. When `stage === 'ENR'`, the function also appends `via_ct=1` so the date filter is applied to the linked CT's `received_at` and the drill-down count matches the dashboard cell.
+4. **Branch label** changes to `${branchName} [ ${ctTotal} | ${enrTotal} ]`, with `ctTotal` and `enrTotal` rendered as two clickable spans (same pattern as cells). Totals computed across the row's visible cells (Day: all 5 days; Time Slot: `visibleCodes`).
+5. **`goToLeadCentre`** parameterized by stage and per-cell context:
+   - Day Distribution: `goToLeadCentre(pip, stage, { day })` where `day` is the full day name (`Wednesday`).
+   - Time Slot Distribution: `goToLeadCentre(pip, stage, { day: selectedDay || undefined, slot })`. `slot` is the 4-digit code.
+   - When `stage === 'ENR'`, appends `via_ct=1`; otherwise omits it.
+   - Branch-label total clicks pass no per-cell context, so they match the row total (Day Distribution passes nothing; Time Slot passes `selectedDay` only if active).
+
+### [frontend/src/pages/GhlLeadsCentrePage.tsx](frontend/src/pages/GhlLeadsCentrePage.tsx)
+
+1. **Read `preferred_day` and `via_ct` from URL params** on mount; add them to state alongside the other filters.
+2. **Add a "Day" select dropdown** to the filter bar (options: `All Days`, Wed, Thu, Fri, Sat, Sun — value is the full day name). Sits between Time Slot and Search visually.
+3. **Include `preferred_day` and `via_ct` in the query params** sent to `/api/ghl-stages`.
+4. **Include both in the page-reset effect and the "Clear" button.**
+5. The `via_ct` flag has **no visible UI control** — it's only set via URL when arriving from the dashboard. It's preserved across filter changes (until Clear is pressed), so changing e.g. the time slot dropdown after arriving from a dashboard click keeps the linked-CT semantics.
 
 No new files. No new routes. No schema changes.
 
@@ -115,14 +146,17 @@ No new files. No new routes. No schema changes.
 
 Manual verification:
 
-1. Pick a date range with known CT→ENR conversions. Confirm cell shows correct `CT | ENR`.
+1. Pick a date range with known CT→ENR conversions. Confirm each cell shows correct `CT | ENR`.
 2. Confirm ENR ≤ CT in every cell.
-3. Click CT number → Lead Centre filters to CT stage. Click ENR number → filters to ENR stage.
-4. Confirm branch label totals = sum of visible cells in that row.
-5. On Time Slot page, toggle Day filter — confirm totals recompute against the now-visible slot codes only.
+3. Click any CT cell → Lead Centre filters to CT stage, count matches the cell number.
+4. Click any ENR cell → Lead Centre filters to ENR stage with `via_ct=1`, count matches the cell number.
+5. Click a CT cell with a specific day on Time Slot page (day filter active) → Lead Centre shows that pipeline + day + slot.
+6. Click the branch label totals → CT and ENR counts match the row totals.
+7. On Time Slot page, toggle Day filter — confirm totals recompute against the now-visible slot codes only.
+8. On Lead Centre after an ENR drill-down: change time slot dropdown → list refines but `via_ct` stays on (URL preserved). Click Clear → all filters including `via_ct` reset.
 
 ## Out of scope
 
-- Per-cell granularity on drill-down (clicking the Wed cell still shows the whole pipeline row in Lead Centre, not just Wed's CTs — Lead Centre has no `preferred_day` filter today). Filed as a possible follow-up.
 - ENR-only mode / toggle.
 - New columns or pages.
+- Surfacing `via_ct` as a visible filter chip in Lead Centre (it's invisible state that the URL carries).
