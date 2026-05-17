@@ -192,7 +192,8 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const {
       date_from = '', date_to = '',
       stage = '', pipeline = '', pipelines = '',
-      time_slot = '', search = '',
+      preferred_day = '', time_slot = '', search = '',
+      via_ct = '',
       page = 1, limit = 50,
     } = req.query;
 
@@ -200,14 +201,48 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const params = [];
     let idx = 1;
 
-    if (date_from) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
-      params.push(date_from);
+    const useViaCt = String(via_ct) === '1';
+
+    if (useViaCt) {
+      // Filters that semantically belong to the lead's CT booking get moved
+      // into an EXISTS clause against the matching CT row. Lets ENR drill-downs
+      // from the For Manjeet dashboards filter by the CT's date/day/slot rather
+      // than the ENR row's own (often empty) fields.
+      const ex = [
+        `ct.email = ghl_stages.email`,
+        `ct.opportunity_name = ghl_stages.opportunity_name`,
+        `ct.stage_key = 'CT'`,
+        `ct.preferred_day <> ''`,
+        `ct.time_slot <> ''`,
+      ];
+      if (date_from) {
+        ex.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+        params.push(date_from);
+      }
+      if (date_to) {
+        ex.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+        params.push(date_to);
+      }
+      if (preferred_day) { ex.push(`ct.preferred_day = $${idx++}`); params.push(preferred_day); }
+      if (time_slot)     { ex.push(`ct.time_slot LIKE $${idx++}`);   params.push(`${time_slot}%`); }
+      conditions.push(`EXISTS (SELECT 1 FROM ghl_stages ct WHERE ${ex.join(' AND ')})`);
+    } else {
+      if (date_from) {
+        conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+        params.push(date_from);
+      }
+      if (date_to) {
+        conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+        params.push(date_to);
+      }
+      if (preferred_day) { conditions.push(`preferred_day = $${idx++}`); params.push(preferred_day); }
+      if (time_slot) {
+        // Stored values look like '1730 | 05:30pm' — match by leading 4-digit code.
+        conditions.push(`time_slot LIKE $${idx++}`);
+        params.push(`${time_slot}%`);
+      }
     }
-    if (date_to) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
-      params.push(date_to);
-    }
+
     if (stage)    { conditions.push(`stage_key = $${idx++}`); params.push(stage); }
     if (pipeline) { conditions.push(`pipeline_name = $${idx++}`); params.push(pipeline); }
     else if (pipelines) {
@@ -217,11 +252,6 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
         conditions.push(`pipeline_name IN (${placeholders})`);
         params.push(...list);
       }
-    }
-    if (time_slot) {
-      // Stored values look like '1730 | 05:30pm' — match by leading 4-digit code.
-      conditions.push(`time_slot LIKE $${idx++}`);
-      params.push(`${time_slot}%`);
     }
     if (search) {
       conditions.push(`(email ILIKE $${idx} OR opportunity_name ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx})`);
@@ -572,24 +602,30 @@ router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
 router.get('/ct-calendar', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '' } = req.query;
-    const conditions = [`stage_key = 'CT'`, `preferred_day <> ''`, `time_slot <> ''`];
+    const conditions = [`ct.stage_key = 'CT'`, `ct.preferred_day <> ''`, `ct.time_slot <> ''`];
     const params = [];
     let idx = 1;
     if (date_from) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+      conditions.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
       params.push(date_from);
     }
     if (date_to) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+      conditions.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
       params.push(date_to);
     }
     const where = `WHERE ${conditions.join(' AND ')}`;
     const { rows } = await pool.query(
-      `SELECT pipeline_name, preferred_day, time_slot, COUNT(*)::int AS n
-       FROM ghl_stages
+      `SELECT ct.pipeline_name, ct.preferred_day, ct.time_slot,
+              COUNT(*)::int AS n,
+              COUNT(*) FILTER (WHERE enr.email IS NOT NULL)::int AS n_enr
+       FROM ghl_stages ct
+       LEFT JOIN ghl_stages enr
+         ON enr.email = ct.email
+        AND enr.opportunity_name = ct.opportunity_name
+        AND enr.stage_key = 'ENR'
        ${where}
-       GROUP BY pipeline_name, preferred_day, time_slot
-       ORDER BY pipeline_name, preferred_day, time_slot`,
+       GROUP BY ct.pipeline_name, ct.preferred_day, ct.time_slot
+       ORDER BY ct.pipeline_name, ct.preferred_day, ct.time_slot`,
       params,
     );
     return res.json({ rows });
