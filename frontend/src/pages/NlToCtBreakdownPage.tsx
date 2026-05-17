@@ -50,16 +50,16 @@ function CaptureModal({ tabId, slot, payload, onClose, onCaptured }: CaptureModa
           <thead>
             <tr style={{ background: '#f5f5f5' }}>
               <th style={{ textAlign: 'left', padding: 6 }}>Branch</th>
-              <th style={{ textAlign: 'right', padding: 6 }}>Existing frozen</th>
-              <th style={{ textAlign: 'right', padding: 6 }}>Current sheet</th>
+              <th style={{ textAlign: 'center', padding: 6 }}>Existing frozen</th>
+              <th style={{ textAlign: 'center', padding: 6 }}>Current sheet</th>
             </tr>
           </thead>
           <tbody>
             {branches.map(b => (
               <tr key={b.code}>
                 <td style={{ padding: 6 }}>{b.code}</td>
-                <td style={{ padding: 6, textAlign: 'right', color: b.frozen !== null ? '#444' : '#aaa' }}>{b.frozen ?? '—'}</td>
-                <td style={{ padding: 6, textAlign: 'right', fontWeight: b.frozen !== b.live ? 600 : 400 }}>{b.live ?? '—'}</td>
+                <td style={{ padding: 6, textAlign: 'center', color: b.frozen !== null ? '#444' : '#aaa' }}>{b.frozen ?? '—'}</td>
+                <td style={{ padding: 6, textAlign: 'center', fontWeight: b.frozen !== b.live ? 600 : 400 }}>{b.live ?? '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -209,16 +209,16 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
           return (
             <tr key={b.code}>
               <td style={{ padding: '4px 8px', border: '1px solid #ddd', fontWeight: 600 }}>{b.code}</td>
-              <td style={{ padding: '4px 8px', border: '1px solid #ddd', background: '#fffae0', textAlign: 'right' }}>{bd?.nl ?? '—'}</td>
-              <td style={{ padding: '4px 8px', border: '1px solid #ddd', background: '#ffe6c8', textAlign: 'right' }}>{bd?.ct ?? '—'}</td>
+              <td style={{ padding: '4px 8px', border: '1px solid #ddd', background: '#fffae0', textAlign: 'center' }}>{bd?.nl ?? '—'}</td>
+              <td style={{ padding: '4px 8px', border: '1px solid #ddd', background: '#ffe6c8', textAlign: 'center' }}>{bd?.ct ?? '—'}</td>
               {TIME_SLOTS.flatMap(slot => {
                 const sd = bd?.slots.find(s => s.slot_key === slot.key);
                 const goal = sd?.goal ?? null;
                 const displayActual = sd?.actual_captured ?? sd?.actual_live ?? null;
                 const tint = cellTint(goal, displayActual);
                 return [
-                  <td key={`${b.code}-${slot.key}-g`} style={{ padding: '4px 8px', border: '1px solid #ddd', textAlign: 'right' }}>{goal ?? '—'}</td>,
-                  <td key={`${b.code}-${slot.key}-a`} style={{ padding: '4px 8px', border: '1px solid #ddd', textAlign: 'right', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
+                  <td key={`${b.code}-${slot.key}-g`} style={{ padding: '4px 8px', border: '1px solid #ddd', textAlign: 'center' }}>{goal ?? '—'}</td>,
+                  <td key={`${b.code}-${slot.key}-a`} style={{ padding: '4px 8px', border: '1px solid #ddd', textAlign: 'center', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
                     <div>{displayActual ?? '—'}</div>
                     {prev && (() => {
                       const psd = prevByCode.get(b.code)?.slots.find(s => s.slot_key === slot.key);
@@ -299,97 +299,113 @@ interface TilesViewProps {
   prev: TabPayload | null;
 }
 function TilesView({ payload, prev }: TilesViewProps) {
-  const slotTotals = TIME_SLOTS.map(s => {
-    let goalSum = 0, actualSum = 0, prevGoalSum = 0, prevActualSum = 0;
-    for (const b of payload.branches) {
-      const sd = b.slots.find(x => x.slot_key === s.key);
-      goalSum   += sd?.goal ?? 0;
-      actualSum += sd?.actual_captured ?? sd?.actual_live ?? 0;
-    }
-    if (prev) {
-      for (const b of prev.branches) {
-        const sd = b.slots.find(x => x.slot_key === s.key);
-        prevGoalSum   += sd?.goal ?? 0;
-        prevActualSum += sd?.actual_captured ?? sd?.actual_live ?? 0;
-      }
-    }
-    const pct = goalSum > 0 ? Math.round((actualSum / goalSum) * 100) : 0;
-    const prevPct = prevGoalSum > 0 ? Math.round((prevActualSum / prevGoalSum) * 100) : 0;
-    return { slot: s, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct };
-  });
-
-  // Status color palette — single source of truth for both accent + bar fill.
-  // Values picked for WCAG AA contrast against white text/labels at the bar
-  // and ≥4.5:1 for the percentage number against the card background.
+  // Tone palette shared across the slot summary and per-branch boxes.
   function tone(pct: number) {
-    if (pct >= 100) return { accent: '#16a34a', soft: '#dcfce7', label: 'On target' };  // green
-    if (pct >= 70)  return { accent: '#eab308', soft: '#fef9c3', label: 'Close' };       // amber
-    return { accent: '#dc2626', soft: '#fee2e2', label: 'Behind' };                       // red
+    if (pct >= 100) return { accent: '#16a34a', soft: '#dcfce7' };
+    if (pct >= 70)  return { accent: '#eab308', soft: '#fef9c3' };
+    return { accent: '#dc2626', soft: '#fee2e2' };
+  }
+  function branchTint(goal: number | null, actual: number | null): string {
+    if (actual == null || goal == null) return '#f3f4f6';
+    if (actual === 0) return '#fee2e2';
+    if (actual >= goal) return '#dcfce7';
+    return '#fef9c3';
   }
 
+  const dayName = (d: 'Wed' | 'Thu' | 'Fri') => d === 'Wed' ? 'Wednesday' : d === 'Thu' ? 'Thursday' : 'Friday';
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-      {slotTotals.map(({ slot, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct }) => {
-        const t = tone(pct);
-        const barFill = Math.min(100, pct); // clamp visual to 100, the % can still exceed
-        const delta = actualSum - prevActualSum;
-        return (
-          <div
-            key={slot.key}
-            style={{
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: 10,
-              padding: 16,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            {/* Slot label + status pill */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 12, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
-                {slot.day} · {slot.time}
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: t.accent, background: t.soft, padding: '2px 8px', borderRadius: 999 }}>
-                {t.label}
-              </span>
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {SLOTS_BY_DAY.map(group => (
+        <div key={group.day}>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: 16, fontWeight: 700, color: '#111827', borderBottom: '2px solid #e5e7eb', paddingBottom: 6 }}>
+            {dayName(group.day)}
+          </h3>
 
-            {/* Big percentage + actual/goal numbers */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ fontSize: 32, fontWeight: 700, color: t.accent, lineHeight: 1 }}>{pct}%</span>
-              <span style={{ fontSize: 14, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
-                {actualSum}<span style={{ color: '#9ca3af' }}> / {goalSum}</span>
-              </span>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {group.slots.map(slot => {
+              const branchRow = payload.branches.map(b => {
+                const sd = b.slots.find(x => x.slot_key === slot.key);
+                const psd = prev?.branches.find(x => x.code === b.code)?.slots.find(x => x.slot_key === slot.key);
+                const actual = sd?.actual_captured ?? sd?.actual_live ?? null;
+                const goal = sd?.goal ?? null;
+                const prevA = psd ? (psd.actual_captured ?? psd.actual_live ?? null) : null;
+                return { code: b.code, goal, actual, prevA };
+              });
+              const goalSum = branchRow.reduce((n, x) => n + (x.goal ?? 0), 0);
+              const actualSum = branchRow.reduce((n, x) => n + (x.actual ?? 0), 0);
+              const prevActualSum = branchRow.reduce((n, x) => n + (x.prevA ?? 0), 0);
+              const pct = goalSum > 0 ? Math.round((actualSum / goalSum) * 100) : 0;
+              const delta = actualSum - prevActualSum;
+              const t = tone(pct);
 
-            {/* Progress bar */}
-            <div style={{ height: 8, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${barFill}%`,
-                  background: t.accent,
-                  borderRadius: 999,
-                  transition: 'width 200ms ease-out',
-                }}
-              />
-            </div>
+              return (
+                <div
+                  key={slot.key}
+                  style={{
+                    display: 'flex',
+                    gap: 16,
+                    alignItems: 'stretch',
+                    background: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 10,
+                    padding: 12,
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  {/* Slot summary, left */}
+                  <div style={{ width: 150, flexShrink: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingRight: 16, borderRight: '1px solid #f3f4f6' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{slot.time}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+                      <span style={{ fontSize: 24, fontWeight: 700, color: t.accent, lineHeight: 1 }}>{pct}%</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                      {actualSum}<span style={{ color: '#9ca3af' }}> / {goalSum}</span>
+                    </div>
+                    {prev && (
+                      <div style={{ fontSize: 11, color: delta >= 0 ? '#16a34a' : '#dc2626', marginTop: 4, fontWeight: 600 }}>
+                        {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)} vs last
+                      </div>
+                    )}
+                  </div>
 
-            {/* Last-week comparison */}
-            {prev && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280' }}>
-                <span>Last week: <span style={{ fontVariantNumeric: 'tabular-nums', color: '#374151' }}>{prevActualSum}/{prevGoalSum}</span> ({prevPct}%)</span>
-                <span style={{ fontWeight: 600, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
-                  {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}
-                </span>
-              </div>
-            )}
+                  {/* Branch mini-boxes, right */}
+                  <div style={{
+                    flex: 1,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))',
+                    gap: 6,
+                  }}>
+                    {branchRow.map(b => (
+                      <div
+                        key={b.code}
+                        title={`${b.code}: ${b.actual ?? '—'} / ${b.goal ?? '—'}`}
+                        style={{
+                          background: branchTint(b.goal, b.actual),
+                          borderRadius: 6,
+                          padding: '6px 4px',
+                          textAlign: 'center',
+                          border: '1px solid rgba(0,0,0,0.04)',
+                        }}
+                      >
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#374151', letterSpacing: 0.3 }}>{b.code}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
+                          {b.actual ?? '—'}
+                        </div>
+                        {b.goal != null && (
+                          <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>
+                            /{b.goal}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
