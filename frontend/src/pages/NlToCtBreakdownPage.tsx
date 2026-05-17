@@ -130,17 +130,17 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
   }, [payload, prev]);
 
   return (
-    <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
+    <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
       <thead>
         <tr>
-          <th style={{ padding: 4, background: '#f5f5f5', border: '1px solid #ddd' }} rowSpan={3}>Branch</th>
-          <th style={{ padding: 4, background: '#fffae0', border: '1px solid #ddd' }} rowSpan={3}>NL</th>
-          <th style={{ padding: 4, background: '#ffe6c8', border: '1px solid #ddd' }} rowSpan={3}>CT @ 40%</th>
+          <th style={{ padding: '6px 10px', background: '#f5f5f5', border: '1px solid #ddd' }} rowSpan={3}>Branch</th>
+          <th style={{ padding: '6px 10px', background: '#fffae0', border: '1px solid #ddd' }} rowSpan={3}>NL</th>
+          <th style={{ padding: '6px 10px', background: '#ffe6c8', border: '1px solid #ddd' }} rowSpan={3}>CT @ 40%</th>
           {SLOTS_BY_DAY.map(group => (
             <th
               key={group.day}
-              colSpan={group.slots.reduce((n, s) => n + (s.hasQaqc ? 3 : 2), 0)}
-              style={{ padding: 4, background: '#e8eef9', border: '1px solid #ddd', textAlign: 'center' }}
+              colSpan={group.slots.length * 2}
+              style={{ padding: '6px 10px', background: '#e8eef9', border: '1px solid #ddd', textAlign: 'center' }}
             >
               {group.day === 'Wed' ? 'Wednesday' : group.day === 'Thu' ? 'Thursday' : 'Friday'}
             </th>
@@ -148,13 +148,12 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
         </tr>
         <tr>
           {TIME_SLOTS.map(slot => {
-            const span = slot.hasQaqc ? 3 : 2;
             const anyFrozen = payload.branches.some(b => b.slots.find(s => s.slot_key === slot.key)?.actual_captured != null);
             return (
               <th
                 key={slot.key}
-                colSpan={span}
-                style={{ padding: 4, background: '#e8eef9', border: '1px solid #ddd', textAlign: 'center' }}
+                colSpan={2}
+                style={{ padding: '6px 10px', background: '#e8eef9', border: '1px solid #ddd', textAlign: 'center' }}
               >
                 {slot.time}{' '}
                 <button
@@ -170,29 +169,24 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
           })}
         </tr>
         <tr>
-          {TIME_SLOTS.flatMap(slot => {
-            const cols = [
-              <th key={`${slot.key}-g`} style={{ padding: 4, border: '1px solid #ddd' }}>Goal</th>,
-              <th key={`${slot.key}-a`} style={{ padding: 4, border: '1px solid #ddd' }}>Actual</th>,
-            ];
-            if (slot.hasQaqc) cols.push(<th key={`${slot.key}-q`} style={{ padding: 4, border: '1px solid #ddd', background: '#d4f5d4' }}>QAQC</th>);
-            return cols;
-          })}
+          {TIME_SLOTS.flatMap(slot => [
+            <th key={`${slot.key}-g`} style={{ padding: '4px 8px', border: '1px solid #ddd' }}>Goal</th>,
+            <th key={`${slot.key}-a`} style={{ padding: '4px 8px', border: '1px solid #ddd' }}>Actual</th>,
+          ])}
         </tr>
       </thead>
       <tbody>
-        {/* Totals row */}
-        <tr style={{ background: '#f0f4fb', fontWeight: 700 }}>
-          <td style={{ padding: 4, border: '1px solid #ddd' }}>Total</td>
-          <td style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{totals.nl}</td>
-          <td style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{totals.ct}</td>
+        {/* Totals row — bold, grey, centered */}
+        <tr style={{ background: '#e5e7eb', fontWeight: 700 }}>
+          <td style={{ padding: '6px 10px', border: '1px solid #ddd', textAlign: 'center' }}>Total</td>
+          <td style={{ padding: '6px 10px', border: '1px solid #ddd', textAlign: 'center' }}>{totals.nl}</td>
+          <td style={{ padding: '6px 10px', border: '1px solid #ddd', textAlign: 'center' }}>{totals.ct}</td>
           {TIME_SLOTS.flatMap(slot => {
             const g = totals.slotGoals[slot.key];
             const a = totals.slotActuals[slot.key];
-            const tint = cellTint(g, a);
-            const cells = [
-              <td key={`total-${slot.key}-g`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{g}</td>,
-              <td key={`total-${slot.key}-a`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right', background: tint }}>
+            return [
+              <td key={`total-${slot.key}-g`} style={{ padding: '6px 10px', border: '1px solid #ddd', textAlign: 'center' }}>{g}</td>,
+              <td key={`total-${slot.key}-a`} style={{ padding: '6px 10px', border: '1px solid #ddd', textAlign: 'center' }}>
                 <div>{a}</div>
                 {prev && (() => {
                   const prevA = totals.slotPrevActuals[slot.key];
@@ -208,27 +202,23 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
                 })()}
               </td>,
             ];
-            if (slot.hasQaqc) {
-              cells.push(<td key={`total-${slot.key}-q`} style={{ padding: 4, border: '1px solid #ddd' }} />);
-            }
-            return cells;
           })}
         </tr>
         {BRANCHES.map(b => {
           const bd = byCode.get(b.code);
           return (
             <tr key={b.code}>
-              <td style={{ padding: 4, border: '1px solid #ddd', fontWeight: 600 }}>{b.code}</td>
-              <td style={{ padding: 4, border: '1px solid #ddd', background: '#fffae0', textAlign: 'right' }}>{bd?.nl ?? '—'}</td>
-              <td style={{ padding: 4, border: '1px solid #ddd', background: '#ffe6c8', textAlign: 'right' }}>{bd?.ct ?? '—'}</td>
+              <td style={{ padding: '4px 8px', border: '1px solid #ddd', fontWeight: 600 }}>{b.code}</td>
+              <td style={{ padding: '4px 8px', border: '1px solid #ddd', background: '#fffae0', textAlign: 'right' }}>{bd?.nl ?? '—'}</td>
+              <td style={{ padding: '4px 8px', border: '1px solid #ddd', background: '#ffe6c8', textAlign: 'right' }}>{bd?.ct ?? '—'}</td>
               {TIME_SLOTS.flatMap(slot => {
                 const sd = bd?.slots.find(s => s.slot_key === slot.key);
                 const goal = sd?.goal ?? null;
                 const displayActual = sd?.actual_captured ?? sd?.actual_live ?? null;
                 const tint = cellTint(goal, displayActual);
-                const cells = [
-                  <td key={`${b.code}-${slot.key}-g`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right' }}>{goal ?? '—'}</td>,
-                  <td key={`${b.code}-${slot.key}-a`} style={{ padding: 4, border: '1px solid #ddd', textAlign: 'right', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
+                return [
+                  <td key={`${b.code}-${slot.key}-g`} style={{ padding: '4px 8px', border: '1px solid #ddd', textAlign: 'right' }}>{goal ?? '—'}</td>,
+                  <td key={`${b.code}-${slot.key}-a`} style={{ padding: '4px 8px', border: '1px solid #ddd', textAlign: 'right', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
                     <div>{displayActual ?? '—'}</div>
                     {prev && (() => {
                       const psd = prevByCode.get(b.code)?.slots.find(s => s.slot_key === slot.key);
@@ -247,14 +237,6 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
                     })()}
                   </td>,
                 ];
-                if (slot.hasQaqc) {
-                  cells.push(
-                    <td key={`${b.code}-${slot.key}-q`} style={{ padding: 4, border: '1px solid #ddd', background: '#eafbeb', fontSize: 11 }}>
-                      {sd?.qaqc ?? ''}
-                    </td>
-                  );
-                }
-                return cells;
               })}
             </tr>
           );
@@ -336,30 +318,78 @@ function TilesView({ payload, prev }: TilesViewProps) {
     return { slot: s, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct };
   });
 
+  // Status color palette — single source of truth for both accent + bar fill.
+  // Values picked for WCAG AA contrast against white text/labels at the bar
+  // and ≥4.5:1 for the percentage number against the card background.
+  function tone(pct: number) {
+    if (pct >= 100) return { accent: '#16a34a', soft: '#dcfce7', label: 'On target' };  // green
+    if (pct >= 70)  return { accent: '#eab308', soft: '#fef9c3', label: 'Close' };       // amber
+    return { accent: '#dc2626', soft: '#fee2e2', label: 'Behind' };                       // red
+  }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-      {slotTotals.map(({ slot, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct }) => (
-        <div
-          key={slot.key}
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: 6,
-            padding: 14,
-            background: pct >= 100 ? '#e6f7e8' : pct >= 70 ? '#fffbe6' : '#fde2e2',
-          }}
-        >
-          <div style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{slot.day} {slot.time}</div>
-          <div style={{ fontSize: 26, fontWeight: 600, marginTop: 4 }}>
-            {actualSum} <span style={{ fontSize: 14, color: 'var(--muted)' }}>/ {goalSum}</span>
-          </div>
-          <div style={{ fontSize: 14, color: '#333', marginTop: 4 }}>{pct}%</div>
-          {prev && (
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-              Last week: {prevActualSum}/{prevGoalSum} ({prevPct}%)
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+      {slotTotals.map(({ slot, goalSum, actualSum, pct, prevGoalSum, prevActualSum, prevPct }) => {
+        const t = tone(pct);
+        const barFill = Math.min(100, pct); // clamp visual to 100, the % can still exceed
+        const delta = actualSum - prevActualSum;
+        return (
+          <div
+            key={slot.key}
+            style={{
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: 10,
+              padding: 16,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            {/* Slot label + status pill */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 12, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
+                {slot.day} · {slot.time}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: t.accent, background: t.soft, padding: '2px 8px', borderRadius: 999 }}>
+                {t.label}
+              </span>
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Big percentage + actual/goal numbers */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ fontSize: 32, fontWeight: 700, color: t.accent, lineHeight: 1 }}>{pct}%</span>
+              <span style={{ fontSize: 14, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
+                {actualSum}<span style={{ color: '#9ca3af' }}> / {goalSum}</span>
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div style={{ height: 8, background: '#f3f4f6', borderRadius: 999, overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${barFill}%`,
+                  background: t.accent,
+                  borderRadius: 999,
+                  transition: 'width 200ms ease-out',
+                }}
+              />
+            </div>
+
+            {/* Last-week comparison */}
+            {prev && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#6b7280' }}>
+                <span>Last week: <span style={{ fontVariantNumeric: 'tabular-nums', color: '#374151' }}>{prevActualSum}/{prevGoalSum}</span> ({prevPct}%)</span>
+                <span style={{ fontWeight: 600, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
+                  {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -414,23 +444,36 @@ export function NlToCtBreakdownPage() {
       <div className="dashboardHeader">
         <BackButton to="/" label="Back to Home" />
         <h1 className="pageHeaderTitle" style={{ marginTop: 16 }}>NL to CT Breakdown</h1>
+        <p style={{ marginTop: 4, color: '#6b7280', fontSize: 14 }}>
+          Per-branch and per-slot tracking of new leads converting to confirmed trials. Capture each slot's Actual to lock the number for week-over-week comparison.
+        </p>
       </div>
 
       {tabsQ.data && tabsQ.data.tabs.length === 0 && (
-        <div style={{ background: '#fff4d6', padding: 12, borderRadius: 4 }}>
+        <div style={{ background: '#fff4d6', padding: 12, borderRadius: 6, border: '1px solid #fde68a' }}>
           No weekly tabs registered yet. Go to <a href="/nl-to-ct/manage">Manage NL to CT Tabs</a> to add one.
         </div>
       )}
 
       {tabsQ.data && tabsQ.data.tabs.length > 0 && (
         <>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{
+            display: 'flex',
+            gap: 20,
+            alignItems: 'center',
+            marginBottom: 20,
+            flexWrap: 'wrap',
+            padding: 12,
+            background: '#f9fafb',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: '#374151' }}>
               Week:
               <select
                 value={effectiveId ?? ''}
                 onChange={(e) => setSelectedId(Number(e.target.value))}
-                style={{ padding: '6px 8px', fontSize: 14 }}
+                style={{ padding: '6px 10px', fontSize: 14, border: '1px solid #d1d5db', borderRadius: 6, background: 'white' }}
               >
                 {tabsQ.data.tabs.map((t: NlToCtTab) => (
                   <option key={t.id} value={t.id}>{formatWeekDate(t.week_date)}</option>
@@ -438,46 +481,49 @@ export function NlToCtBreakdownPage() {
               </select>
             </label>
 
-            <div style={{ display: 'inline-flex', borderRadius: 4, overflow: 'hidden', border: '1px solid #ccc' }}>
+            <div style={{ display: 'inline-flex', borderRadius: 6, overflow: 'hidden', border: '1px solid #d1d5db', background: 'white' }}>
               {(['grid','cards','tiles'] as ViewMode[]).map(v => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
-                  className="btn btnSmall"
                   style={{
-                    background: view === v ? '#2680eb' : 'white',
-                    color: view === v ? 'white' : '#333',
+                    background: view === v ? '#2563eb' : 'white',
+                    color: view === v ? 'white' : '#374151',
                     border: 'none',
-                    padding: '6px 12px',
-                    borderRight: v !== 'tiles' ? '1px solid #ccc' : undefined,
+                    padding: '6px 14px',
+                    borderRight: v !== 'tiles' ? '1px solid #d1d5db' : undefined,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    transition: 'background 150ms',
                   }}
                 >
                   {v}
                 </button>
               ))}
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', fontSize: 13, fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={showLast}
                 onChange={(e) => setShowLast(e.target.checked)}
+                style={{ cursor: 'pointer' }}
               />
               Show last week
               {showLast && prevQ.isError && (
-                <span style={{ color: '#8a1f1f', fontSize: 12, marginLeft: 4 }}>(no earlier week)</span>
+                <span style={{ color: '#dc2626', fontSize: 12, marginLeft: 4, fontWeight: 400 }}>(no earlier week)</span>
               )}
             </label>
           </div>
 
-          {dataQ.isLoading && <p>Loading week data…</p>}
-          {dataQ.error && <p style={{ color: '#8a1f1f' }}>Failed to load week data.</p>}
+          {dataQ.isLoading && <p style={{ color: '#6b7280' }}>Loading week data…</p>}
+          {dataQ.error && <p style={{ color: '#dc2626' }}>Failed to load week data.</p>}
           {dataQ.data && (
             <>
               {dataQ.data.sheet_read_error && (
-                <div style={{ background: '#fde2e2', color: '#8a1f1f', padding: 10, borderRadius: 4, marginBottom: 12 }}>
-                  Live sheet read failed — showing frozen captures only. ({dataQ.data.sheet_read_error})
+                <div style={{ background: '#fef2f2', color: '#991b1b', padding: 12, borderRadius: 6, marginBottom: 16, border: '1px solid #fecaca', fontSize: 13 }}>
+                  Live sheet read failed — showing frozen captures only. <span style={{ color: '#6b7280' }}>({dataQ.data.sheet_read_error})</span>
                 </div>
               )}
               {view === 'grid' && (
