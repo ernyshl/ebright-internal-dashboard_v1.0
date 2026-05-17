@@ -10,27 +10,31 @@ const SPREADSHEET_ID = '1GgZRY2MS8m4BJX2lzww-eEkIXcdJV8sLMURGu-ai4QQ';
 
 // Order matches the source sheet (top-to-bottom). `row` is the 1-based row
 // number in the sheet that holds the branch's data.
+// Sheet layout: row 1 = parameter values (0.5, 0.55, …), row 2 = day-group
+// headers (Wednesday/Thursday/Friday), row 3 = column header row
+// (Branch/NL/CT@40%/4:30PM/…), row 4 = Goal/Actual/QAQC sub-headers,
+// row 5 onwards = branch data.
 const BRANCHES = [
-  { code: 'ONL',  row: 3  },
-  { code: 'ST',   row: 4  },
-  { code: 'SA',   row: 5  },
-  { code: 'SP',   row: 6  },
-  { code: 'KD',   row: 7  },
-  { code: 'PJY',  row: 8  },
-  { code: 'AMP',  row: 9  },
-  { code: 'CJY',  row: 10 },
-  { code: 'KLG',  row: 11 },
-  { code: 'DA',   row: 12 },
-  { code: 'BBB',  row: 13 },
-  { code: 'DK',   row: 14 },
-  { code: 'SHA',  row: 15 },
-  { code: 'BTHO', row: 16 },
-  { code: 'EGR',  row: 17 },
-  { code: 'BSP',  row: 18 },
-  { code: 'RBY',  row: 19 },
-  { code: 'TSG',  row: 20 },
-  { code: 'KW',   row: 21 },
-  { code: 'KTG',  row: 22 },
+  { code: 'ONL',  row: 5  },
+  { code: 'ST',   row: 6  },
+  { code: 'SA',   row: 7  },
+  { code: 'SP',   row: 8  },
+  { code: 'KD',   row: 9  },
+  { code: 'PJY',  row: 10 },
+  { code: 'AMP',  row: 11 },
+  { code: 'CJY',  row: 12 },
+  { code: 'KLG',  row: 13 },
+  { code: 'DA',   row: 14 },
+  { code: 'BBB',  row: 15 },
+  { code: 'DK',   row: 16 },
+  { code: 'SHA',  row: 17 },
+  { code: 'BTHO', row: 18 },
+  { code: 'EGR',  row: 19 },
+  { code: 'BSP',  row: 20 },
+  { code: 'RBY',  row: 21 },
+  { code: 'TSG',  row: 22 },
+  { code: 'KW',   row: 23 },
+  { code: 'KTG',  row: 24 },
 ];
 
 // Column-letter positions in the sheet. `qaqcCol: null` means the slot
