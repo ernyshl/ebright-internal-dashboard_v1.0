@@ -42,6 +42,63 @@ function toIntOrNull(s) {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
+// Build the merged payload for a given tab. Used by GET /tabs/:id/data
+// and GET /tabs/:id/previous-week.
+async function buildTabPayload(tabRow) {
+  const sheet = await readTab({ spreadsheetId: SPREADSHEET_ID, gid: tabRow.gid });
+
+  // Frozen actuals.
+  const { rows: captureRows } = await pool.query(
+    `SELECT slot_key, branch_code, actual, captured_by, captured_at
+       FROM nl_to_ct_captures
+      WHERE tab_id = $1`,
+    [tabRow.id]
+  );
+  const frozen = new Map(); // `${slot_key}::${branch_code}` → capture
+  for (const c of captureRows) frozen.set(`${c.slot_key}::${c.branch_code}`, c);
+
+  const cellAt = (rowIdx, colLetter) => {
+    const row = sheet.rows[rowIdx];
+    if (!row) return null;
+    return row[colLetterToIndex(colLetter)] ?? null;
+  };
+
+  // Parameters live on row 1 of each slot's goal column (e.g. E1, G1, K1…).
+  const parameters = {};
+  for (const slot of TIME_SLOTS) {
+    const raw = cellAt(0, slot.goalCol);
+    const n = raw == null || raw === '' ? null : Number(raw);
+    parameters[slot.key] = Number.isFinite(n) ? n : null;
+  }
+
+  const branches = BRANCHES.map(b => {
+    const rowIdx = b.row - 1; // sheet rows are 1-based; array is 0-based
+    return {
+      code: b.code,
+      nl: toIntOrNull(cellAt(rowIdx, NL_COL)),
+      ct: toIntOrNull(cellAt(rowIdx, CT_COL)),
+      slots: TIME_SLOTS.map(slot => {
+        const fz = frozen.get(`${slot.key}::${b.code}`);
+        return {
+          slot_key: slot.key,
+          goal: toIntOrNull(cellAt(rowIdx, slot.goalCol)),
+          actual_live: toIntOrNull(cellAt(rowIdx, slot.actualCol)),
+          actual_captured: fz ? fz.actual : null,
+          captured_at: fz ? fz.captured_at : null,
+          captured_by: fz ? fz.captured_by : null,
+          qaqc: slot.qaqcCol ? (cellAt(rowIdx, slot.qaqcCol) || null) : null,
+        };
+      }),
+    };
+  });
+
+  return {
+    tab: tabRow,
+    parameters,
+    branches,
+  };
+}
+
 // ─── GET /api/nl-to-ct/tabs ───────────────────────────────────────────
 router.get('/tabs', async (_req, res, next) => {
   try {
@@ -118,6 +175,60 @@ router.delete('/tabs/:id', async (req, res, next) => {
     const { rowCount } = await pool.query('DELETE FROM nl_to_ct_tabs WHERE id = $1', [id]);
     if (rowCount === 0) return res.status(404).json({ error: 'Tab not found' });
     res.status(204).end();
+  } catch (err) { next(err); }
+});
+
+// ─── GET /api/nl-to-ct/tabs/:id/data ──────────────────────────────────
+router.get('/tabs/:id/data', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid id' });
+
+    const { rows } = await pool.query(
+      `SELECT id, gid, tab_name, week_date, added_by, added_at
+         FROM nl_to_ct_tabs
+        WHERE id = $1`,
+      [id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Tab not found' });
+
+    try {
+      const payload = await buildTabPayload(rows[0]);
+      res.json(payload);
+    } catch (err) {
+      // Sheet read failed — return what we have from the DB so the UI can
+      // still render frozen Actuals with a banner.
+      const { rows: captureRows } = await pool.query(
+        `SELECT slot_key, branch_code, actual, captured_by, captured_at
+           FROM nl_to_ct_captures
+          WHERE tab_id = $1`,
+        [id]
+      );
+      const frozen = new Map();
+      for (const c of captureRows) frozen.set(`${c.slot_key}::${c.branch_code}`, c);
+      res.json({
+        tab: rows[0],
+        parameters: Object.fromEntries(TIME_SLOTS.map(s => [s.key, null])),
+        branches: BRANCHES.map(b => ({
+          code: b.code,
+          nl: null,
+          ct: null,
+          slots: TIME_SLOTS.map(slot => {
+            const fz = frozen.get(`${slot.key}::${b.code}`);
+            return {
+              slot_key: slot.key,
+              goal: null,
+              actual_live: null,
+              actual_captured: fz ? fz.actual : null,
+              captured_at: fz ? fz.captured_at : null,
+              captured_by: fz ? fz.captured_by : null,
+              qaqc: null,
+            };
+          }),
+        })),
+        sheet_read_error: err.message || 'Sheet read failed',
+      });
+    }
   } catch (err) { next(err); }
 });
 
