@@ -118,6 +118,31 @@ async function runMigrations() {
       ON finance_renewals_refresh_log (status, ran_at DESC)
   `);
 
+  // nl_to_ct: tables backing the Testing NL to CT Breakdown dashboard.
+  // See docs/superpowers/specs/2026-05-17-nl-to-ct-breakdown-design.md
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS nl_to_ct_tabs (
+      id         SERIAL       PRIMARY KEY,
+      gid        TEXT         NOT NULL UNIQUE,
+      tab_name   TEXT         NOT NULL,
+      week_date  DATE         NOT NULL UNIQUE,
+      added_by   UUID         REFERENCES users(id) ON DELETE SET NULL,
+      added_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS nl_to_ct_captures (
+      id           SERIAL       PRIMARY KEY,
+      tab_id       INTEGER      NOT NULL REFERENCES nl_to_ct_tabs(id) ON DELETE CASCADE,
+      slot_key     TEXT         NOT NULL,
+      branch_code  TEXT         NOT NULL,
+      actual       INTEGER      NOT NULL CHECK (actual >= 0),
+      captured_by  UUID         REFERENCES users(id) ON DELETE SET NULL,
+      captured_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      CONSTRAINT nl_to_ct_captures_unique UNIQUE (tab_id, slot_key, branch_code)
+    )
+  `);
+
   // Apply any standalone SQL migration files in backend/sql/ (e.g. ST merged
   // staff view, AMF sync state). They're idempotent (CREATE OR REPLACE,
   // CREATE IF NOT EXISTS) so safe to re-run on every boot.

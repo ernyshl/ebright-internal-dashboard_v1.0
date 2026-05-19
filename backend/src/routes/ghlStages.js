@@ -1,3 +1,4 @@
+const https = require('https');
 const express = require('express');
 const { pool } = require('../db');
 const { env } = require('../env');
@@ -28,6 +29,28 @@ function getStageKey(raw) {
   if (s.includes('show'))       return 'SU';
   if (s.includes('enrolled'))   return 'ENR';
   return null;
+}
+
+// Fire-and-forget Telegram alert for double-fired NL webhooks.
+function sendDoubleFireAlert({ botToken, chatIds, pipelineName, email, leadName, firstSeen, refiredAt }) {
+  if (!botToken || !chatIds.length) return;
+  const fmt = (d) => new Date(d).toLocaleString('en-MY', {
+    timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const text = `⚠️ Double Fire NL Detected\nPipeline: ${pipelineName || 'Unknown'}\nEmail: ${email}\nLead: ${leadName || 'Unknown'}\nFirst seen: ${fmt(firstSeen)}\nRe-fired: ${fmt(refiredAt)}`;
+  for (const chatId of chatIds) {
+    const body = JSON.stringify({ chat_id: chatId, text });
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${botToken}/sendMessage`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, () => {});
+    req.on('error', (err) => console.error('[double-fire alert] telegram error:', err.message));
+    req.write(body);
+    req.end();
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -101,22 +124,32 @@ router.post('/webhook', async (req, res) => {
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
-    // Ignore duplicate fires for the same opportunity at the same stage:
-    // same email + same opportunity_name + same stage_key → already captured.
-    // Different opportunity_name (e.g. siblings under a parent's email
-    // creating distinct opportunities) is allowed through as a new lead.
-    // The full payload is preserved in ghl_webhook_log (action='ignored')
-    // and surfaced via the ghl_ignored_payloads view for later replay.
+    // Duplicate check: same email + opportunity_name + stage_key already exists.
+    // NL double-fires: send a Telegram alert and still proceed to insert (kept for
+    // debugging). All other stages: return 'ignored' as before.
     {
       const { rows: exists } = await pool.query(
-        `SELECT 1 FROM ghl_stages
+        `SELECT received_at, pipeline_name FROM ghl_stages
          WHERE email = $1 AND opportunity_name = $2 AND stage_key = $3
          LIMIT 1`,
         [email, opportunityName, stageKey]
       );
       if (exists.length > 0) {
-        await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+opportunity_name+stage already exists' });
-        return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+opportunity_name+stage)' });
+        if (stageKey === 'NL') {
+          sendDoubleFireAlert({
+            botToken: env.TELEGRAM_BOT_TOKEN,
+            chatIds: (env.TELEGRAM_ALLOWED_CHATS || '').split(',').map(s => s.trim()).filter(Boolean),
+            pipelineName: pipelineName || exists[0].pipeline_name,
+            email,
+            leadName: opportunityName || studentName,
+            firstSeen: exists[0].received_at,
+            refiredAt: new Date(),
+          });
+          // Fall through — let the INSERT/ON CONFLICT UPDATE proceed so the re-fire is recorded.
+        } else {
+          await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+opportunity_name+stage already exists' });
+          return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+opportunity_name+stage)' });
+        }
       }
     }
 
@@ -159,7 +192,8 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const {
       date_from = '', date_to = '',
       stage = '', pipeline = '', pipelines = '',
-      time_slot = '', search = '',
+      preferred_day = '', time_slot = '', search = '',
+      via_ct = '',
       page = 1, limit = 50,
     } = req.query;
 
@@ -167,14 +201,48 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
     const params = [];
     let idx = 1;
 
-    if (date_from) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
-      params.push(date_from);
+    const useViaCt = String(via_ct) === '1';
+
+    if (useViaCt) {
+      // Filters that semantically belong to the lead's CT booking get moved
+      // into an EXISTS clause against the matching CT row. Lets ENR drill-downs
+      // from the For Manjeet dashboards filter by the CT's date/day/slot rather
+      // than the ENR row's own (often empty) fields.
+      const ex = [
+        `ct.email = ghl_stages.email`,
+        `ct.opportunity_name = ghl_stages.opportunity_name`,
+        `ct.stage_key = 'CT'`,
+        `ct.preferred_day <> ''`,
+        `ct.time_slot <> ''`,
+      ];
+      if (date_from) {
+        ex.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+        params.push(date_from);
+      }
+      if (date_to) {
+        ex.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+        params.push(date_to);
+      }
+      if (preferred_day) { ex.push(`ct.preferred_day = $${idx++}`); params.push(preferred_day); }
+      if (time_slot)     { ex.push(`ct.time_slot LIKE $${idx++}`);   params.push(`${time_slot}%`); }
+      conditions.push(`EXISTS (SELECT 1 FROM ghl_stages ct WHERE ${ex.join(' AND ')})`);
+    } else {
+      if (date_from) {
+        conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+        params.push(date_from);
+      }
+      if (date_to) {
+        conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+        params.push(date_to);
+      }
+      if (preferred_day) { conditions.push(`preferred_day = $${idx++}`); params.push(preferred_day); }
+      if (time_slot) {
+        // Stored values look like '1730 | 05:30pm' — match by leading 4-digit code.
+        conditions.push(`time_slot LIKE $${idx++}`);
+        params.push(`${time_slot}%`);
+      }
     }
-    if (date_to) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
-      params.push(date_to);
-    }
+
     if (stage)    { conditions.push(`stage_key = $${idx++}`); params.push(stage); }
     if (pipeline) { conditions.push(`pipeline_name = $${idx++}`); params.push(pipeline); }
     else if (pipelines) {
@@ -184,11 +252,6 @@ router.get('/', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) 
         conditions.push(`pipeline_name IN (${placeholders})`);
         params.push(...list);
       }
-    }
-    if (time_slot) {
-      // Stored values look like '1730 | 05:30pm' — match by leading 4-digit code.
-      conditions.push(`time_slot LIKE $${idx++}`);
-      params.push(`${time_slot}%`);
     }
     if (search) {
       conditions.push(`(email ILIKE $${idx} OR opportunity_name ILIKE $${idx} OR last_name ILIKE $${idx} OR phone ILIKE $${idx})`);
@@ -539,24 +602,30 @@ router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
 router.get('/ct-calendar', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
     const { date_from = '', date_to = '' } = req.query;
-    const conditions = [`stage_key = 'CT'`, `preferred_day <> ''`, `time_slot <> ''`];
+    const conditions = [`ct.stage_key = 'CT'`, `ct.preferred_day <> ''`, `ct.time_slot <> ''`];
     const params = [];
     let idx = 1;
     if (date_from) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
+      conditions.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date >= $${idx++}::date`);
       params.push(date_from);
     }
     if (date_to) {
-      conditions.push(`(received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
+      conditions.push(`(ct.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date <= $${idx++}::date`);
       params.push(date_to);
     }
     const where = `WHERE ${conditions.join(' AND ')}`;
     const { rows } = await pool.query(
-      `SELECT pipeline_name, preferred_day, time_slot, COUNT(*)::int AS n
-       FROM ghl_stages
+      `SELECT ct.pipeline_name, ct.preferred_day, ct.time_slot,
+              COUNT(*)::int AS n,
+              COUNT(*) FILTER (WHERE enr.email IS NOT NULL)::int AS n_enr
+       FROM ghl_stages ct
+       LEFT JOIN ghl_stages enr
+         ON enr.email = ct.email
+        AND enr.opportunity_name = ct.opportunity_name
+        AND enr.stage_key = 'ENR'
        ${where}
-       GROUP BY pipeline_name, preferred_day, time_slot
-       ORDER BY pipeline_name, preferred_day, time_slot`,
+       GROUP BY ct.pipeline_name, ct.preferred_day, ct.time_slot
+       ORDER BY ct.pipeline_name, ct.preferred_day, ct.time_slot`,
       params,
     );
     return res.json({ rows });

@@ -98,12 +98,16 @@ export function GhlLeadsCentrePage() {
   const [preset,     setPreset]     = useState(searchParams.get('preset') || 'this_month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo,   setCustomTo]   = useState('');
-  const [stage,      setStage]      = useState(searchParams.get('stage')    || '');
-  const [pipeline,   setPipeline]   = useState(searchParams.get('pipeline') || '');
-  const [region,     setRegion]     = useState(searchParams.get('region')   || '');
-  const [timeSlot,   setTimeSlot]   = useState(searchParams.get('time_slot') || '');
-  const [search,     setSearch]     = useState('');
-  const [page,       setPage]       = useState(1);
+  const [stage,        setStage]        = useState(searchParams.get('stage')    || '');
+  const [pipeline,     setPipeline]     = useState(searchParams.get('pipeline') || '');
+  const [region,       setRegion]       = useState(searchParams.get('region')   || '');
+  const [preferredDay, setPreferredDay] = useState(searchParams.get('preferred_day') || '');
+  const [timeSlot,     setTimeSlot]     = useState(searchParams.get('time_slot') || '');
+  // via_ct: invisible flag — when set, the backend applies date/day/slot to the
+  // linked CT row instead of the outer row. Carried in via URL on ENR drill-down.
+  const [viaCt,        setViaCt]        = useState(searchParams.get('via_ct') === '1');
+  const [search,       setSearch]       = useState('');
+  const [page,         setPage]         = useState(1);
 
   // CRUD state
   const [showForm,   setShowForm]   = useState(false);
@@ -111,7 +115,7 @@ export function GhlLeadsCentrePage() {
   const [form,       setForm]       = useState({ ...EMPTY_FORM });
   const [deleteId,   setDeleteId]   = useState(null);
 
-  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, stage, pipeline, region, timeSlot, search]);
+  useEffect(() => { setPage(1); }, [preset, customFrom, customTo, stage, pipeline, region, preferredDay, timeSlot, search, viaCt]);
 
   const filteredPipelines = region ? (REGION_PIPELINES[region] || []) : ALL_PIPELINES;
   useEffect(() => {
@@ -138,14 +142,16 @@ export function GhlLeadsCentrePage() {
   };
 
   const params = new URLSearchParams({ date_from, date_to, page: String(page), limit: String(PAGE_SIZE) });
-  if (stage)    params.set('stage', stage);
-  if (pipeline) params.set('pipeline', pipeline);
+  if (stage)        params.set('stage', stage);
+  if (pipeline)     params.set('pipeline', pipeline);
   if (!pipeline && region) params.set('pipelines', filteredPipelines.join(','));
-  if (timeSlot) params.set('time_slot', timeSlot);
-  if (search)   params.set('search', search);
+  if (preferredDay) params.set('preferred_day', preferredDay);
+  if (timeSlot)     params.set('time_slot', timeSlot);
+  if (viaCt)        params.set('via_ct', '1');
+  if (search)       params.set('search', search);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['ghlLeadsCentre', date_from, date_to, stage, pipeline, region, timeSlot, search, page],
+    queryKey: ['ghlLeadsCentre', date_from, date_to, stage, pipeline, region, preferredDay, timeSlot, viaCt, search, page],
     queryFn: () => apiFetch(`/api/ghl-stages?${params}`),
     staleTime: 2 * 60 * 1000,
     placeholderData: keepPreviousData,
@@ -327,6 +333,17 @@ export function GhlLeadsCentrePage() {
           </select>
         </div>
         <div className="brRankFilterGroup">
+          <label className="brRankLabel">Day</label>
+          <select className="filterSelect" value={preferredDay} onChange={e => setPreferredDay(e.target.value)}>
+            <option value="">All Days</option>
+            <option value="Wednesday">Wed</option>
+            <option value="Thursday">Thu</option>
+            <option value="Friday">Fri</option>
+            <option value="Saturday">Sat</option>
+            <option value="Sunday">Sun</option>
+          </select>
+        </div>
+        <div className="brRankFilterGroup">
           <label className="brRankLabel">Time Slot</label>
           <select className="filterSelect" value={timeSlot} onChange={e => setTimeSlot(e.target.value)}>
             <option value="">All Slots</option>
@@ -356,9 +373,9 @@ export function GhlLeadsCentrePage() {
             style={{ width: '100%' }}
           />
         </div>
-        {(stage || pipeline || region || timeSlot || search) && (
+        {(stage || pipeline || region || preferredDay || timeSlot || viaCt || search) && (
           <div className="brRankFilterGroup" style={{ alignSelf: 'flex-end' }}>
-            <button className="btn btnGhost btnSmall" onClick={() => { setStage(''); setPipeline(''); setRegion(''); setTimeSlot(''); setSearch(''); }}>Clear</button>
+            <button className="btn btnGhost btnSmall" onClick={() => { setStage(''); setPipeline(''); setRegion(''); setPreferredDay(''); setTimeSlot(''); setViaCt(false); setSearch(''); }}>Clear</button>
           </div>
         )}
       </div>

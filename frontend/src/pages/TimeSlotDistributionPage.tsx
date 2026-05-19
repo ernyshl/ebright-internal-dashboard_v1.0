@@ -30,40 +30,132 @@ function getVisibleCodes(selectedDay: string): string[] {
   return ALL_SLOT_CODES;
 }
 
-function MetricCard({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
+function PairValue({ ct, enr, onClickCt, onClickEnr }: {
+  ct: number;
+  enr: number;
+  onClickCt?: () => void;
+  onClickEnr?: () => void;
+}) {
+  const sharedDigit: React.CSSProperties = {
+    fontSize: 26,
+    fontWeight: 700,
+    padding: '0 3px',
+    transition: 'color 120ms',
+  };
   return (
-    <div
-      onClick={onClick}
-      style={{
-        background: 'var(--inputBg, #f9fafb)',
-        border: '1px solid var(--border, #e5e7eb)',
-        borderRadius: 10,
-        padding: '16px 8px',
-        textAlign: 'center',
-        minWidth: 0,
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'border-color 120ms',
-      }}
-      onMouseEnter={e => { if (onClick) e.currentTarget.style.borderColor = 'var(--brand)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border, #e5e7eb)'; }}
-    >
-      <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 6 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: value > 0 && onClick ? 'var(--brand)' : (value > 0 ? 'var(--text)' : 'var(--muted)') }}>
-        {value}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 2 }}>
+      <span
+        onClick={ct > 0 && onClickCt ? onClickCt : undefined}
+        style={{
+          ...sharedDigit,
+          cursor: ct > 0 && onClickCt ? 'pointer' : 'default',
+          color: ct > 0 ? (onClickCt ? 'var(--brand)' : 'var(--text)') : 'var(--muted)',
+        }}
+      >
+        {ct}
+      </span>
+      <span style={{ color: 'var(--muted)', fontSize: 15, fontWeight: 500 }}>|</span>
+      <span
+        onClick={enr > 0 && onClickEnr ? onClickEnr : undefined}
+        style={{
+          ...sharedDigit,
+          cursor: enr > 0 && onClickEnr ? 'pointer' : 'default',
+          color: enr > 0 ? (onClickEnr ? 'var(--brand)' : 'var(--text)') : 'var(--muted)',
+        }}
+      >
+        {enr}
+      </span>
     </div>
   );
 }
 
-function Row({ label, values, codes, onCellClick, bold = false }: {
+function MetricCard({ label, ct, enr, onClickCt, onClickEnr }: {
   label: string;
-  values: Record<string, number>;
-  codes: string[];
-  onCellClick?: (code: string) => void;
+  ct: number;
+  enr: number;
+  onClickCt?: () => void;
+  onClickEnr?: () => void;
+}) {
+  return (
+    <div
+      style={{
+        background: 'var(--inputBg, #f9fafb)',
+        border: '1px solid var(--border, #e5e7eb)',
+        borderRadius: 10,
+        padding: '12px 6px 14px',
+        textAlign: 'center',
+        minWidth: 0,
+      }}
+    >
+      <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 4 }}>
+        {label}
+      </div>
+      <PairValue ct={ct} enr={enr} onClickCt={onClickCt} onClickEnr={onClickEnr} />
+    </div>
+  );
+}
+
+function BranchLabel({ name, ctTotal, enrTotal, onClickCt, onClickEnr, bold }: {
+  name: string;
+  ctTotal: number;
+  enrTotal: number;
+  onClickCt?: () => void;
+  onClickEnr?: () => void;
   bold?: boolean;
 }) {
+  return (
+    <div style={{
+      width: 260, flexShrink: 0,
+      fontSize: bold ? 18 : 16,
+      fontWeight: bold ? 800 : 600,
+      color: 'var(--text)',
+      display: 'flex', alignItems: 'baseline', gap: 8,
+    }}>
+      <span>{name}</span>
+      <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: bold ? 16 : 14 }}>
+        [
+        <span
+          onClick={ctTotal > 0 && onClickCt ? onClickCt : undefined}
+          style={{
+            cursor: ctTotal > 0 && onClickCt ? 'pointer' : 'default',
+            color: ctTotal > 0 ? 'var(--brand)' : 'var(--muted)',
+            padding: '0 4px',
+            fontWeight: bold ? 700 : 600,
+          }}
+        >
+          {ctTotal}
+        </span>
+        |
+        <span
+          onClick={enrTotal > 0 && onClickEnr ? onClickEnr : undefined}
+          style={{
+            cursor: enrTotal > 0 && onClickEnr ? 'pointer' : 'default',
+            color: enrTotal > 0 ? 'var(--brand)' : 'var(--muted)',
+            padding: '0 4px',
+            fontWeight: bold ? 700 : 600,
+          }}
+        >
+          {enrTotal}
+        </span>
+        ]
+      </span>
+    </div>
+  );
+}
+
+function Row({ label, ctValues, enrValues, codes, onCellClickCt, onCellClickEnr, onLabelClickCt, onLabelClickEnr, bold = false }: {
+  label: string;
+  ctValues: Record<string, number>;
+  enrValues: Record<string, number>;
+  codes: string[];
+  onCellClickCt?: (code: string) => void;
+  onCellClickEnr?: (code: string) => void;
+  onLabelClickCt?: () => void;
+  onLabelClickEnr?: () => void;
+  bold?: boolean;
+}) {
+  const ctTotal = codes.reduce((s, c) => s + (ctValues[c] || 0), 0);
+  const enrTotal = codes.reduce((s, c) => s + (enrValues[c] || 0), 0);
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 20,
@@ -73,19 +165,23 @@ function Row({ label, values, codes, onCellClick, bold = false }: {
       padding: '16px 24px',
       marginBottom: 12,
     }}>
-      <div style={{
-        width: 220, flexShrink: 0,
-        fontSize: bold ? 18 : 16,
-        fontWeight: bold ? 800 : 600,
-        color: 'var(--text)',
-      }}>{label}</div>
+      <BranchLabel
+        name={label}
+        ctTotal={ctTotal}
+        enrTotal={enrTotal}
+        onClickCt={onLabelClickCt}
+        onClickEnr={onLabelClickEnr}
+        bold={bold}
+      />
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${codes.length}, 1fr)`, gap: 10 }}>
         {codes.map(c => (
           <MetricCard
             key={c}
             label={c}
-            value={values[c] || 0}
-            onClick={onCellClick ? () => onCellClick(c) : undefined}
+            ct={ctValues[c] || 0}
+            enr={enrValues[c] || 0}
+            onClickCt={onCellClickCt ? () => onCellClickCt(c) : undefined}
+            onClickEnr={onCellClickEnr ? () => onCellClickEnr(c) : undefined}
           />
         ))}
       </div>
@@ -123,39 +219,49 @@ export function TimeSlotDistributionPage() {
 
   const visibleCodes = getVisibleCodes(selectedDay);
 
-  // pipeline -> slot_code -> count, filtered by selectedDay if set
-  const slotMap = useMemo(() => {
-    const m: Record<string, Record<string, number>> = {};
+  // pipeline -> slot_code -> { ct, enr }, filtered by selectedDay if set.
+  const { ctMap, enrMap } = useMemo(() => {
+    const ct: Record<string, Record<string, number>> = {};
+    const enr: Record<string, Record<string, number>> = {};
     for (const r of (data?.rows || [])) {
       if (!r.pipeline_name) continue;
       if (selectedDay && r.preferred_day !== selectedDay) continue;
       const code = String(r.time_slot || '').split('|')[0].trim();
       if (!code) continue;
-      m[r.pipeline_name] ??= {};
-      m[r.pipeline_name][code] = (m[r.pipeline_name][code] || 0) + Number(r.n || 0);
+      ct[r.pipeline_name]  ??= {};
+      enr[r.pipeline_name] ??= {};
+      ct[r.pipeline_name][code]  = (ct[r.pipeline_name][code]  || 0) + Number(r.n     || 0);
+      enr[r.pipeline_name][code] = (enr[r.pipeline_name][code] || 0) + Number(r.n_enr || 0);
     }
-    return m;
+    return { ctMap: ct, enrMap: enr };
   }, [data, selectedDay]);
 
   const regionPipelines = region === 'all' ? ALL_PIPELINES : (REGION_PIPELINES[`Region ${region}`] || []);
   const visiblePipelines = branch ? [branch] : regionPipelines;
 
-  const overall: Record<string, number> = useMemo(() => {
-    const totals: Record<string, number> = {};
+  const { ctOverall, enrOverall } = useMemo(() => {
+    const ct: Record<string, number> = {};
+    const enr: Record<string, number> = {};
     for (const pip of visiblePipelines) {
-      const sd = slotMap[pip] || {};
+      const sdCt = ctMap[pip] || {};
+      const sdEnr = enrMap[pip] || {};
       for (const code of visibleCodes) {
-        totals[code] = (totals[code] || 0) + (sd[code] || 0);
+        ct[code]  = (ct[code]  || 0) + (sdCt[code]  || 0);
+        enr[code] = (enr[code] || 0) + (sdEnr[code] || 0);
       }
     }
-    return totals;
-  }, [slotMap, visiblePipelines, visibleCodes]);
+    return { ctOverall: ct, enrOverall: enr };
+  }, [ctMap, enrMap, visiblePipelines, visibleCodes]);
 
-  // GHL Lead Centre doesn't filter by time_slot, so the slot click opens
-  // CT records for that pipeline + date range (with day filter when present).
-  const goToLeadCentre = (pip: string, _code: string) => {
-    const p = new URLSearchParams({ stage: 'CT', preset });
+  // For ENR clicks, via_ct=1 tells the backend to apply date/day/slot filters
+  // to the linked CT row instead of the ENR row itself — so the drill-down
+  // count matches the cell number exactly.
+  const goToLeadCentre = (pip: string, stage: 'CT' | 'ENR', slot?: string) => {
+    const p = new URLSearchParams({ stage, preset });
     if (pip) p.set('pipeline', pip);
+    if (selectedDay) p.set('preferred_day', selectedDay);
+    if (slot) p.set('time_slot', slot);
+    if (stage === 'ENR') p.set('via_ct', '1');
     navigate(`/ghl-lead-centre?${p}`);
   };
 
@@ -165,7 +271,7 @@ export function TimeSlotDistributionPage() {
         <BackButton to="/" label="Back to Home" />
         <div style={{ marginTop: 16 }}>
           <h1 className="pageHeaderTitle">Time Slot Distribution</h1>
-          <p className="headerSubtitle">CT bookings by time slot · {dateLabel} · Source: GHL webhook DB</p>
+          <p className="headerSubtitle">CT bookings by time slot · {dateLabel} · Each cell shows CT | ENR · Source: GHL webhook DB</p>
         </div>
       </div>
 
@@ -239,9 +345,13 @@ export function TimeSlotDistributionPage() {
           {/* Overall row */}
           <Row
             label="Overall"
-            values={overall}
+            ctValues={ctOverall}
+            enrValues={enrOverall}
             codes={visibleCodes}
-            onCellClick={(c) => goToLeadCentre('', c)}
+            onCellClickCt={(c) => goToLeadCentre('', 'CT',  c)}
+            onCellClickEnr={(c) => goToLeadCentre('', 'ENR', c)}
+            onLabelClickCt={() => goToLeadCentre('', 'CT')}
+            onLabelClickEnr={() => goToLeadCentre('', 'ENR')}
             bold
           />
           {/* Branch rows — always shown so layout is consistent regardless of data */}
@@ -249,9 +359,13 @@ export function TimeSlotDistributionPage() {
             <Row
               key={pip}
               label={PIPELINE_TO_BRANCH[pip] || pip}
-              values={slotMap[pip] || {}}
+              ctValues={ctMap[pip] || {}}
+              enrValues={enrMap[pip] || {}}
               codes={visibleCodes}
-              onCellClick={(c) => goToLeadCentre(pip, c)}
+              onCellClickCt={(c) => goToLeadCentre(pip, 'CT',  c)}
+              onCellClickEnr={(c) => goToLeadCentre(pip, 'ENR', c)}
+              onLabelClickCt={() => goToLeadCentre(pip, 'CT')}
+              onLabelClickEnr={() => goToLeadCentre(pip, 'ENR')}
             />
           ))}
         </div>

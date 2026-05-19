@@ -62,6 +62,9 @@ import { GhlIgnoredPayloadsPage } from './pages/GhlIgnoredPayloadsPage';
 import { HrfsOverviewV2Page } from './pages/HrfsOverviewV2Page';
 import { SalestrailPage } from './pages/SalestrailPage';
 import { SalestrailBranchPage } from './pages/SalestrailBranchPage';
+import { NlToCtTabsPage } from './pages/NlToCtTabsPage';
+import { NlToCtBreakdownPage } from './pages/NlToCtBreakdownPage';
+import { AdamTestingPage } from './pages/AdamTestingPage';
 
 
 export default function App() {
@@ -214,6 +217,15 @@ export default function App() {
           } />
           <Route path="/ui-ux-testing" element={
             <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>
+          } />
+          <Route path="/nl-to-ct/manage" element={
+            <RequirePermission dashboard="testing"><NlToCtTabsPage /></RequirePermission>
+          } />
+          <Route path="/nl-to-ct" element={
+            <RequirePermission dashboard="testing"><NlToCtBreakdownPage /></RequirePermission>
+          } />
+          <Route path="/adam-testing" element={
+            <RequirePermission roles={['super_admin']}><AdamTestingPage /></RequirePermission>
           } />
           <Route path="/branch-performance" element={
             <RequirePermission dashboard="testing"><BranchPerformancePage /></RequirePermission>

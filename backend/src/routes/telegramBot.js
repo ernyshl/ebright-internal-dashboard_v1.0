@@ -34,7 +34,7 @@ const LEAD_SOURCE_CASE = `
   CASE
     WHEN TRIM(lead_source) = 'Meta' THEN 'Meta'
     WHEN TRIM(lead_source) = 'TikTok' THEN 'TikTok'
-    WHEN LOWER(TRIM(lead_source)) = 'trial class form' THEN 'Website (Conversion)'
+    WHEN LOWER(TRIM(lead_source)) IN ('trial class form','online conversion form') THEN 'Website (Conversion)'
     WHEN LOWER(TRIM(lead_source)) = 'roadshow' THEN 'Roadshow'
     WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
     WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in') THEN 'Walk In'
@@ -53,8 +53,8 @@ async function getLeadsByDate(offsetDays = 0) {
     FROM master_leads_powerbi
     WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date
           = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - $2::int
-      AND sibling_index = 1
       AND TRIM(clean_branch) = ANY($1::text[])
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY count DESC;
   `, [VALID_BRANCHES, offsetDays]);
@@ -64,10 +64,22 @@ async function getLeadsByDate(offsetDays = 0) {
 async function getLeadsToday()     { return getLeadsByDate(0); }
 async function getLeadsYesterday() { return getLeadsByDate(1); }
 
+async function getSaraLeads(offsetDays = 0) {
+  const { rows } = await pool.query(`
+    SELECT COUNT(*) as count FROM meta_leads
+    WHERE (lead_created_time AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+          = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - $1::int
+      AND EXISTS (
+        SELECT 1 FROM jsonb_array_elements(raw_data->'field_data') f
+        WHERE f->>'name' ILIKE '%position%' OR f->>'name' ILIKE '%education%'
+      );
+  `, [offsetDays]);
+  return Number(rows[0]?.count || 0);
+}
+
 async function getSpendBreakdown() {
   const FB_ACCOUNTS = [
     process.env.META_MAIN_FB_ID,
-    process.env.META_SARA_ID,
     process.env.META_ONLINE_ID,
   ].filter(Boolean);
   const TT_ACCOUNT = process.env.META_TT_ID || '';
@@ -76,6 +88,7 @@ async function getSpendBreakdown() {
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
            AND account_id = ANY($1::text[])
+           AND campaign_name NOT ILIKE '%franchise%'
        ), 0) AS meta,
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
@@ -99,7 +112,6 @@ async function getSpendToday() {
 async function getSpendYesterday() {
   const FB_ACCOUNTS = [
     process.env.META_MAIN_FB_ID,
-    process.env.META_SARA_ID,
     process.env.META_ONLINE_ID,
   ].filter(Boolean);
   const TT_ACCOUNT = process.env.META_TT_ID || '';
@@ -108,6 +120,7 @@ async function getSpendYesterday() {
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
            AND account_id = ANY($1::text[])
+           AND campaign_name NOT ILIKE '%franchise%'
        ), 0) AS meta,
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - 1
@@ -132,9 +145,7 @@ async function getLeadsByBranch() {
     WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
       AND clean_branch IS NOT NULL
       AND TRIM(clean_branch) != ''
-      AND LOWER(TRIM(clean_branch)) != 'unspecified'
-      AND LOWER(TRIM(clean_branch)) != 'unknown branch'
-      AND LOWER(TRIM(clean_branch)) NOT LIKE '%test%'
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY count DESC;
   `);
@@ -145,8 +156,8 @@ async function getLeadsByRegion() {
   const { rows } = await pool.query(`
     SELECT
       CASE
-        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Bandar Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan','Tropicana Sungai Buloh']) THEN 'Region A'
-        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang Perdana','Kajang','Taman Sri Gombak','Puncak Jalil']) THEN 'Region B'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Rimbayu','Klang','Shah Alam','Setia Alam','Denai Alam','Eco Grandeur','Subang Taipan','Tropicana Sungai Buloh']) THEN 'Region A'
+        WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Danau Kota','Kota Damansara','Ampang','Sri Petaling','Bandar Tun Hussein Onn','Kajang','Taman Sri Gombak','Puncak Jalil']) THEN 'Region B'
         WHEN TRIM(clean_branch) ILIKE ANY(ARRAY['Putrajaya','Kota Warisan','Bandar Baru Bangi','Cyberjaya','Bandar Seri Putra','Dataran Puchong Utama','Online']) THEN 'Region C'
         ELSE 'Other'
       END as region,
@@ -154,19 +165,21 @@ async function getLeadsByRegion() {
     FROM master_leads_powerbi
     WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
       AND clean_branch IS NOT NULL AND TRIM(clean_branch) != ''
+      AND sibling_index = 1
     GROUP BY 1
     ORDER BY region;
   `);
   return rows;
 }
 
-function buildReportMessage(leads, spend, { isYesterday = false } = {}) {
+function buildReportMessage(leads, spend, saraLeads = 0, { isYesterday = false } = {}) {
   const sources = ['Meta', 'TikTok', 'Website (Conversion)', 'Roadshow', 'Self Generated Lead', 'Walk In', 'Website (Organic)', 'Others'];
   const map = {};
   let total = 0;
   for (const r of leads) { map[r.source] = Number(r.count); total += Number(r.count); }
 
-  const cpl = total > 0 ? spend / total : 0;
+  const paidLeads = (map['Meta'] || 0) + (map['TikTok'] || 0) + (map['Website (Conversion)'] || 0);
+  const cpl = paidLeads > 0 ? spend / paidLeads : 0;
 
   let dateStr;
   if (isYesterday) {
@@ -184,6 +197,7 @@ function buildReportMessage(leads, spend, { isYesterday = false } = {}) {
   let msg = `📊 *Ebright Daily Report*\n📅 ${dateStr}\n\n*${leadsLabel}*\n━━━━━━━━━━━━━━━━━━\n`;
   for (const s of sources) msg += `${s}: *${map[s] || 0}*\n`;
   msg += `━━━━━━━━━━━━━━━━━━\nTOTAL: *${total}*\n\n`;
+  msg += `*Recruitment Leads*\n━━━━━━━━━━━━━━━━━━\nTOTAL: *${saraLeads}*\n\n`;
   msg += `*Executive Summary*\n━━━━━━━━━━━━━━━━━━\n`;
   msg += `${totalLabel}: *${total}*\n`;
   msg += `${spendLabel}: *${fmtRM(spend)}*\n`;
@@ -222,13 +236,40 @@ router.post('/webhook', async (req, res) => {
     }
 
     if (text === '/report' || text === '/today' || text === '/start') {
-      const [leads, spend] = await Promise.all([getLeadsToday(), getSpendToday()]);
-      await sendTelegramMessage(chatId, buildReportMessage(leads, spend));
+      // Serve from cache (written by cron) so numbers always match the last
+      // broadcast report. Falls back to a live query before the first cron of
+      // the day fires.
+      const { rows: cached } = await pool.query(`
+        SELECT * FROM telegram_report_cache
+        WHERE report_date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+      `);
+      if (cached.length > 0) {
+        const c = cached[0];
+        const leads = [
+          { source: 'Meta',                  count: c.meta_count   },
+          { source: 'TikTok',                count: c.tiktok_count },
+          { source: 'Website (Conversion)',  count: c.website_conv },
+          { source: 'Roadshow',              count: c.roadshow     },
+          { source: 'Self Generated Lead',   count: c.sgl          },
+          { source: 'Walk In',               count: c.walkin       },
+          { source: 'Website (Organic)',     count: c.website_org  },
+          { source: 'Others',                count: c.others       },
+        ];
+        const updatedAt = new Date(c.updated_at).toLocaleString('en-MY', {
+          timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hour12: false,
+        });
+        const msg = buildReportMessage(leads, Number(c.total_spend), Number(c.sara_leads))
+          + `\n\n_Data as of ${updatedAt}_`;
+        await sendTelegramMessage(chatId, msg);
+      } else {
+        const [leads, spend, saraLeads] = await Promise.all([getLeadsToday(), getSpendToday(), getSaraLeads(0)]);
+        await sendTelegramMessage(chatId, buildReportMessage(leads, spend, saraLeads));
+      }
     }
 
     else if (text === '/ytdreport' || text === '/yesterday') {
-      const [leads, spend] = await Promise.all([getLeadsYesterday(), getSpendYesterday()]);
-      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, { isYesterday: true }));
+      const [leads, spend, saraLeads] = await Promise.all([getLeadsYesterday(), getSpendYesterday(), getSaraLeads(1)]);
+      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, saraLeads, { isYesterday: true }));
     }
 
     else if (text === '/branch' || text === '/branches') {
