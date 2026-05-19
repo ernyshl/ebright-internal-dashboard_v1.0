@@ -68,6 +68,9 @@ const EnvSchema = z.object({
   // Set this and pass it as secret_token when registering the webhook with
   // Telegram so only genuine Telegram pushes are accepted.
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+
+  // Google Ads lead form webhook — paste the key Google gives you after registering the URL
+  GOOGLE_ADS_WEBHOOK_KEY: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
