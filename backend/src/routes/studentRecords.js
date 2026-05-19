@@ -34,6 +34,8 @@ function rowToStudent(r) {
     guardianName:   r.guardian_name   || '',
     guardianMobile: r.guardian_mobile || '',
     coachName:      r.coach_name      || '',
+    creditExpiryDate: r.credit_expiry_date ? new Date(r.credit_expiry_date).toISOString().slice(0, 10) : '',
+    packageStatus:  r.package_status  || '',
   };
 }
 
@@ -121,6 +123,16 @@ router.put('/:id', async (req, res, next) => {
   const isoDob = s.dob && /^\d{4}-\d{2}-\d{2}$/.test(s.dob)
     ? s.dob
     : null;
+  // Package fields: allow clearing (so write direct, not COALESCE).
+  // Empty/invalid → null. Only sets if key is present in body to avoid wiping during partial updates.
+  const hasExpiry = Object.prototype.hasOwnProperty.call(s, 'creditExpiryDate');
+  const hasStatus = Object.prototype.hasOwnProperty.call(s, 'packageStatus');
+  const expiryIso = (s.creditExpiryDate && /^\d{4}-\d{2}-\d{2}$/.test(s.creditExpiryDate))
+    ? s.creditExpiryDate
+    : null;
+  const pkgStatus = (typeof s.packageStatus === 'string' && s.packageStatus.trim())
+    ? s.packageStatus.trim()
+    : null;
   try {
     const { students: tbl } = getTableNames();
     // Snapshot BEFORE update so we can diff for audit log
@@ -141,8 +153,10 @@ router.put('/:id', async (req, res, next) => {
          grade_chapter=$7, fa_progress_json=$8::jsonb, total_fa=$9,
          pcm_progress_json=$10::jsonb, total_pcm=$11,
          workbook_progress_json=$12::jsonb, total_workbook=$13,
-         guardian_name=$14, guardian_mobile=$15, coach_name=$16
-       WHERE id=$17`,
+         guardian_name=$14, guardian_mobile=$15, coach_name=$16,
+         credit_expiry_date = CASE WHEN $17::boolean THEN $18::date  ELSE credit_expiry_date END,
+         package_status     = CASE WHEN $19::boolean THEN $20::text  ELSE package_status     END
+       WHERE id=$21`,
       s.name,
       s.status,
       s.gender,
@@ -159,6 +173,10 @@ router.put('/:id', async (req, res, next) => {
       s.guardianName   ?? '',
       s.guardianMobile ?? '',
       s.coachName      ?? '',
+      hasExpiry,
+      expiryIso,
+      hasStatus,
+      pkgStatus,
       id,
     );
     const rows = await prisma.$queryRawUnsafe(`SELECT * FROM ${tbl} WHERE id=$1`, id);

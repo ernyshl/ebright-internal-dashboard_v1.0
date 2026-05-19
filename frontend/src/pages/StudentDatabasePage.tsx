@@ -8,6 +8,7 @@ import { getAgeGroup, getAgeGroupColor } from '../lib/ageGroup';
 import { useAcademy } from '../context/AcademyContext';
 import { apiFetch } from '../lib/api';
 import AddStudentModal from '../components/StudentDB/AddStudentModal';
+import AddPackageModal from '../components/StudentDB/AddPackageModal';
 import EditStudentModal from '../components/StudentDB/EditStudentModal';
 import DeleteConfirmModal from '../components/StudentDB/DeleteConfirmModal';
 import ArchiveConfirmModal from '../components/StudentDB/ArchiveConfirmModal';
@@ -32,8 +33,10 @@ export function StudentDatabasePage() {
   const navigate = useNavigate();
   const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch } = useAcademy();
   const [branchFilter, setBranchFilter] = useState(sharedBranch);
+  const [packageStatusFilter, setPackageStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Expired' | 'Unenrolled'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddPackage, setShowAddPackage] = useState(false);
   const [editStudent, setEditStudent] = useState<any>(null);
   const [deleteStudent, setDeleteStudent] = useState<any>(null);
   const [archiveStudent, setArchiveStudent] = useState<any>(null);
@@ -57,7 +60,7 @@ export function StudentDatabasePage() {
   }, []);
 
   // Reset to page 1 when filter/search changes so user doesn't land on an empty later page
-  useEffect(() => { setCurrentPage(1); }, [branchFilter, searchQuery]);
+  useEffect(() => { setCurrentPage(1); }, [branchFilter, searchQuery, packageStatusFilter]);
 
   function handleBranchChange(branch: string) {
     setBranchFilter(branch);
@@ -67,8 +70,12 @@ export function StudentDatabasePage() {
   const branchFiltered = branchFilter === 'All' ? students : students.filter(s => s.branch === branchFilter);
   const activeFiltered = branchFiltered.filter(s => s.status === 'Active');
 
+  const pkgFiltered = packageStatusFilter === 'All'
+    ? branchFiltered
+    : branchFiltered.filter(s => String(s.packageStatus || '').trim().toLowerCase() === packageStatusFilter.toLowerCase());
+
   const q = searchQuery.trim().toLowerCase();
-  const displayed = q ? branchFiltered.filter(s => s.name.toLowerCase().includes(q)) : branchFiltered;
+  const displayed = q ? pkgFiltered.filter(s => s.name.toLowerCase().includes(q)) : pkgFiltered;
 
   const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -243,6 +250,8 @@ export function StudentDatabasePage() {
       'Age Group':         getAgeGroup(s.dob || ''),
       'Coach Name':        s.coachName || '',
       'Enrollment Date':   s.enrollmentDate,
+      'Credit Expiry Date':s.creditExpiryDate || '',
+      'Package Status':    s.packageStatus  || '',
       'Grade':             s.grade,
       'Chapter':           s.chapter,
       'Status':            s.status,
@@ -275,6 +284,7 @@ export function StudentDatabasePage() {
             <button onClick={() => navigate('/archived-students')} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:'pointer', fontWeight:500 }}>🗂 Archived Students</button>
             <button onClick={exportToExcel} disabled={displayed.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'none', background:'#10b981', color:'#fff', cursor:'pointer', fontWeight:600, opacity:displayed.length?1:0.4 }}>⬇ Export</button>
             <button onClick={() => setShowAdd(true)} style={{ fontSize:13, padding:'8px 20px', borderRadius:8, border:'none', background:'#4f46e5', color:'#fff', cursor:'pointer', fontWeight:600 }}>+ Add Students</button>
+            <button onClick={() => setShowAddPackage(true)} style={{ fontSize:13, padding:'8px 20px', borderRadius:8, border:'none', background:'#0ea5e9', color:'#fff', cursor:'pointer', fontWeight:600 }}>+ Add Package</button>
             <button onClick={() => { setDeleteAllBranch(branchFilter); setShowDeleteAll(true); }} disabled={students.length===0} style={{ fontSize:13, padding:'8px 16px', borderRadius:8, border:'1px solid #dc2626', background:'rgba(239,68,68,0.08)', color:'#dc2626', cursor:'pointer', fontWeight:600, opacity:students.length?1:0.4 }}>🗑 Delete All</button>
           </div>
         </div>
@@ -349,6 +359,15 @@ export function StudentDatabasePage() {
           {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
 
+        <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>Package Status:</span>
+        <select value={packageStatusFilter} onChange={e => setPackageStatusFilter(e.target.value as any)} style={{ fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', background:'var(--bg)', color:'var(--text)', outline:'none' }}>
+          <option value="All">All</option>
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Expired">Expired</option>
+          <option value="Unenrolled">Unenrolled</option>
+        </select>
+
         {/* Search input */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:180, maxWidth:320, border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', background:'var(--bg)' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -366,14 +385,15 @@ export function StudentDatabasePage() {
           )}
         </div>
 
-        {(branchFilter !== 'All' || q) && (
+        {(branchFilter !== 'All' || q || packageStatusFilter !== 'All') && (
           <span style={{ fontSize:13, color:'#4f46e5', fontWeight:500 }}>
             Showing {displayed.length === 0 ? 0 : `${pageStart + 1}-${pageEnd}`} of {displayed.length} student{displayed.length!==1?'s':''}
             {branchFilter !== 'All' ? ` in ${branchFilter}` : ''}
+            {packageStatusFilter !== 'All' ? ` · ${packageStatusFilter}` : ''}
             {q ? ` matching "${searchQuery.trim()}"` : ''}
           </span>
         )}
-        {(branchFilter === 'All' && !q) && displayed.length > 0 && (
+        {(branchFilter === 'All' && !q && packageStatusFilter === 'All') && displayed.length > 0 && (
           <span style={{ fontSize:13, color:'var(--muted)', fontWeight:500 }}>
             Showing {pageStart + 1}-{pageEnd} of {displayed.length}
           </span>
@@ -389,14 +409,14 @@ export function StudentDatabasePage() {
           <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                {['No.','Name','Gender','Branch','DOB','Age Group','Coach Name','Enrollment Date','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Workbook Progress','Total Workbook','Guardian Name','Guardian Mobile','Actions'].map(h => (
+                {['No.','Name','Gender','Branch','DOB','Age Group','Coach Name','Enrollment Date','Credit Expiry Date','Package Status','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Workbook Progress','Total Workbook','Guardian Name','Guardian Mobile','Actions'].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {displayed.length === 0 ? (
-                <tr><td colSpan={18} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
+                <tr><td colSpan={20} style={{ ...td, textAlign:'center', padding:'48px 16px', color:'var(--muted)' }}>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
                     <span style={{ fontSize:36 }}>{q ? '🔍' : '🎓'}</span>
                     <p style={{ fontWeight:600, color:'var(--text)', margin:0 }}>
@@ -435,6 +455,22 @@ export function StudentDatabasePage() {
                     })()}
                     <td style={{ ...td, whiteSpace:'nowrap', color: student.coachName ? 'var(--text)' : 'var(--muted)', fontStyle: student.coachName ? 'normal' : 'italic' }}>{student.coachName || '—'}</td>
                     <td style={{ ...td, color:'var(--muted)', whiteSpace:'nowrap' }}>{student.enrollmentDate||'—'}</td>
+                    <td style={{ ...td, whiteSpace:'nowrap', color: student.creditExpiryDate ? 'var(--text)' : 'var(--muted)', fontStyle: student.creditExpiryDate ? 'normal' : 'italic' }}>{student.creditExpiryDate || '—'}</td>
+                    {(() => {
+                      const ps = String(student.packageStatus || '').trim();
+                      const lower = ps.toLowerCase();
+                      const isExpired = lower === 'expired';
+                      const isActive  = lower === 'active';
+                      const bg = isExpired ? 'rgba(239,68,68,0.12)' : isActive ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)';
+                      const fg = isExpired ? '#dc2626' : isActive ? '#16a34a' : 'var(--muted)';
+                      return (
+                        <td style={td}>
+                          {ps
+                            ? <span style={{ fontSize:11, padding:'2px 8px', borderRadius:99, fontWeight:600, background:bg, color:fg, whiteSpace:'nowrap' }}>{ps}</span>
+                            : <span style={{ color:'var(--muted)', fontStyle:'italic' }}>—</span>}
+                        </td>
+                      );
+                    })()}
                     <td style={td}><span style={{ fontSize:11, padding:'4px 8px', borderRadius:6, fontWeight:600, background:'rgba(139,92,246,0.1)', color:'#7c3aed', whiteSpace:'nowrap' }}>{student.grade} — {student.chapter}</span></td>
 
                     {/* FA checkboxes */}
@@ -555,6 +591,18 @@ export function StudentDatabasePage() {
 
       {/* Modals */}
       {showAdd     && <AddStudentModal    onClose={() => setShowAdd(false)}      onAdd={addStudents} onBulkComplete={handleBulkUploadComplete} />}
+      {showAddPackage && <AddPackageModal
+        students={students}
+        onClose={() => setShowAddPackage(false)}
+        onComplete={async (msg) => {
+          const res = await apiFetch('/api/student-records');
+          if (res?.data) setStudents(res.data);
+          if (msg) {
+            setSuccessMsg(msg);
+            setTimeout(() => setSuccessMsg(''), 4000);
+          }
+        }}
+      />}
       {editStudent && <EditStudentModal   student={editStudent} onClose={() => setEditStudent(null)}   onSave={updateStudent} />}
       {deleteStudent && <DeleteConfirmModal student={deleteStudent} onClose={() => setDeleteStudent(null)} onConfirm={() => deleteStudentById(deleteStudent.id)} />}
       {archiveStudent && <ArchiveConfirmModal student={archiveStudent} onClose={() => setArchiveStudent(null)} onConfirm={() => archiveStudentById(archiveStudent)} />}

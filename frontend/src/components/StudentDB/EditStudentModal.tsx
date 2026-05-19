@@ -18,7 +18,7 @@ function toIsoDate(val: string): string {
 }
 
 export default function EditStudentModal({ student, onClose, onSave }) {
-  const [form, setForm] = useState({ ...student, enrollmentDate: toIsoDate(student.enrollmentDate), dob: toIsoDate(student.dob) });
+  const [form, setForm] = useState({ ...student, enrollmentDate: toIsoDate(student.enrollmentDate), dob: toIsoDate(student.dob), creditExpiryDate: toIsoDate(student.creditExpiryDate || ''), packageStatus: student.packageStatus || '' });
 
   function set(field, value) {
     setForm(prev => {
@@ -141,6 +141,22 @@ export default function EditStudentModal({ student, onClose, onSave }) {
             <p style={{ fontSize:12, color:'#6366f1', margin:'0 0 4px' }}>FA: <strong>{faCount}</strong> checkbox{faCount !== 1 ? 'es' : ''}{chNum < 9 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C9)</span>}</p>
             <p style={{ fontSize:12, color:'#f59e0b', margin:'0 0 4px' }}>PCM: <strong>{pcmCount}</strong> checkbox{pcmCount !== 1 ? 'es' : ''}{chNum < 9 && <span style={{ color:'#f59e0b', marginLeft:6 }}>(unlocks at C9)</span>}</p>
             <p style={{ fontSize:12, color:'#10b981', margin:0 }}>Workbook: <strong>{workbookCount}</strong> checkbox{workbookCount !== 1 ? 'es' : ''}{form.grade !== 'G1' && chNum < 9 && <span style={{ color:'#10b981', marginLeft:6 }}>(unlocks at C9)</span>}</p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div>
+              <label style={lbl}>Credit Expiry Date</label>
+              <input type="date" style={inp} value={form.creditExpiryDate || ''} onChange={e => set('creditExpiryDate', e.target.value)} />
+            </div>
+            <div>
+              <label style={lbl}>Package Status</label>
+              <select style={inp} value={form.packageStatus || ''} onChange={e => set('packageStatus', e.target.value)}>
+                <option value="">— None —</option>
+                <option value="Active">Active</option>
+                <option value="Pending">Pending</option>
+                <option value="Expired">Expired</option>
+                <option value="Unenrolled">Unenrolled</option>
+              </select>
+            </div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
             <div>

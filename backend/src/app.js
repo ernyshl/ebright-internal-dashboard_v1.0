@@ -34,6 +34,7 @@ const { okrAttendanceRouter } = require('./routes/okrAttendance');
 const { studentRecordsRouter } = require('./routes/studentRecords');
 const { archivedStudentsRouter } = require('./routes/archivedStudents');
 const { studentUploadRouter } = require('./routes/studentUpload');
+const { studentPackagesRouter } = require('./routes/studentPackages');
 const { studentAttendanceRouter } = require('./routes/studentAttendance');
 const { guardianBackfillRouter } = require('./routes/guardianBackfill');
 const { studentChangeLogRouter } = require('./routes/studentChangeLog');
@@ -177,6 +178,7 @@ function createApp() {
   app.use('/api/student-records', applyRoleBasedRateLimit, studentRecordsRouter);
   app.use('/api/archived-students', applyRoleBasedRateLimit, archivedStudentsRouter);
   app.use('/api/student-upload', applyRoleBasedRateLimit, studentUploadRouter);
+  app.use('/api/student-packages', applyRoleBasedRateLimit, studentPackagesRouter);
   app.use('/api/student-attendance', applyRoleBasedRateLimit, studentAttendanceRouter);
   app.use('/api/coach-bm-performance', applyRoleBasedRateLimit, coachBmPerformanceRouter);
   app.use('/api/guardian-backfill', applyRoleBasedRateLimit, guardianBackfillRouter);

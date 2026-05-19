@@ -25,6 +25,7 @@ type BatchSummary = {
 };
 
 const SORTED_BRANCHES = [...BRANCHES].sort();
+const PAGE_SIZE = 50;
 
 const th: React.CSSProperties = {
   padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700,
@@ -576,6 +577,7 @@ export function StudentAttendancePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [branchFilter, setBranchFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [showClearAll, setShowClearAll] = useState(false);
@@ -595,6 +597,9 @@ export function StudentAttendancePage() {
       .catch(err => flash(`❌ Failed to load attendance: ${err?.data?.error || err?.message || 'server error'}`))
       .finally(() => setLoading(false));
   }, []);
+
+  // Reset to page 1 when filter/search changes
+  useEffect(() => { setCurrentPage(1); }, [branchFilter, searchQuery]);
 
   function handleImported(newRows: StoredRow[], summary: BatchSummary, branch: string, fileName: string) {
     setRows(newRows);
@@ -683,6 +688,12 @@ export function StudentAttendancePage() {
       )
     : branchFiltered;
 
+  const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageEnd = Math.min(pageStart + PAGE_SIZE, displayed.length);
+  const paginated = displayed.slice(pageStart, pageEnd);
+
   return (
     <div className="dashboardPage">
       <div style={{ marginBottom: 24 }}>
@@ -737,16 +748,21 @@ export function StudentAttendancePage() {
 
         {(branchFilter !== 'All' || q) && (
           <span style={{ fontSize: 13, color: '#4f46e5', fontWeight: 500 }}>
-            Showing {displayed.length} record{displayed.length !== 1 ? 's' : ''}
+            Showing {displayed.length === 0 ? 0 : `${pageStart + 1}-${pageEnd}`} of {displayed.length} record{displayed.length !== 1 ? 's' : ''}
             {branchFilter !== 'All' ? ` in ${branchFilter}` : ''}
             {q ? ` matching "${searchQuery.trim()}"` : ''}
+          </span>
+        )}
+        {(branchFilter === 'All' && !q) && displayed.length > 0 && (
+          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500 }}>
+            Showing {pageStart + 1}-{pageEnd} of {displayed.length}
           </span>
         )}
       </div>
 
       <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
                 {['No.', 'Branch', 'Student Name', 'Attendance Status', 'Lesson Name', 'Lesson Teacher(s)', 'Lesson Date', 'Day', 'Attendance By', 'Actions'].map(h => (
@@ -769,11 +785,11 @@ export function StudentAttendancePage() {
                     </div>
                   </td>
                 </tr>
-              ) : displayed.map((r, idx) => {
+              ) : paginated.map((r, idx) => {
                 const sc = statusColors(r.attendanceStatus);
                 return (
                   <tr key={r.id ?? idx} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ ...td, color: 'var(--muted)' }}>{idx + 1}</td>
+                    <td style={{ ...td, color: 'var(--muted)' }}>{pageStart + idx + 1}</td>
                     <td style={td}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600, background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>{r.branch}</span></td>
                     <td style={{ ...td, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{r.studentName}</td>
                     <td style={td}><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, fontWeight: 600, background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>{r.attendanceStatus || '—'}</span></td>
@@ -794,6 +810,36 @@ export function StudentAttendancePage() {
             </tbody>
           </table>
         </div>
+        {displayed.length > PAGE_SIZE && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderTop:'1px solid var(--border)', flexWrap:'wrap', gap:12 }}>
+            <span style={{ fontSize:12, color:'var(--muted)' }}>
+              Page {safePage} of {totalPages} · {displayed.length} record{displayed.length !== 1 ? 's' : ''}
+            </span>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              <button onClick={() => setCurrentPage(1)} disabled={safePage === 1}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===1?'not-allowed':'pointer', opacity:safePage===1?0.4:1, fontWeight:500 }}>« First</button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===1?'not-allowed':'pointer', opacity:safePage===1?0.4:1, fontWeight:500 }}>‹ Prev</button>
+              {(() => {
+                const windowSize = 5;
+                const half = Math.floor(windowSize / 2);
+                let start = Math.max(1, safePage - half);
+                const end = Math.min(totalPages, start + windowSize - 1);
+                start = Math.max(1, end - windowSize + 1);
+                const pages: number[] = [];
+                for (let p = start; p <= end; p++) pages.push(p);
+                return pages.map(p => (
+                  <button key={p} onClick={() => setCurrentPage(p)}
+                    style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:p===safePage?'#4f46e5':'var(--panel)', color:p===safePage?'#fff':'var(--text)', cursor:'pointer', fontWeight:p===safePage?700:500, minWidth:32 }}>{p}</button>
+                ));
+              })()}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===totalPages?'not-allowed':'pointer', opacity:safePage===totalPages?0.4:1, fontWeight:500 }}>Next ›</button>
+              <button onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages}
+                style={{ fontSize:12, padding:'5px 10px', borderRadius:6, border:'1px solid var(--border)', background:'var(--panel)', color:'var(--text)', cursor:safePage===totalPages?'not-allowed':'pointer', opacity:safePage===totalPages?0.4:1, fontWeight:500 }}>Last »</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showUpload && (
