@@ -35,6 +35,14 @@ export function StudentDatabasePage() {
   const [branchFilter, setBranchFilter] = useState(sharedBranch);
   const [packageStatusFilter, setPackageStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Expired' | 'Unenrolled'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortKey, setSortKey] = useState<'enrollmentDate' | 'creditExpiryDate' | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  function toggleSort(key: 'enrollmentDate' | 'creditExpiryDate') {
+    if (sortKey !== key) { setSortKey(key); setSortDir('asc'); return; }
+    if (sortDir === 'asc') { setSortDir('desc'); return; }
+    setSortKey(null); // third click clears sort
+  }
   const [showAdd, setShowAdd] = useState(false);
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [editStudent, setEditStudent] = useState<any>(null);
@@ -75,7 +83,18 @@ export function StudentDatabasePage() {
     : branchFiltered.filter(s => String(s.packageStatus || '').trim().toLowerCase() === packageStatusFilter.toLowerCase());
 
   const q = searchQuery.trim().toLowerCase();
-  const displayed = q ? pkgFiltered.filter(s => s.name.toLowerCase().includes(q)) : pkgFiltered;
+  const searchFiltered = q ? pkgFiltered.filter(s => s.name.toLowerCase().includes(q)) : pkgFiltered;
+  const displayed = sortKey
+    ? [...searchFiltered].sort((a, b) => {
+        const va = String(a[sortKey] || '');
+        const vb = String(b[sortKey] || '');
+        // Empty values always at the bottom regardless of direction
+        if (!va && !vb) return 0;
+        if (!va) return 1;
+        if (!vb) return -1;
+        return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      })
+    : searchFiltered;
 
   const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -409,9 +428,19 @@ export function StudentDatabasePage() {
           <table style={{ minWidth:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ background:'var(--bg)', borderBottom:'1px solid var(--border)' }}>
-                {['No.','Name','Gender','Branch','DOB','Age Group','Coach Name','Enrollment Date','Credit Expiry Date','Package Status','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Workbook Progress','Total Workbook','Guardian Name','Guardian Mobile','Actions'].map(h => (
-                  <th key={h} style={th}>{h}</th>
-                ))}
+                {['No.','Name','Gender','Branch','DOB','Age Group','Coach Name','Enrollment Date','Credit Expiry Date','Package Status','Grade & Chapter','FA Progress','Total FA','PCM Progress','Total PCM','Workbook Progress','Total Workbook','Guardian Name','Guardian Mobile','Actions'].map(h => {
+                  const sortable = h === 'Enrollment Date' ? 'enrollmentDate' : h === 'Credit Expiry Date' ? 'creditExpiryDate' : null;
+                  if (!sortable) return <th key={h} style={th}>{h}</th>;
+                  const active = sortKey === sortable;
+                  const arrow = !active ? '↕' : sortDir === 'asc' ? '▲' : '▼';
+                  return (
+                    <th key={h} style={{ ...th, cursor: 'pointer', userSelect: 'none', color: active ? '#4f46e5' : th.color }}
+                        onClick={() => toggleSort(sortable as 'enrollmentDate' | 'creditExpiryDate')}
+                        title="Click to sort">
+                      {h} <span style={{ fontSize: 10, marginLeft: 2, opacity: active ? 1 : 0.4 }}>{arrow}</span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
