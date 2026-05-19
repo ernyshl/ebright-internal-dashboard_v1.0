@@ -225,7 +225,7 @@ function BranchCard({ branch, filtered, prevData }) {
         </div>
         <div style={{ background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.8, textAlign: 'center', padding: '5px 6px 3px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.08)' }}>
-            FA Invited
+            FA Attended
           </div>
           <div style={{ display: 'flex', flex: 1 }}>
             <div style={{ flex: 1, textAlign: 'center', padding: '5px 4px', borderRight: '1px solid var(--border)' }}>

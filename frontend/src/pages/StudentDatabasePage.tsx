@@ -330,10 +330,10 @@ export function StudentDatabasePage() {
               {statCard('Total Active',   totalActive,   ' active',  '#10b981', '✅')}
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gridTemplateRows:'1fr 1fr', gap:12 }}>
-              {statCard('FA Invited',   faInvited,  `/${faDue}`,  '#4f46e5', '🎓')}
+              {statCard('FA Attended',  faInvited,  `/${faDue}`,  '#4f46e5', '🎓')}
               {statCard('FA Due',       faDue,      '',           '#8b5cf6', '📅')}
               {statCard('FA Backlog',   faBacklog,  `/${faDue}`,  '#ef4444', '📋')}
-              {statCard('PCM Invited',  pcmInvited, `/${pcmDue}`, '#0ea5e9', '🧪')}
+              {statCard('PCM Attended', pcmInvited, `/${pcmDue}`, '#0ea5e9', '🧪')}
               {statCard('PCM Due',      pcmDue,     '',           '#06b6d4', '📅')}
               {statCard('PCM Backlog',  pcmBacklog, `/${pcmDue}`, '#f97316', '📋')}
             </div>
