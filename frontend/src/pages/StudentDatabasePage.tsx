@@ -432,12 +432,17 @@ export function StudentDatabasePage() {
                   const sortable = h === 'Enrollment Date' ? 'enrollmentDate' : h === 'Credit Expiry Date' ? 'creditExpiryDate' : null;
                   if (!sortable) return <th key={h} style={th}>{h}</th>;
                   const active = sortKey === sortable;
-                  const arrow = !active ? '↕' : sortDir === 'asc' ? '▲' : '▼';
                   return (
                     <th key={h} style={{ ...th, cursor: 'pointer', userSelect: 'none', color: active ? '#4f46e5' : th.color }}
                         onClick={() => toggleSort(sortable as 'enrollmentDate' | 'creditExpiryDate')}
                         title="Click to sort">
-                      {h} <span style={{ fontSize: 10, marginLeft: 2, opacity: active ? 1 : 0.4 }}>{arrow}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {h}
+                        <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 0.8, fontSize: 9, fontWeight: 900 }}>
+                          <span style={{ color: active && sortDir === 'asc' ? '#4f46e5' : 'var(--muted)', opacity: active && sortDir === 'asc' ? 1 : 0.55 }}>▲</span>
+                          <span style={{ color: active && sortDir === 'desc' ? '#4f46e5' : 'var(--muted)', opacity: active && sortDir === 'desc' ? 1 : 0.55 }}>▼</span>
+                        </span>
+                      </span>
                     </th>
                   );
                 })}
