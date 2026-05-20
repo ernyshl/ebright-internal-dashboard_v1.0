@@ -45,6 +45,8 @@ const { hikEventsRouter } = require('./routes/hikEvents');
 const { nlToCtRouter } = require('./routes/nlToCt');
 const { googleAdsLeadsRouter } = require('./routes/googleAdsLeads');
 const { wixTrialFormLeadsRouter } = require('./routes/wixTrialFormLeads');
+const { metaLeadsRouter } = require('./routes/metaLeads');
+const { tiktokLeadsRouter } = require('./routes/tiktokLeads');
 
 const jwt = require('jsonwebtoken');
 
@@ -191,6 +193,8 @@ function createApp() {
   app.use('/api/nl-to-ct', applyRoleBasedRateLimit, nlToCtRouter);
   app.use('/api/google-ads-leads', googleAdsLeadsRouter);
   app.use('/api/wix-trial-form', wixTrialFormLeadsRouter);
+  app.use('/api/meta-leads', metaLeadsRouter);
+  app.use('/api/tiktok-leads', tiktokLeadsRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

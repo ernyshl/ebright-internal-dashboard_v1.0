@@ -74,6 +74,12 @@ const EnvSchema = z.object({
 
   // Wix trial class form webhook — optional secret; add webhook_key to Velo fetch if set
   WIX_TRIAL_WEBHOOK_KEY: z.string().optional(),
+
+  // Meta → GHL webhook — optional secret sent by sync_meta_leads.py
+  META_GHL_WEBHOOK_KEY: z.string().optional(),
+
+  // TikTok → GHL webhook — optional secret sent by pipeline.py
+  TIKTOK_GHL_WEBHOOK_KEY: z.string().optional(),
 });
 
 const env = EnvSchema.parse(process.env);
