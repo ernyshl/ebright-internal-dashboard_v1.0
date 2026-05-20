@@ -64,6 +64,8 @@ const LEADS_SRC = `(
     WHERE lower(ml.form_name) ILIKE ('%' || lower(keyword) || '%')
     LIMIT 1
   ) bm2 ON true
+  WHERE ml.form_name NOT ILIKE '%COACH%'
+    AND ml.form_name NOT ILIKE '% PT %'
 
   UNION ALL
 
