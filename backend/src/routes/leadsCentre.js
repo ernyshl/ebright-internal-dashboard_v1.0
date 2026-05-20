@@ -134,7 +134,7 @@ const LEADS_SRC = `(
   UNION ALL
 
   SELECT
-    'Trial Class Form'::text          AS lead_source,
+    wtf.lead_source                   AS lead_source,
     wtf.parent_name                   AS full_name,
     wtf.parent_email                  AS email,
     wtf.parent_phone                  AS phone_number,
