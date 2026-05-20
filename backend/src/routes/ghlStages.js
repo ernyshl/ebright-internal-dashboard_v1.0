@@ -138,7 +138,7 @@ router.post('/webhook', async (req, res) => {
         if (stageKey === 'NL') {
           sendDoubleFireAlert({
             botToken: env.TELEGRAM_BOT_TOKEN,
-            chatIds: (env.TELEGRAM_ALLOWED_CHATS || '').split(',').map(s => s.trim()).filter(Boolean),
+            chatIds: (env.TELEGRAM_ALERT_CHATS || '').split(',').map(s => s.trim()).filter(Boolean),
             pipelineName: pipelineName || exists[0].pipeline_name,
             email,
             leadName: opportunityName || studentName,

@@ -64,6 +64,8 @@ const LEADS_SRC = `(
     WHERE lower(ml.form_name) ILIKE ('%' || lower(keyword) || '%')
     LIMIT 1
   ) bm2 ON true
+  WHERE ml.form_name NOT ILIKE '%COACH%'
+    AND ml.form_name NOT ILIKE '% PT %'
 
   UNION ALL
 
@@ -114,6 +116,42 @@ const LEADS_SRC = `(
   FROM raw_wix_leads rw
   CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(rw.children_count, 1), 1)) gs(gs)
   LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(rw.raw_branch_text)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM wix_trial_form_leads wtf
+    WHERE lower(wtf.parent_email) = lower(rw.email)
+  )
+
+  UNION ALL
+
+  SELECT
+    'Google Lead Form'::text AS lead_source,
+    gl.full_name,
+    gl.email,
+    gl.phone             AS phone_number,
+    NULL::text           AS child_name,
+    gl.campaign_name,
+    gl.branch            AS clean_branch,
+    gl.branch_raw        AS raw_branch_text,
+    NULL::text           AS region,
+    (gl.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::timestamp AS submitted_at
+  FROM google_ads_leads gl
+  WHERE gl.is_test = false
+
+  UNION ALL
+
+  SELECT
+    wtf.lead_source                              AS lead_source,
+    wtf.parent_name                              AS full_name,
+    wtf.parent_email                             AS email,
+    wtf.parent_phone                             AS phone_number,
+    (wtf.children -> (gs.gs - 1)) ->> 'name'        AS child_name,
+    wtf.utm_campaign                             AS campaign_name,
+    wtf.branch                                   AS clean_branch,
+    wtf.preferred_branch                         AS raw_branch_text,
+    NULL::text                                   AS region,
+    (wtf.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::timestamp AS submitted_at
+  FROM wix_trial_form_leads wtf
+  CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(wtf.children_count, 1), 1)) gs(gs)
 ) AS leads_view`;
 
 function sanitizeSearchTerm(term) {
