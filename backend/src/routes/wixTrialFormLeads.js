@@ -149,7 +149,7 @@ async function ghlRequest(method, path, token, body) {
   });
 }
 
-async function pushToGHL(fullName, email, phone, locationKey) {
+async function pushToGHL(fullName, email, phone, locationKey, leadSource) {
   const locationConfig = LOCATION_MAPPING[locationKey];
   if (!locationConfig) {
     console.warn(`[Wix Trial → GHL] No location config for key: ${locationKey}`);
@@ -169,7 +169,7 @@ async function pushToGHL(fullName, email, phone, locationKey) {
     lastName,
     email,
     phone,
-    source: 'Trial Class Form',
+    source: leadSource,
     tags,
   });
 
@@ -202,7 +202,7 @@ async function pushToGHL(fullName, email, phone, locationKey) {
     contactId,
     name:   `${fullName} [#${uniqueId}]`,
     status: 'open',
-    source: 'Trial Class Form',
+    source: leadSource,
   });
 
   console.log(`[Wix Trial → GHL] Contact + opportunity created for ${email} in ${locationKey}`);
@@ -276,7 +276,7 @@ router.post('/webhook', async (req, res) => {
     );
 
     if (locationKey) {
-      pushToGHL(parentName, parentEmail, parentPhone, locationKey)
+      pushToGHL(parentName, parentEmail, parentPhone, locationKey, leadSource)
         .catch(err => console.error('[Wix Trial → GHL] push failed:', err.message));
     } else {
       console.warn(`[Wix Trial] Could not resolve GHL location key for: ${rawLocationKey}`);
