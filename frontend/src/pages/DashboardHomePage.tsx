@@ -140,8 +140,6 @@ export function DashboardHomePage() {
         { label: 'Branch Performance', path: '/branch-performance', dashboard: 'testing' },
         { label: 'To Tally', path: '/tally', dashboard: 'testing' },
         { label: 'UI/UX Testing', path: '/ui-ux-testing', dashboard: 'testing' },
-        { label: 'Testing NL to CT Breakdown', path: '/nl-to-ct', dashboard: 'testing' },
-        { label: 'Manage NL to CT Tabs', path: '/nl-to-ct/manage', dashboard: 'testing' },
       ]
     },
     {
@@ -153,6 +151,8 @@ export function DashboardHomePage() {
         { label: 'Leads Dashboard v2', path: '/leads-dashboard-v2', dashboard: 'manjeet' },
         { label: 'Day Distribution',    path: '/day-distribution',    dashboard: 'manjeet' },
         { label: 'Time Slot Distribution', path: '/time-slot-distribution', dashboard: 'manjeet' },
+        { label: 'NL to CT Breakdown', path: '/nl-to-ct', dashboard: 'manjeet' },
+        { label: 'Manage NL to CT Tabs', path: '/nl-to-ct/manage', dashboard: 'manjeet' },
       ]
     },
     {

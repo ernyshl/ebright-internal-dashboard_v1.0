@@ -16,7 +16,7 @@ const {
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireDashboard('testing'));
+router.use(requireDashboard('manjeet'));
 
 // ─── helpers ──────────────────────────────────────────────────────────
 function parseWeekDateFromTabName(tabName) {

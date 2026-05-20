@@ -78,9 +78,9 @@ function CaptureModal({ tabId, slot, payload, onClose, onCaptured }: CaptureModa
 // ─── Cell colouring (grid view) ───────────────────────────────────────
 function cellTint(goal: number | null, actual: number | null): string | undefined {
   if (actual == null || goal == null) return undefined;
-  if (actual === 0)   return 'var(--brandLight)';     // red (theme-aware)
-  if (actual >= goal) return 'var(--successLight)';   // green
-  return 'var(--warningLight)';                       // yellow
+  if (actual === 0)   return 'var(--tint-danger)';    // red (theme-aware)
+  if (actual >= goal) return 'var(--tint-success)';   // green
+  return 'var(--tint-warning)';                       // yellow
 }
 
 // ─── Grid view ────────────────────────────────────────────────────────
@@ -129,17 +129,17 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
   }, [payload, prev]);
 
   return (
-    <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
+    <table style={{ borderCollapse: 'collapse', fontSize: 15, minWidth: 1000, color: 'var(--text)' }}>
       <thead>
         <tr>
-          <th style={{ padding: '6px 10px', background: 'var(--borderLight)', border: '1px solid var(--border)' }} rowSpan={3}>Branch</th>
-          <th style={{ padding: '6px 10px', background: 'var(--warningLight)', border: '1px solid var(--border)' }} rowSpan={3}>NL</th>
-          <th style={{ padding: '6px 10px', background: 'var(--warningLight)', border: '1px solid var(--border)' }} rowSpan={3}>CT @ 40%</th>
+          <th style={{ padding: '10px 14px', background: 'var(--borderLight)', border: '1px solid var(--border)' }} rowSpan={3}>Branch</th>
+          <th style={{ padding: '10px 14px', background: 'var(--warningLight)', border: '1px solid var(--border)' }} rowSpan={3}>NL</th>
+          <th style={{ padding: '10px 14px', background: 'var(--warningLight)', border: '1px solid var(--border)' }} rowSpan={3}>CT @ 40%</th>
           {SLOTS_BY_DAY.map(group => (
             <th
               key={group.day}
               colSpan={group.slots.length * 2}
-              style={{ padding: '6px 10px', background: 'var(--infoLight)', border: '1px solid var(--border)', textAlign: 'center' }}
+              style={{ padding: '10px 14px', background: 'var(--infoLight)', border: '1px solid var(--border)', textAlign: 'center' }}
             >
               {group.day === 'Wed' ? 'Wednesday' : group.day === 'Thu' ? 'Thursday' : 'Friday'}
             </th>
@@ -152,7 +152,7 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
               <th
                 key={slot.key}
                 colSpan={2}
-                style={{ padding: '6px 10px', background: 'var(--infoLight)', border: '1px solid var(--border)', textAlign: 'center' }}
+                style={{ padding: '10px 14px', background: 'var(--infoLight)', border: '1px solid var(--border)', textAlign: 'center' }}
               >
                 {slot.time}{' '}
                 <button
@@ -169,29 +169,29 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
         </tr>
         <tr>
           {TIME_SLOTS.flatMap(slot => [
-            <th key={`${slot.key}-g`} style={{ padding: '4px 8px', border: '1px solid var(--border)' }}>Goal</th>,
-            <th key={`${slot.key}-a`} style={{ padding: '4px 8px', border: '1px solid var(--border)' }}>Actual</th>,
+            <th key={`${slot.key}-g`} style={{ padding: '8px 12px', border: '1px solid var(--border)' }}>Goal</th>,
+            <th key={`${slot.key}-a`} style={{ padding: '8px 12px', border: '1px solid var(--border)' }}>Actual</th>,
           ])}
         </tr>
       </thead>
       <tbody>
         {/* Totals row — bold, grey, centered */}
         <tr style={{ background: 'var(--border)', fontWeight: 700 }}>
-          <td style={{ padding: '6px 10px', border: '1px solid var(--border)', textAlign: 'center' }}>Total</td>
-          <td style={{ padding: '6px 10px', border: '1px solid var(--border)', textAlign: 'center' }}>{totals.nl}</td>
-          <td style={{ padding: '6px 10px', border: '1px solid var(--border)', textAlign: 'center' }}>{totals.ct}</td>
+          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', textAlign: 'center' }}>Total</td>
+          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', textAlign: 'center' }}>{totals.nl}</td>
+          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', textAlign: 'center' }}>{totals.ct}</td>
           {TIME_SLOTS.flatMap(slot => {
             const g = totals.slotGoals[slot.key];
             const a = totals.slotActuals[slot.key];
             return [
-              <td key={`total-${slot.key}-g`} style={{ padding: '6px 10px', border: '1px solid var(--border)', textAlign: 'center' }}>{g}</td>,
-              <td key={`total-${slot.key}-a`} style={{ padding: '6px 10px', border: '1px solid var(--border)', textAlign: 'center' }}>
+              <td key={`total-${slot.key}-g`} style={{ padding: '10px 14px', border: '1px solid var(--border)', textAlign: 'center' }}>{g}</td>,
+              <td key={`total-${slot.key}-a`} style={{ padding: '10px 14px', border: '1px solid var(--border)', textAlign: 'center' }}>
                 <div>{a}</div>
                 {prev && (() => {
                   const prevA = totals.slotPrevActuals[slot.key];
                   const delta = a - prevA;
                   return (
-                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2, fontWeight: 500 }}>
+                    <div style={{ fontSize: 11, color: 'var(--textSecondary)', marginTop: 3, fontWeight: 500 }}>
                       prev {prevA}{' '}
                       <span style={{ color: delta >= 0 ? 'var(--success)' : 'var(--brand)' }}>
                         ({delta >= 0 ? '+' : ''}{delta})
@@ -207,24 +207,24 @@ function GridView({ payload, prev, onCaptureSlot }: GridViewProps) {
           const bd = byCode.get(b.code);
           return (
             <tr key={b.code}>
-              <td style={{ padding: '4px 8px', border: '1px solid var(--border)', fontWeight: 600 }}>{b.code}</td>
-              <td style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'var(--warningLight)', textAlign: 'center' }}>{bd?.nl ?? '—'}</td>
-              <td style={{ padding: '4px 8px', border: '1px solid var(--border)', background: 'var(--warningLight)', textAlign: 'center' }}>{bd?.ct ?? '—'}</td>
+              <td style={{ padding: '8px 12px', border: '1px solid var(--border)', fontWeight: 600 }}>{b.code}</td>
+              <td style={{ padding: '8px 12px', border: '1px solid var(--border)', background: 'var(--warningLight)', textAlign: 'center' }}>{bd?.nl ?? '—'}</td>
+              <td style={{ padding: '8px 12px', border: '1px solid var(--border)', background: 'var(--warningLight)', textAlign: 'center' }}>{bd?.ct ?? '—'}</td>
               {TIME_SLOTS.flatMap(slot => {
                 const sd = bd?.slots.find(s => s.slot_key === slot.key);
                 const goal = sd?.goal ?? null;
                 const displayActual = sd?.actual_captured ?? sd?.actual_live ?? null;
                 const tint = cellTint(goal, displayActual);
                 return [
-                  <td key={`${b.code}-${slot.key}-g`} style={{ padding: '4px 8px', border: '1px solid var(--border)', textAlign: 'center' }}>{goal ?? '—'}</td>,
-                  <td key={`${b.code}-${slot.key}-a`} style={{ padding: '4px 8px', border: '1px solid var(--border)', textAlign: 'center', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
+                  <td key={`${b.code}-${slot.key}-g`} style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center' }}>{goal ?? '—'}</td>,
+                  <td key={`${b.code}-${slot.key}-a`} style={{ padding: '8px 12px', border: '1px solid var(--border)', textAlign: 'center', background: tint, fontWeight: sd?.actual_captured != null ? 600 : 400 }}>
                     <div>{displayActual ?? '—'}</div>
                     {prev && (() => {
                       const psd = prevByCode.get(b.code)?.slots.find(s => s.slot_key === slot.key);
                       const prevA = psd?.actual_captured ?? psd?.actual_live ?? null;
                       const delta = displayActual != null && prevA != null ? displayActual - prevA : null;
                       return (
-                        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: 'var(--textSecondary)', marginTop: 3 }}>
                           prev {prevA ?? '—'}{' '}
                           {delta != null && (
                             <span style={{ color: delta >= 0 ? 'var(--success)' : 'var(--brand)' }}>

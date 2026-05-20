@@ -87,6 +87,13 @@
   --warningLight: rgba(217, 119, 6, 0.1);
   --infoLight: rgba(2, 132, 199, 0.1);
 
+  /* Stronger tints for cell backgrounds (NL-to-CT grid/cards/tiles).
+     0.22 alpha keeps colour meaningful against dark surfaces without
+     drowning the foreground text. */
+  --tint-success: rgba(5, 150, 105, 0.22);
+  --tint-warning: rgba(217, 119, 6, 0.22);
+  --tint-danger:  rgba(220, 38, 38, 0.22);
+
   /* Component Background Overrides */
   --inputBg: rgba(30, 41, 59, 0.5);
   --inputBgFocus: rgba(30, 41, 59, 0.8);

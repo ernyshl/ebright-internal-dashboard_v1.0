@@ -219,10 +219,10 @@ export default function App() {
             <RequirePermission dashboard="testing"><UiUxTestingPage /></RequirePermission>
           } />
           <Route path="/nl-to-ct/manage" element={
-            <RequirePermission dashboard="testing"><NlToCtTabsPage /></RequirePermission>
+            <RequirePermission dashboard="manjeet"><NlToCtTabsPage /></RequirePermission>
           } />
           <Route path="/nl-to-ct" element={
-            <RequirePermission dashboard="testing"><NlToCtBreakdownPage /></RequirePermission>
+            <RequirePermission dashboard="manjeet"><NlToCtBreakdownPage /></RequirePermission>
           } />
           <Route path="/adam-testing" element={
             <RequirePermission roles={['super_admin']}><AdamTestingPage /></RequirePermission>
