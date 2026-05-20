@@ -33,6 +33,7 @@ export function StudentDatabasePage() {
   const navigate = useNavigate();
   const { dbStudents: students, setDbStudents: setStudents, sharedBranch, setSharedBranch } = useAcademy();
   const [branchFilter, setBranchFilter] = useState(sharedBranch);
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
   const [packageStatusFilter, setPackageStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Expired' | 'Unenrolled'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortKey, setSortKey] = useState<'enrollmentDate' | 'creditExpiryDate' | null>(null);
@@ -68,7 +69,7 @@ export function StudentDatabasePage() {
   }, []);
 
   // Reset to page 1 when filter/search changes so user doesn't land on an empty later page
-  useEffect(() => { setCurrentPage(1); }, [branchFilter, searchQuery, packageStatusFilter]);
+  useEffect(() => { setCurrentPage(1); }, [branchFilter, searchQuery, packageStatusFilter, statusFilter]);
 
   function handleBranchChange(branch: string) {
     setBranchFilter(branch);
@@ -78,9 +79,13 @@ export function StudentDatabasePage() {
   const branchFiltered = branchFilter === 'All' ? students : students.filter(s => s.branch === branchFilter);
   const activeFiltered = branchFiltered.filter(s => s.status === 'Active');
 
-  const pkgFiltered = packageStatusFilter === 'All'
+  const statusFiltered = statusFilter === 'All'
     ? branchFiltered
-    : branchFiltered.filter(s => String(s.packageStatus || '').trim().toLowerCase() === packageStatusFilter.toLowerCase());
+    : branchFiltered.filter(s => s.status === statusFilter);
+
+  const pkgFiltered = packageStatusFilter === 'All'
+    ? statusFiltered
+    : statusFiltered.filter(s => String(s.packageStatus || '').trim().toLowerCase() === packageStatusFilter.toLowerCase());
 
   const q = searchQuery.trim().toLowerCase();
   const searchFiltered = q ? pkgFiltered.filter(s => s.name.toLowerCase().includes(q)) : pkgFiltered;
@@ -378,6 +383,13 @@ export function StudentDatabasePage() {
           {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
 
+        <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>Student Status:</span>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} style={{ fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', background:'var(--bg)', color:'var(--text)', outline:'none' }}>
+          <option value="All">All</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+
         <span style={{ fontSize:13, fontWeight:600, color:'var(--text)' }}>Package Status:</span>
         <select value={packageStatusFilter} onChange={e => setPackageStatusFilter(e.target.value as any)} style={{ fontSize:13, border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', background:'var(--bg)', color:'var(--text)', outline:'none' }}>
           <option value="All">All</option>
@@ -404,15 +416,16 @@ export function StudentDatabasePage() {
           )}
         </div>
 
-        {(branchFilter !== 'All' || q || packageStatusFilter !== 'All') && (
+        {(branchFilter !== 'All' || q || packageStatusFilter !== 'All' || statusFilter !== 'All') && (
           <span style={{ fontSize:13, color:'#4f46e5', fontWeight:500 }}>
             Showing {displayed.length === 0 ? 0 : `${pageStart + 1}-${pageEnd}`} of {displayed.length} student{displayed.length!==1?'s':''}
             {branchFilter !== 'All' ? ` in ${branchFilter}` : ''}
+            {statusFilter !== 'All' ? ` · ${statusFilter}` : ''}
             {packageStatusFilter !== 'All' ? ` · ${packageStatusFilter}` : ''}
             {q ? ` matching "${searchQuery.trim()}"` : ''}
           </span>
         )}
-        {(branchFilter === 'All' && !q && packageStatusFilter === 'All') && displayed.length > 0 && (
+        {(branchFilter === 'All' && !q && packageStatusFilter === 'All' && statusFilter === 'All') && displayed.length > 0 && (
           <span style={{ fontSize:13, color:'var(--muted)', fontWeight:500 }}>
             Showing {pageStart + 1}-{pageEnd} of {displayed.length}
           </span>
