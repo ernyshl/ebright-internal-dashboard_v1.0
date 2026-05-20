@@ -116,6 +116,10 @@ const LEADS_SRC = `(
   FROM raw_wix_leads rw
   CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(rw.children_count, 1), 1)) gs(gs)
   LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(rw.raw_branch_text)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM wix_trial_form_leads wtf
+    WHERE lower(wtf.parent_email) = lower(rw.email)
+  )
 
   UNION ALL
 
@@ -136,17 +140,18 @@ const LEADS_SRC = `(
   UNION ALL
 
   SELECT
-    wtf.lead_source                   AS lead_source,
-    wtf.parent_name                   AS full_name,
-    wtf.parent_email                  AS email,
-    wtf.parent_phone                  AS phone_number,
-    (wtf.children->0->>'name')::text  AS child_name,
-    wtf.utm_campaign                  AS campaign_name,
-    wtf.branch                        AS clean_branch,
-    wtf.preferred_branch              AS raw_branch_text,
-    NULL::text                        AS region,
+    wtf.lead_source                              AS lead_source,
+    wtf.parent_name                              AS full_name,
+    wtf.parent_email                             AS email,
+    wtf.parent_phone                             AS phone_number,
+    (wtf.children -> (gs.gs - 1)) ->> 'name'        AS child_name,
+    wtf.utm_campaign                             AS campaign_name,
+    wtf.branch                                   AS clean_branch,
+    wtf.preferred_branch                         AS raw_branch_text,
+    NULL::text                                   AS region,
     (wtf.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::timestamp AS submitted_at
   FROM wix_trial_form_leads wtf
+  CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(wtf.children_count, 1), 1)) gs(gs)
 ) AS leads_view`;
 
 function sanitizeSearchTerm(term) {
