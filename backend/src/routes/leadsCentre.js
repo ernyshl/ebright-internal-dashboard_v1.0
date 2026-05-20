@@ -114,6 +114,22 @@ const LEADS_SRC = `(
   FROM raw_wix_leads rw
   CROSS JOIN LATERAL generate_series(1, GREATEST(COALESCE(rw.children_count, 1), 1)) gs(gs)
   LEFT JOIN branch_mapping bm ON lower(bm.keyword) = lower(rw.raw_branch_text)
+
+  UNION ALL
+
+  SELECT
+    'Google Lead Form'::text AS lead_source,
+    gl.full_name,
+    gl.email,
+    gl.phone             AS phone_number,
+    NULL::text           AS child_name,
+    gl.campaign_name,
+    gl.branch            AS clean_branch,
+    gl.branch_raw        AS raw_branch_text,
+    NULL::text           AS region,
+    (gl.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::timestamp AS submitted_at
+  FROM google_ads_leads gl
+  WHERE gl.is_test = false
 ) AS leads_view`;
 
 function sanitizeSearchTerm(term) {

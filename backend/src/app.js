@@ -43,6 +43,7 @@ const { coachBmPerformanceRouter } = require('./routes/coachBmPerformance');
 const { salestrailRouter } = require('./routes/salestrail');
 const { hikEventsRouter } = require('./routes/hikEvents');
 const { nlToCtRouter } = require('./routes/nlToCt');
+const { googleAdsLeadsRouter } = require('./routes/googleAdsLeads');
 
 const jwt = require('jsonwebtoken');
 
@@ -187,6 +188,7 @@ function createApp() {
   app.use('/api/branch-performance', applyRoleBasedRateLimit, branchPerformanceRouter);
   app.use('/api/salestrail', applyRoleBasedRateLimit, salestrailRouter);
   app.use('/api/nl-to-ct', applyRoleBasedRateLimit, nlToCtRouter);
+  app.use('/api/google-ads-leads', googleAdsLeadsRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars

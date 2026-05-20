@@ -36,6 +36,7 @@ router.get('/breakdown', requireAuth, requireRole(['super_admin', 'ceo', 'rm', '
             WHEN LOWER(TRIM(lead_source)) IN ('self generated lead','self-generated lead','selfgenerated lead','self generated','self-generated','sgl','s.g.l') THEN 'Self Generated Lead'
             WHEN LOWER(TRIM(lead_source)) IN ('walk in','walk-in','walkin','walk_in')    THEN 'Walk In'
             WHEN LOWER(TRIM(lead_source)) = 'website'                                    THEN 'Website'
+            WHEN LOWER(TRIM(lead_source)) = 'google lead form'                          THEN 'Google Lead Form'
             ELSE 'Others'
           END                                                          AS lead_source_cat,
           CASE
