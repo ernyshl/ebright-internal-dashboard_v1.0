@@ -102,17 +102,17 @@ export function NlToCtTabsPage() {
         </button>
       </form>
       {error && (
-        <div style={{ background: '#fde2e2', color: '#8a1f1f', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
+        <div style={{ background: 'var(--brandLight)', color: 'var(--brand)', padding: '8px 12px', borderRadius: 4, marginBottom: 16 }}>
           {error}
         </div>
       )}
 
       {tabsQ.isLoading && <p>Loading…</p>}
-      {tabsQ.error && <p style={{ color: '#8a1f1f' }}>Failed to load tabs.</p>}
+      {tabsQ.error && <p style={{ color: 'var(--brand)' }}>Failed to load tabs.</p>}
       {tabsQ.data && (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: 8 }}>Week date</th>
               <th style={{ padding: 8 }}>Tab name</th>
               <th style={{ padding: 8 }}>gid</th>
@@ -125,7 +125,7 @@ export function NlToCtTabsPage() {
               <tr><td colSpan={5} style={{ padding: 16, color: 'var(--muted)' }}>No tabs registered yet.</td></tr>
             )}
             {tabsQ.data.tabs.map((t) => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={t.id} style={{ borderBottom: '1px solid var(--borderLight)' }}>
                 <td style={{ padding: 8 }}>{formatWeekDate(t.week_date)}</td>
                 <td style={{ padding: 8 }}>{t.tab_name}</td>
                 <td style={{ padding: 8, fontFamily: 'monospace' }}>{t.gid}</td>
