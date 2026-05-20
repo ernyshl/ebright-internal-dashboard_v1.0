@@ -258,9 +258,9 @@ function CardsView({ payload, prev }: CardsViewProps) {
   }
   function rowTint(goal: number | null, actual: number | null): string {
     if (actual == null || goal == null) return 'var(--borderLight)';
-    if (actual === 0) return 'var(--brandLight)';
-    if (actual >= goal) return 'var(--successLight)';
-    return 'var(--warningLight)';
+    if (actual === 0) return 'var(--tint-danger)';
+    if (actual >= goal) return 'var(--tint-success)';
+    return 'var(--tint-warning)';
   }
   const dayName = (d: 'Wed' | 'Thu' | 'Fri') => d === 'Wed' ? 'Wed' : d === 'Thu' ? 'Thu' : 'Fri';
 
@@ -291,12 +291,13 @@ function CardsView({ payload, prev }: CardsViewProps) {
             key={b.code}
             style={{
               background: 'var(--panel)',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--border)',
               borderRadius: 10,
               boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
+              color: 'var(--text)',
             }}
           >
             {/* Header: branch + overall % */}
@@ -304,18 +305,18 @@ function CardsView({ payload, prev }: CardsViewProps) {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '12px 14px',
-              borderBottom: '1px solid #f3f4f6',
+              padding: '14px 16px',
+              borderBottom: '1px solid var(--borderLight)',
             }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>{b.code}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>{b.code}</div>
+                <div style={{ fontSize: 13, color: 'var(--textSecondary)', marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
                   NL {b.nl ?? '—'} · CT {b.ct ?? '—'}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                <span style={{ fontSize: 22, fontWeight: 700, color: t.accent, lineHeight: 1 }}>{pct}%</span>
-                <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 26, fontWeight: 700, color: t.accent, lineHeight: 1 }}>{pct}%</span>
+                <span style={{ fontSize: 13, color: 'var(--textSecondary)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
                   {actualSum}<span style={{ color: 'var(--muted)' }}> / {goalSum}</span>
                 </span>
               </div>
@@ -330,19 +331,19 @@ function CardsView({ payload, prev }: CardsViewProps) {
                     key={r.slot.key}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '32px 60px 1fr auto',
+                      gridTemplateColumns: '36px 72px 1fr auto',
                       alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 14px',
+                      gap: 8,
+                      padding: '10px 16px',
                       background: rowTint(r.goal, r.actual),
-                      borderTop: r.showDay ? '1px solid #f3f4f6' : 'none',
-                      fontSize: 12,
+                      borderTop: r.showDay ? '1px solid var(--borderLight)' : 'none',
+                      fontSize: 14,
                     }}
                   >
-                    <span style={{ fontSize: 11, fontWeight: 600, color: r.showDay ? 'var(--textSecondary)' : 'transparent' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: r.showDay ? 'var(--textSecondary)' : 'transparent' }}>
                       {dayName(r.slot.day)}
                     </span>
-                    <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ color: 'var(--textSecondary)', fontVariantNumeric: 'tabular-nums' }}>
                       {r.slot.time}
                     </span>
                     <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: 'var(--text)' }}>
@@ -350,11 +351,11 @@ function CardsView({ payload, prev }: CardsViewProps) {
                     </span>
                     {prev && (
                       <span style={{
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
-                        color: delta == null ? 'var(--muted)' : delta >= 0 ? 'var(--success)' : 'var(--brand)',
+                        color: delta == null ? 'var(--textSecondary)' : delta >= 0 ? 'var(--success)' : 'var(--brand)',
                         fontVariantNumeric: 'tabular-nums',
-                        minWidth: 32,
+                        minWidth: 40,
                         textAlign: 'right',
                       }}>
                         {delta == null ? '—' : `${delta >= 0 ? '▲' : '▼'}${Math.abs(delta)}`}
