@@ -244,6 +244,8 @@ router.post('/webhook', async (req, res) => {
     const branch         = locationKey ? (LOCATION_KEY_TO_OFFICIAL[locationKey] || null) : null;
     const children       = Array.isArray(payload.children) ? payload.children : [];
     const childrenCount  = Number(payload.childrenCount) || children.length;
+    const leadSource     = (payload.lead_source || 'Trial Class Form').trim();
+    const leadSourceKey  = leadSource.toLowerCase().replace(/\s+/g, '_');
 
     await pool.query(
       `INSERT INTO wix_trial_form_leads
@@ -259,7 +261,7 @@ router.post('/webhook', async (req, res) => {
         payload.remarks || '',
         payload.utm_source || '', payload.utm_medium || '',
         payload.utm_campaign || '', payload.utm_content || '', payload.utm_term || '',
-        'Trial Class Form',
+        leadSource,
         payload.landing_page_url || '', payload.device_type || '',
         payload.fbclid || '', payload.gclid || '',
         JSON.stringify(payload),
@@ -268,9 +270,9 @@ router.post('/webhook', async (req, res) => {
 
     await pool.query(
       `INSERT INTO master_leads_base (source, full_name, email, phone, branch, submission_date, campaign_name)
-       VALUES ('trial_class_form', $1, $2, $3, $4, NOW(), $5)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6)
        ON CONFLICT DO NOTHING`,
-      [parentName, parentEmail, parentPhone, branch, payload.utm_campaign || null]
+      [leadSourceKey, parentName, parentEmail, parentPhone, branch, payload.utm_campaign || null]
     );
 
     if (locationKey) {
