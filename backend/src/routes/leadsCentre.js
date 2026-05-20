@@ -130,6 +130,21 @@ const LEADS_SRC = `(
     (gl.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::timestamp AS submitted_at
   FROM google_ads_leads gl
   WHERE gl.is_test = false
+
+  UNION ALL
+
+  SELECT
+    'Trial Class Form'::text          AS lead_source,
+    wtf.parent_name                   AS full_name,
+    wtf.parent_email                  AS email,
+    wtf.parent_phone                  AS phone_number,
+    (wtf.children->0->>'name')::text  AS child_name,
+    wtf.utm_campaign                  AS campaign_name,
+    wtf.branch                        AS clean_branch,
+    wtf.preferred_branch              AS raw_branch_text,
+    NULL::text                        AS region,
+    (wtf.received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::timestamp AS submitted_at
+  FROM wix_trial_form_leads wtf
 ) AS leads_view`;
 
 function sanitizeSearchTerm(term) {

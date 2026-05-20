@@ -44,6 +44,7 @@ const { salestrailRouter } = require('./routes/salestrail');
 const { hikEventsRouter } = require('./routes/hikEvents');
 const { nlToCtRouter } = require('./routes/nlToCt');
 const { googleAdsLeadsRouter } = require('./routes/googleAdsLeads');
+const { wixTrialFormLeadsRouter } = require('./routes/wixTrialFormLeads');
 
 const jwt = require('jsonwebtoken');
 
@@ -189,6 +190,7 @@ function createApp() {
   app.use('/api/salestrail', applyRoleBasedRateLimit, salestrailRouter);
   app.use('/api/nl-to-ct', applyRoleBasedRateLimit, nlToCtRouter);
   app.use('/api/google-ads-leads', googleAdsLeadsRouter);
+  app.use('/api/wix-trial-form', wixTrialFormLeadsRouter);
 
   // Error handler
   // eslint-disable-next-line no-unused-vars
