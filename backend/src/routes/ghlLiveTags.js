@@ -120,7 +120,7 @@ async function buildData(dateFrom, dateTo) {
       })
     )
   );
-  return { branches: results };
+  return { branches: results, fetchedAt: new Date().toISOString() };
 }
 
 // 5-minute in-memory cache with stale-while-revalidate.
@@ -163,7 +163,7 @@ router.get('/by-branch', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
     // Cold cache — wait for full fetch then store and return
     const data = await buildData(date_from, date_to);
     cache.set(cacheKey, { data, ts: Date.now() });
-    return res.json(data);
+    return res.json({ ...data, isStale: false });
   } catch (err) {
     return next(err);
   }
