@@ -5,7 +5,11 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 const ALLOWED_ROLES = ['super_admin', 'ceo', 'hr', 'tv'];
 
-// GET /api/hr-mc/dashboard — approved SL (sick leave) from -7 days to today.
+// GET /api/hr-mc/dashboard — every approved non-AL leave row from -7 days
+// to today. Card is labelled "MC" but intentionally catches every non-AL
+// type (SL, UL, CL, HDL, ...) — HR asked for this on 2026-05-21 so
+// unpaid-leave / no-show absences also surface here, not just sick leave.
+//
 // Source: hrfs."LeaveTransaction" FDW → ebright_hrfs.public.LeaveTransaction,
 // fed hourly from the Autocount Payroll API by leave_import.py. The CRUD
 // endpoints below still operate on the older public.hr_mc table — it's a
@@ -44,7 +48,8 @@ router.get('/dashboard', requireAuth, requireRole(ALLOWED_ROLES), async (_req, r
          OR (m.branchstaff_id IS NULL
              AND rn.name_from_lt IS NOT NULL
              AND UPPER(TRIM(bs.name)) = UPPER(TRIM(rn.name_from_lt)))
-       WHERE lt."LeaveTypeCode" = 'SL'
+       WHERE lt."LeaveTypeCode" IS NOT NULL
+         AND lt."LeaveTypeCode" <> 'AL'
          AND lt."ApplyStatus" = 'A'
          AND lt."LeaveDate"::date >= CURRENT_DATE - INTERVAL '7 days'
          AND lt."LeaveDate"::date <= CURRENT_DATE
