@@ -123,10 +123,6 @@ async function buildData(dateFrom, dateTo) {
   return { branches: results, fetchedAt: new Date().toISOString() };
 }
 
-// 5-minute in-memory cache with stale-while-revalidate.
-// After the first cold load, every request returns instantly from cache.
-// When the cache entry is older than CACHE_TTL the stale data is still served
-// immediately and a background refresh runs so the *next* request is fresh.
 const cache = new Map();
 const refreshing = new Set();
 const CACHE_TTL = 5 * 60 * 1000;
@@ -139,6 +135,35 @@ function bgRefresh(cacheKey, dateFrom, dateTo) {
     .catch((err) => console.error('[ghl-live-tags] bg refresh error:', err.message))
     .finally(() => refreshing.delete(cacheKey));
 }
+
+// Returns YYYY-MM-DD for today in KL time.
+function todayKL() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+}
+
+// Returns { dateFrom, dateTo } for the current ISO week (Mon–today) in KL time.
+function thisWeekKL() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+  const day = now.getDay(); // 0 = Sun
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  return {
+    dateFrom: mon.toLocaleDateString('en-CA'),
+    dateTo:   now.toLocaleDateString('en-CA'),
+  };
+}
+
+// Pre-warm Today + This Week on startup and every 5 minutes so the cache
+// is always hot. Users only wait on cold load in the first ~60s after restart.
+function warmup() {
+  const today = todayKL();
+  const week  = thisWeekKL();
+  bgRefresh(`${today}|${today}`,          today,          today);
+  bgRefresh(`${week.dateFrom}|${week.dateTo}`, week.dateFrom, week.dateTo);
+}
+
+warmup();
+setInterval(warmup, CACHE_TTL);
 
 // ──────────────────────────────────────────────────────────────
 // GET /api/ghl-live-tags/by-branch?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
