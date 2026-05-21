@@ -17,6 +17,7 @@ export function DashboardHomePage() {
       links: [
         { label: 'GHL Lead Centre', path: '/ghl-lead-centre', dashboard: 'operations_dept' },
         { label: 'GHL Dashboard (CT to NL)', path: '/ghl-dashboard', dashboard: 'operations_dept' },
+        { label: 'GHL Tag Dashboard', path: '/ghl-tag-dashboard', dashboard: 'operations_dept' },
         { label: 'CT with time slot', path: '/ct-with-time-slot', dashboard: 'operations_dept' },
         { label: 'Salestrail', path: '/salestrail', dashboard: 'operations_dept' },
       ]

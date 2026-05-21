@@ -47,6 +47,7 @@ const { googleAdsLeadsRouter } = require('./routes/googleAdsLeads');
 const { wixTrialFormLeadsRouter } = require('./routes/wixTrialFormLeads');
 const { metaLeadsRouter } = require('./routes/metaLeads');
 const { tiktokLeadsRouter } = require('./routes/tiktokLeads');
+const { ghlLiveTagsRouter } = require('./routes/ghlLiveTags');
 
 const jwt = require('jsonwebtoken');
 
@@ -164,6 +165,7 @@ function createApp() {
   app.use('/api/leads-centre', applyRoleBasedRateLimit, leadsCentreRouter);
   app.use('/api/devices', applyRoleBasedRateLimit, devicesRouter);
   app.use('/api/ghl-stages', applyRoleBasedRateLimit, ghlStagesRouter);
+  app.use('/api/ghl-live-tags', applyRoleBasedRateLimit, ghlLiveTagsRouter);
   app.use('/api/telegram', telegramBotRouter);
   app.use('/api/hr-staff-movements', applyRoleBasedRateLimit, hrStaffMovementsRouter);
   app.use('/api/hr-mc', applyRoleBasedRateLimit, hrMcRouter);

@@ -28,6 +28,7 @@ import { LeadsGhlViewPage } from './pages/LeadsGhlViewPage';
 import { PlatformBreakdownPage } from './pages/PlatformBreakdownPage';
 import { GhlLeadsCentrePage } from './pages/GhlLeadsCentrePage';
 import { GhlDashboardPage } from './pages/GhlDashboardPage';
+import { GhlTagDashboardPage } from './pages/GhlTagDashboardPage';
 import { TallyPage } from './pages/TallyPage';
 import { HrOnbOfbDashboardPage } from './pages/HrOnbOfbDashboardPage';
 import { HrStaffListPage } from './pages/HrStaffListPage';
@@ -193,6 +194,9 @@ export default function App() {
           } />
           <Route path="/ghl-dashboard" element={
             <RequirePermission dashboard="operations_dept"><GhlDashboardPage /></RequirePermission>
+          } />
+          <Route path="/ghl-tag-dashboard" element={
+            <RequirePermission dashboard="operations_dept"><GhlTagDashboardPage /></RequirePermission>
           } />
           <Route path="/tally" element={
             <RequirePermission dashboard="testing"><TallyPage /></RequirePermission>
