@@ -123,6 +123,14 @@ export function GhlTagDashboardPage() {
   });
 
   const branches: BranchRow[] = data?.branches || [];
+  const fetchedAt = data?.fetchedAt
+    ? new Date(data.fetchedAt).toLocaleString('en-MY', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+      })
+    : null;
 
   const byRegion: Record<string, BranchRow[]> = {
     'Overall':  branches,
@@ -139,6 +147,7 @@ export function GhlTagDashboardPage() {
           <h1 className="pageHeaderTitle">GHL Tag Dashboard</h1>
           <p className="headerSubtitle">
             NL (created) · CT / SU / ENR (updated) · {dateLabel} · Source: GHL API live tags
+            {fetchedAt && <span style={{ marginLeft: 8, opacity: 0.6 }}>· Last updated: {fetchedAt}</span>}
           </p>
         </div>
       </div>
