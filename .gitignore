@@ -112,3 +112,6 @@ Desktop.ini
 
 # Superpowers brainstorm workspace
 .superpowers/
+
+# Local diagnostic scripts (often contain hardcoded credentials — never commit)
+backend/check-login.js

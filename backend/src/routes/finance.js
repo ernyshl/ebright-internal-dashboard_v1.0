@@ -134,13 +134,32 @@ financeRouter.get('/branch-ranking', async (req, res, next) => {
 // docs/superpowers/specs/2026-05-05-finance-renewals-table-design.md
 financeRouter.get('/renewal-by-branch', async (req, res, next) => {
   try {
+    // Always validate month/year first — required even when a custom range
+    // is provided (frontend uses them as the queryKey, and we want a clean
+    // 400 on garbage input instead of `${undefined}-${undefined}-01`).
     const m = parseInt(req.query.month, 10);
     const y = parseInt(req.query.year, 10);
     if (!Number.isFinite(m) || !Number.isFinite(y) || m < 1 || m > 12 || y < 2000 || y > 2100) {
       return res.status(400).json({ error: 'Invalid month or year' });
     }
-    const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
-    const endDate = new Date(y, m, 0).toISOString().split('T')[0];
+    // Optional custom date range. Both ends must be ISO YYYY-MM-DD; if either
+    // fails the format check we silently ignore and fall back to the full
+    // month — the frontend already constrains the inputs to the selected
+    // month, so this is a defensive guard.
+    const { date_from, date_to } = req.query;
+    const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+    const useCustomRange =
+      typeof date_from === 'string' && isoRe.test(date_from) &&
+      typeof date_to   === 'string' && isoRe.test(date_to)   &&
+      date_from <= date_to;
+    let startDate, endDate;
+    if (useCustomRange) {
+      startDate = date_from;
+      endDate   = date_to;
+    } else {
+      startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+      endDate   = new Date(y, m, 0).toISOString().split('T')[0];
+    }
 
     // Drive off branch_map_autocount so every branch that can appear in
     // AutoCount-sourced renewals shows up, even with zero rows for the month.
