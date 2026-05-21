@@ -53,6 +53,14 @@ GROUP BY 1
 ORDER BY count DESC;
 "
 
+# Total including all siblings (for regional context).
+TOTAL_WITH_SIBLINGS_SQL="
+SELECT COUNT(*) as count
+FROM master_leads_powerbi
+WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+  AND TRIM(clean_branch) = ANY(ARRAY['Online','Subang Taipan','Sri Petaling','Setia Alam','Kota Damansara','Putrajaya','Ampang','Cyberjaya','Klang','Denai Alam','Bandar Baru Bangi','Danau Kota','Shah Alam','Bandar Tun Hussein Onn','Eco Grandeur','Bandar Seri Putra','Rimbayu','Kajang','Kota Warisan','Taman Sri Gombak','Dataran Puchong Utama','Tropicana Sungai Buloh','Puncak Jalil']);
+"
+
 # Total spend today — mirrors Marketing Performance "Main Marketing" total.
 # Main Marketing = FB (Group) + FB (Mokhir/Online) + TikTok + Google.
 # Sara is intentionally excluded (matches backend/src/routes/marketing.js
@@ -120,6 +128,7 @@ DB_FAILED=0
 LEADS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -F'|' -c \"$LEADS_SQL\"" 2>/dev/null) || DB_FAILED=1
 SPEND_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$SPEND_SQL\"" 2>/dev/null) || DB_FAILED=1
 SARA_LEADS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$SARA_LEADS_SQL\"" 2>/dev/null) || true
+TOTAL_WITH_SIBLINGS_RESULT=$(docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -t -A -c \"$TOTAL_WITH_SIBLINGS_SQL\"" 2>/dev/null) || true
 
 if [ "$DB_FAILED" -eq 1 ]; then
   broadcast "⚠️ *Ebright Report — Data unavailable*
@@ -152,6 +161,10 @@ done <<< "$LEADS_RESULT"
 # Parse Sara recruitment leads
 SARA_LEADS=$(echo "$SARA_LEADS_RESULT" | tr -d '[:space:]')
 SARA_LEADS=${SARA_LEADS:-0}
+
+# Parse total with siblings
+TOTAL_WITH_SIBLINGS=$(echo "$TOTAL_WITH_SIBLINGS_RESULT" | tr -d '[:space:]')
+TOTAL_WITH_SIBLINGS=${TOTAL_WITH_SIBLINGS:-0}
 
 # Parse spend
 TOTAL_SPEND=$(echo "$SPEND_RESULT" | tr -d '[:space:]')
@@ -192,7 +205,8 @@ TOTAL: *${SARA_LEADS}*
 
 *Executive Summary*
 ━━━━━━━━━━━━━━━━━━
-Total Leads Today: *${TOTAL}*
+TOTAL (without siblings): *${TOTAL}*
+TOTAL (with siblings): *${TOTAL_WITH_SIBLINGS}*
 Total Spend Today: *${FMT_SPEND}*
 Cost Per Lead: *${FMT_CPL}*"
 
@@ -202,26 +216,28 @@ broadcast "$MESSAGE"
 # the same figures that were just broadcast — avoids sync race conditions.
 CACHE_SQL="
 INSERT INTO telegram_report_cache
-  (report_date, meta_count, tiktok_count, website_conv, roadshow, sgl, walkin, website_org, others, total_leads, sara_leads, total_spend, cpl, updated_at)
+  (report_date, meta_count, tiktok_count, website_conv, roadshow, sgl, walkin, website_org, others,
+   total_leads, total_leads_with_siblings, sara_leads, total_spend, cpl, updated_at)
 VALUES (
   (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date,
-  ${META}, ${TIKTOK}, ${WEBSITE_CONV}, ${ROADSHOW}, ${SGL}, ${WALKIN}, ${WEBSITE_ORG}, ${OTHERS}, ${TOTAL}, ${SARA_LEADS},
-  ${TOTAL_SPEND}, ${CPL}, NOW()
+  ${META}, ${TIKTOK}, ${WEBSITE_CONV}, ${ROADSHOW}, ${SGL}, ${WALKIN}, ${WEBSITE_ORG}, ${OTHERS},
+  ${TOTAL}, ${TOTAL_WITH_SIBLINGS}, ${SARA_LEADS}, ${TOTAL_SPEND}, ${CPL}, NOW()
 )
 ON CONFLICT (report_date) DO UPDATE SET
-  meta_count   = EXCLUDED.meta_count,
-  tiktok_count = EXCLUDED.tiktok_count,
-  website_conv = EXCLUDED.website_conv,
-  roadshow     = EXCLUDED.roadshow,
-  sgl          = EXCLUDED.sgl,
-  walkin       = EXCLUDED.walkin,
-  website_org  = EXCLUDED.website_org,
-  others       = EXCLUDED.others,
-  total_leads  = EXCLUDED.total_leads,
-  sara_leads   = EXCLUDED.sara_leads,
-  total_spend  = EXCLUDED.total_spend,
-  cpl          = EXCLUDED.cpl,
-  updated_at   = NOW();
+  meta_count                = EXCLUDED.meta_count,
+  tiktok_count              = EXCLUDED.tiktok_count,
+  website_conv              = EXCLUDED.website_conv,
+  roadshow                  = EXCLUDED.roadshow,
+  sgl                       = EXCLUDED.sgl,
+  walkin                    = EXCLUDED.walkin,
+  website_org               = EXCLUDED.website_org,
+  others                    = EXCLUDED.others,
+  total_leads               = EXCLUDED.total_leads,
+  total_leads_with_siblings = EXCLUDED.total_leads_with_siblings,
+  sara_leads                = EXCLUDED.sara_leads,
+  total_spend               = EXCLUDED.total_spend,
+  cpl                       = EXCLUDED.cpl,
+  updated_at                = NOW();
 "
 docker exec "$DB_CONTAINER" sh -c "psql \$DATABASE_URL -q -c \"$CACHE_SQL\"" 2>/dev/null || true
 echo "Cache saved at $(date)"

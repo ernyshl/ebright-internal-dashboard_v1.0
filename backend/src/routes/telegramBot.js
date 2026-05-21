@@ -172,7 +172,7 @@ async function getLeadsByRegion() {
   return rows;
 }
 
-function buildReportMessage(leads, spend, saraLeads = 0, { isYesterday = false } = {}) {
+function buildReportMessage(leads, spend, saraLeads = 0, { isYesterday = false, totalWithSiblings = null } = {}) {
   const sources = ['Meta', 'TikTok', 'Website (Conversion)', 'Roadshow', 'Self Generated Lead', 'Walk In', 'Website (Organic)', 'Others'];
   const map = {};
   let total = 0;
@@ -191,7 +191,6 @@ function buildReportMessage(leads, spend, saraLeads = 0, { isYesterday = false }
   }
 
   const leadsLabel = isYesterday ? "Yesterday's Leads" : "Today's Leads";
-  const totalLabel = isYesterday ? 'Total Leads Yesterday' : 'Total Leads Today';
   const spendLabel = isYesterday ? 'Total Spend Yesterday' : 'Total Spend Today';
 
   let msg = `📊 *Ebright Daily Report*\n📅 ${dateStr}\n\n*${leadsLabel}*\n━━━━━━━━━━━━━━━━━━\n`;
@@ -199,7 +198,8 @@ function buildReportMessage(leads, spend, saraLeads = 0, { isYesterday = false }
   msg += `━━━━━━━━━━━━━━━━━━\nTOTAL: *${total}*\n\n`;
   msg += `*Recruitment Leads*\n━━━━━━━━━━━━━━━━━━\nTOTAL: *${saraLeads}*\n\n`;
   msg += `*Executive Summary*\n━━━━━━━━━━━━━━━━━━\n`;
-  msg += `${totalLabel}: *${total}*\n`;
+  msg += `TOTAL (without siblings): *${total}*\n`;
+  if (totalWithSiblings !== null) msg += `TOTAL (with siblings): *${totalWithSiblings}*\n`;
   msg += `${spendLabel}: *${fmtRM(spend)}*\n`;
   msg += `Cost Per Lead: *${fmtRM(cpl)}*`;
   return msg;
@@ -258,8 +258,9 @@ router.post('/webhook', async (req, res) => {
         const updatedAt = new Date(c.updated_at).toLocaleString('en-MY', {
           timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hour12: false,
         });
-        const msg = buildReportMessage(leads, Number(c.total_spend), Number(c.sara_leads))
-          + `\n\n_Data as of ${updatedAt}_`;
+        const msg = buildReportMessage(leads, Number(c.total_spend), Number(c.sara_leads), {
+          totalWithSiblings: Number(c.total_leads_with_siblings) || null,
+        }) + `\n\n_Data as of ${updatedAt}_`;
         await sendTelegramMessage(chatId, msg);
       } else {
         const [leads, spend, saraLeads] = await Promise.all([getLeadsToday(), getSpendToday(), getSaraLeads(0)]);
