@@ -108,6 +108,23 @@ router.post('/', requireApiKey, async (req, res, next) => {
       ]
     );
 
+    await pool.query(
+      `INSERT INTO master_leads_base
+         (source, full_name, email, phone, branch, submission_date, children_count, children_details, campaign_name)
+       VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8)
+       ON CONFLICT DO NOTHING`,
+      [
+        lead_source || platform || 'new_platform',
+        parent_name   || null,
+        parent_email  || null,
+        parent_phone  || null,
+        preferred_branch || branch || null,
+        children_count || null,
+        children ? JSON.stringify(children) : null,
+        utm_campaign   || null,
+      ]
+    );
+
     return res.status(201).json({ status: 'ok', id: rows[0].id, received_at: rows[0].received_at });
   } catch (err) {
     return next(err);
