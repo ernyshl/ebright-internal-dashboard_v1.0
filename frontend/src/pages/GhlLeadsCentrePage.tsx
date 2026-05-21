@@ -5,6 +5,64 @@ import { BackButton } from '../components/BackButton';
 import { apiFetch } from '../lib/api';
 import { PIPELINE_REGION, PIPELINE_TO_BRANCH, REGION_PIPELINES } from '../lib/leadsSheet';
 
+function CtNlTallyCard() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['ctNlSummary'],
+    queryFn: () => apiFetch('/api/ghl-stages/ct-nl-summary'),
+    staleTime: 60 * 1000,
+  });
+
+  const summary = data?.summary;
+  const branches: any[] = data?.branches || [];
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>GHL Pipeline — CT to NL (May 16 – Today)</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Hardcoded May 16–20 + live DB from May 21</div>
+        </div>
+        <div style={{ display: 'flex', gap: 24 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Today</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--brand)' }}>{isLoading ? '…' : (summary?.todayCount ?? '—')}</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Total CT→NL</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: '#1565C0' }}>{isLoading ? '…' : (summary?.ghlTotal ?? '—')}</div>
+          </div>
+        </div>
+      </div>
+      {!isLoading && branches.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="dataTable">
+            <thead>
+              <tr>
+                <th>Pipeline</th>
+                <th>Branch</th>
+                <th>GHL 16–20</th>
+                <th>Today (DB)</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {branches.map(b => (
+                <tr key={b.pipeline}>
+                  <td style={{ fontWeight: 600 }}>{b.pipeline}</td>
+                  <td>{b.name}</td>
+                  <td>{b.ghl1620}</td>
+                  <td style={{ color: 'var(--brand)', fontWeight: 700 }}>{b.dbToday}</td>
+                  <td style={{ fontWeight: 700 }}>{b.total}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const PRESETS = [
   { key: 'today',      label: 'Today' },
   { key: 'yesterday',  label: 'Yesterday' },
@@ -225,6 +283,9 @@ export function GhlLeadsCentrePage() {
         </div>
         <button className="btn btnPrimary btnSmall" onClick={handleAdd} style={{ marginLeft: 'auto' }}>+ Add Record</button>
       </div>
+
+      {/* CT→NL Tally Card */}
+      <CtNlTallyCard />
 
       {/* Create / Edit Form */}
       {showForm && (

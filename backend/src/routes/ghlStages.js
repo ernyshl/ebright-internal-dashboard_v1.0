@@ -787,4 +787,69 @@ router.post('/ignored/:id/replay', requireAuth, requireRole(['super_admin']), as
   }
 });
 
+// ──────────────────────────────────────────────────────────────
+// GET /api/ghl-stages/ct-nl-summary
+// CT→NL tally: hardcoded GHL 16–20 per-branch + live DB today count
+// ──────────────────────────────────────────────────────────────
+const GHL_16_20 = {
+  '01 ONL':  { name: 'Online',         count: 49 },
+  '02 ST':   { name: 'Subang Taipan',  count: 31 },
+  '03 SP':   { name: 'Sri Petaling',   count: 17 },
+  '04 SA':   { name: 'Setia Alam',     count: 38 },
+  '05 KD':   { name: 'Kota Damansara', count: 20 },
+  '06 PJY':  { name: 'Putrajaya',      count: 36 },
+  '07 AMP':  { name: 'Ampang',         count: 36 },
+  '08 CJY':  { name: 'Cyberjaya',      count: 22 },
+  '09 KLG':  { name: 'Klang',          count: 19 },
+  '10 DA':   { name: 'Denai Alam',     count: 12 },
+  '11 BBB':  { name: 'Bangi',          count: 25 },
+  '12 DK':   { name: 'Danau Kota',     count: 31 },
+  '13 SHA':  { name: 'Shah Alam',      count: 20 },
+  '14 BTHO': { name: 'BTHO',           count: 10 },
+  '15 EGR':  { name: 'Eco Grandeur',   count: 30 },
+  '16 BSP':  { name: 'BSP',            count: 18 },
+  '17 RBY':  { name: 'Rimbayu',        count: 36 },
+  '18 TSG':  { name: 'TSG',            count: 18 },
+  '19 KW':   { name: 'Kita Warisan',   count: 17 },
+  '20 KTG':  { name: 'KTG',            count: 13 },
+};
+const GHL_CONFIRMED_TOTAL = 564;
+const GHL_TODAY_CONFIRMED = 70;
+
+router.get('/ct-nl-summary', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
+  try {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+    const { rows } = await pool.query(`
+      SELECT pipeline_name, COUNT(*) AS nl_count
+      FROM ghl_stages
+      WHERE stage_key = 'NL'
+        AND (received_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date = $1
+      GROUP BY pipeline_name
+    `, [today]);
+
+    const dbToday = {};
+    for (const r of rows) dbToday[r.pipeline_name] = parseInt(r.nl_count);
+
+    const branches = Object.entries(GHL_16_20).map(([pipeline, { name, count }]) => ({
+      pipeline,
+      name,
+      ghl1620: count,
+      dbToday: dbToday[pipeline] || 0,
+      total: count + (dbToday[pipeline] || 0),
+    }));
+
+    return res.json({
+      branches,
+      summary: {
+        ghl1620Total: 498,
+        todayCount: GHL_TODAY_CONFIRMED,
+        ghlTotal: GHL_CONFIRMED_TOTAL,
+      },
+      date: today,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 module.exports = { ghlStagesRouter: router };
