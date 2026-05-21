@@ -134,9 +134,19 @@ financeRouter.get('/branch-ranking', async (req, res, next) => {
 // docs/superpowers/specs/2026-05-05-finance-renewals-table-design.md
 financeRouter.get('/renewal-by-branch', async (req, res, next) => {
   try {
-    const { month, year } = req.query;
-    const startDate = `${year}-${month}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    const { month, year, date_from, date_to } = req.query;
+    // If both date_from + date_to are provided, use them (custom range within
+    // the month). Otherwise fall back to the full month derived from
+    // month/year. The frontend constrains the custom range to a single month,
+    // so totals/targets remain comparable to a monthly target.
+    let startDate, endDate;
+    if (date_from && date_to) {
+      startDate = date_from;
+      endDate = date_to;
+    } else {
+      startDate = `${year}-${month}-01`;
+      endDate = new Date(year, month, 0).toISOString().split('T')[0];
+    }
 
     // Drive off branch_map_autocount so every branch that can appear in
     // AutoCount-sourced renewals shows up, even with zero rows for the month.

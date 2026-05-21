@@ -39,6 +39,33 @@ const BRANCH_NAME_FALLBACK: Record<string, string> = {
   DPU: 'Ebright Dataran Puchong Utama',
 };
 
+// Monthly renewal revenue targets per branch (RM). null = no target set
+// (e.g. DPU is not yet open). Compared against monthly grand_total or, when
+// the user picks a custom date range, the partial-month grand_total.
+const BRANCH_TARGETS: Record<string, number | null> = {
+  CJY: 25962.3,
+  ST: 14988.7,
+  KD: 16371.2,
+  AMP: 20173.6,
+  BBB: 13344.6,
+  BSP: 9990.9,
+  DA: 11468.7,
+  ONL: 8689.5,
+  SP: 7598.7,
+  DK: 17333.4,
+  TSG: 6244.4,
+  PJY: 16759.7,
+  SHA: 16947.8,
+  SA: 16057.8,
+  KLG: 10993.1,
+  EGR: 4552.7,
+  RBY: 6162.1,
+  BTHO: 6285.9,
+  DPU: null,
+  KTG: 2675.8,
+  KW: 5977,
+};
+
 // --- Helper Functions ---
 const formatRM = (val: number) => 
   new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(val);
@@ -61,6 +88,14 @@ const getBarColor = (rank: number, total: number) => {
   return `hsl(${hue}, ${sat}%, ${lig}%)`;
 };
 
+// Last day of the given month (1-indexed). Used to clamp custom date inputs
+// to the selected month so target comparisons stay meaningful.
+const lastDayOfMonth = (year: number, month1Indexed: number) =>
+  new Date(year, month1Indexed, 0).getDate();
+
+const toIsoDate = (year: number, month1Indexed: number, day: number) =>
+  `${year}-${String(month1Indexed).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
 export default function FinanceRenewalByBranchPage() {
   // 1. State for Filters
   const now = new Date();
@@ -68,6 +103,10 @@ export default function FinanceRenewalByBranchPage() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedBranch, setSelectedBranch] = useState('ALL');
   const [selectedRegion, setSelectedRegion] = useState<'ALL' | Region>('ALL');
+  // Custom date range — both must be set to be active, and both are clamped
+  // to the selected month so the monthly target stays a fair comparison.
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const graphCaptureRef = useRef<HTMLDivElement | null>(null);
@@ -93,17 +132,38 @@ export default function FinanceRenewalByBranchPage() {
   const sortIndicator = (key: SortKey) =>
     sortBy === key ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
 
+  // Month boundary helpers for clamping the custom date inputs.
+  const monthFirst = toIsoDate(selectedYear, selectedMonth, 1);
+  const monthLast  = toIsoDate(selectedYear, selectedMonth, lastDayOfMonth(selectedYear, selectedMonth));
+  // Only treat the custom range as active when BOTH ends are set and both
+  // fall inside the selected month (the <input min/max> already restricts
+  // user input — this is a defensive guard).
+  const customRangeActive =
+    !!startDate && !!endDate &&
+    startDate >= monthFirst && endDate <= monthLast &&
+    startDate <= endDate;
+
   // 2. Data Query
-  const { 
-    data: mainData, 
-    isLoading, 
-    isError, 
+  const {
+    data: mainData,
+    isLoading,
+    isError,
     error,
     refetch,
     isFetching
   } = useQuery({
-    queryKey: ['finance-renewal-by-branch', selectedMonth, selectedYear],
-    queryFn: () => apiFetch(`/api/finance/renewal-by-branch?month=${selectedMonth}&year=${selectedYear}`),
+    queryKey: ['finance-renewal-by-branch', selectedMonth, selectedYear, customRangeActive ? startDate : '', customRangeActive ? endDate : ''],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        month: String(selectedMonth),
+        year: String(selectedYear),
+      });
+      if (customRangeActive) {
+        params.set('date_from', startDate);
+        params.set('date_to', endDate);
+      }
+      return apiFetch(`/api/finance/renewal-by-branch?${params.toString()}`);
+    },
   });
 
   const { data: freshnessData } = useQuery({
@@ -113,9 +173,13 @@ export default function FinanceRenewalByBranchPage() {
   });
 
   // 3. Quick Select Handlers
+  // Each month change clears the custom date range — otherwise the previous
+  // month's start/end would be out of bounds for the new month and silently
+  // get ignored, which is confusing.
   const handleThisMonth = () => {
     setSelectedMonth(now.getMonth() + 1);
     setSelectedYear(now.getFullYear());
+    setStartDate(''); setEndDate('');
   };
 
   const handleLastMonth = () => {
@@ -124,6 +188,16 @@ export default function FinanceRenewalByBranchPage() {
     if (m === 0) { m = 12; y -= 1; }
     setSelectedMonth(m);
     setSelectedYear(y);
+    setStartDate(''); setEndDate('');
+  };
+
+  const handleMonthChange = (m: number) => {
+    setSelectedMonth(m);
+    setStartDate(''); setEndDate('');
+  };
+  const handleYearChange = (y: number) => {
+    setSelectedYear(y);
+    setStartDate(''); setEndDate('');
   };
 
   const showCaptureToast = (msg: string) => {
@@ -238,23 +312,29 @@ export default function FinanceRenewalByBranchPage() {
     return graphRows.reduce((m, r) => Math.max(m, Number(r[key])), 0);
   }, [graphRows, graphMetric]);
 
-  // 5. Calculate Totals
+  // 5. Calculate Totals — target_total sums only branches with a configured
+  // target (null/missing entries are skipped) so the TOTALS row reflects the
+  // achievable target for the visible rows.
   const totals = useMemo(() => {
-    return rows.reduce((acc, row) => ({
-      count_3m: acc.count_3m + row.count_3m,
-      count_6m: acc.count_6m + row.count_6m,
-      count_9m: acc.count_9m + row.count_9m,
-      count_12m: acc.count_12m + row.count_12m,
-      total_3m: acc.total_3m + Number(row.total_3m),
-      total_6m: acc.total_6m + Number(row.total_6m),
-      total_9m: acc.total_9m + Number(row.total_9m),
-      total_12m: acc.total_12m + Number(row.total_12m),
-      total_renewals: acc.total_renewals + row.total_renewals,
-      grand_total: acc.grand_total + Number(row.grand_total),
-    }), {
+    return rows.reduce((acc, row) => {
+      const t = BRANCH_TARGETS[row.branch_code];
+      return {
+        count_3m: acc.count_3m + row.count_3m,
+        count_6m: acc.count_6m + row.count_6m,
+        count_9m: acc.count_9m + row.count_9m,
+        count_12m: acc.count_12m + row.count_12m,
+        total_3m: acc.total_3m + Number(row.total_3m),
+        total_6m: acc.total_6m + Number(row.total_6m),
+        total_9m: acc.total_9m + Number(row.total_9m),
+        total_12m: acc.total_12m + Number(row.total_12m),
+        total_renewals: acc.total_renewals + row.total_renewals,
+        grand_total: acc.grand_total + Number(row.grand_total),
+        target_total: acc.target_total + (t == null ? 0 : t),
+      };
+    }, {
       count_3m: 0, count_6m: 0, count_9m: 0, count_12m: 0,
       total_3m: 0, total_6m: 0, total_9m: 0, total_12m: 0,
-      total_renewals: 0, grand_total: 0
+      total_renewals: 0, grand_total: 0, target_total: 0,
     });
   }, [rows]);
 
@@ -287,10 +367,10 @@ export default function FinanceRenewalByBranchPage() {
       <div className="brRankFilters" style={{ display: 'flex', flexDirection: 'row', gap: '20px', alignItems: 'center', marginBottom: '20px', padding: '15px 20px' }}>
         <div className="brRankFilterGroup">
           <label className="brRankLabel">MONTH</label>
-          <select 
-            className="filterSelect" 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          <select
+            className="filterSelect"
+            value={selectedMonth}
+            onChange={(e) => handleMonthChange(Number(e.target.value))}
           >
             {MONTH_SHORT.map((m, i) => (
               <option key={i} value={i + 1}>{m}</option>
@@ -300,10 +380,10 @@ export default function FinanceRenewalByBranchPage() {
 
         <div className="brRankFilterGroup">
           <label className="brRankLabel">YEAR</label>
-          <select 
-            className="filterSelect" 
-            value={selectedYear} 
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          <select
+            className="filterSelect"
+            value={selectedYear}
+            onChange={(e) => handleYearChange(Number(e.target.value))}
           >
             {[2024, 2025, 2026].map(y => (
               <option key={y} value={y}>{y}</option>
@@ -339,6 +419,35 @@ export default function FinanceRenewalByBranchPage() {
             <option value="B">Region B</option>
             <option value="C">Region C</option>
           </select>
+        </div>
+
+        {/* Custom date range — restricted to days inside the selected month
+            via min/max so the comparison against the monthly target stays
+            fair. Clearing either input disables the range. */}
+        <div className="brRankFilterGroup">
+          <label className="brRankLabel">START DATE</label>
+          <input
+            type="date"
+            className="filterSelect"
+            value={startDate}
+            min={monthFirst}
+            max={endDate || monthLast}
+            onChange={(e) => setStartDate(e.target.value)}
+            style={{ minWidth: '150px' }}
+          />
+        </div>
+
+        <div className="brRankFilterGroup">
+          <label className="brRankLabel">END DATE</label>
+          <input
+            type="date"
+            className="filterSelect"
+            value={endDate}
+            min={startDate || monthFirst}
+            max={monthLast}
+            onChange={(e) => setEndDate(e.target.value)}
+            style={{ minWidth: '150px' }}
+          />
         </div>
 
         <div className="brRankFilterGroup">
@@ -377,6 +486,17 @@ export default function FinanceRenewalByBranchPage() {
     >
       Last Month
     </button>
+    {/* CLEAR RANGE — only shown when a custom range is set, so it doesn't
+        clutter the bar otherwise. */}
+    {(startDate || endDate) && (
+      <button
+        className="btn btnSmall btnSecondary"
+        onClick={() => { setStartDate(''); setEndDate(''); }}
+        title="Clear custom date range"
+      >
+        ✕ Range
+      </button>
+    )}
     {/* TABLE / GRAPH TOGGLE */}
     <button
       className="btn btnSmall btnSecondary"
@@ -442,7 +562,8 @@ export default function FinanceRenewalByBranchPage() {
                 <th className="p-3 border font-semibold text-center" colSpan={4}>Package — Renewals</th>
                 <th className="p-3 border font-bold text-center accentCol sortable" rowSpan={2} onClick={() => handleSort('total_renewals')}>Total Renewals{sortIndicator('total_renewals')}</th>
                 <th className="p-3 border font-semibold text-center" colSpan={4}>Package — Renewals (RM)</th>
-                <th className="p-3 border font-bold text-right accentCol sortable" rowSpan={2} onClick={() => handleSort('grand_total')}>Grand Total (RM){sortIndicator('grand_total')}</th>
+                <th className="p-3 border font-bold text-right accentCol sortable" rowSpan={2} onClick={() => handleSort('grand_total')}>Actual (RM){sortIndicator('grand_total')}</th>
+                <th className="p-3 border font-bold text-right targetCol" rowSpan={2}>Target (RM)</th>
               </tr>
               <tr>
                 <th className="p-3 border font-semibold text-center sortable" onClick={() => handleSort('count_3m')}>3M{sortIndicator('count_3m')}</th>
@@ -470,9 +591,12 @@ export default function FinanceRenewalByBranchPage() {
                   <td className="p-3 border text-right">{formatRM(totals.total_9m)}</td>
                   <td className="p-3 border text-right">{formatRM(totals.total_12m)}</td>
                   <td className="p-3 border text-right text-lg accentCol grandTotalCell">{formatRM(totals.grand_total)}</td>
+                  <td className="p-3 border text-right text-lg targetCol">{formatRM(totals.target_total)}</td>
                 </tr>
               )}
-              {sortedRows.length > 0 ? sortedRows.map((row, i) => (
+              {sortedRows.length > 0 ? sortedRows.map((row, i) => {
+                const target = BRANCH_TARGETS[row.branch_code];
+                return (
                 <tr key={row.branch_code} className="border-b">
                   <td className="p-3 border text-center rowNumCell">{i + 1}</td>
                   <td className="p-3 border font-medium">{row.branch_code}</td>
@@ -486,10 +610,12 @@ export default function FinanceRenewalByBranchPage() {
                   <td className="p-3 border text-right amountCell">{formatRM(row.total_9m)}</td>
                   <td className="p-3 border text-right amountCell">{formatRM(row.total_12m)}</td>
                   <td className="p-3 border text-right font-bold accentCol grandTotalCell">{formatRM(row.grand_total)}</td>
+                  <td className="p-3 border text-right targetCol">{target == null ? '—' : formatRM(target)}</td>
                 </tr>
-              )) : (
+                );
+              }) : (
                 <tr>
-                  <td colSpan={12} className="p-10 text-center rowNumCell">No renewal records found for this period.</td>
+                  <td colSpan={13} className="p-10 text-center rowNumCell">No renewal records found for this period.</td>
                 </tr>
               )}
             </tbody>
@@ -520,10 +646,53 @@ export default function FinanceRenewalByBranchPage() {
                     ? Number(row.grand_total)
                     : Number(row.total_renewals);
                   const isZero = value === 0;
-                  const widthPct = graphMax > 0 ? (value / graphMax) * 100 : 0;
-                  const display = graphMetric === 'revenue'
-                    ? formatRM(value)
-                    : `${value} renewal${value === 1 ? '' : 's'}`;
+                  // Revenue mode: track = monthly target, fill = actual (so
+                  // 50% of target visually lands at the midpoint of the row).
+                  // Count mode: target not defined → fall back to the previous
+                  // max-relative bar so the chart still reads at a glance.
+                  // Branches with target === null (e.g. DPU) also fall back.
+                  const target = graphMetric === 'revenue'
+                    ? BRANCH_TARGETS[row.branch_code]
+                    : null;
+                  const useProgress = graphMetric === 'revenue' && target != null && target > 0;
+                  // Revenue mode + no target configured (e.g. DPU). Render an
+                  // empty 0% bar and a blank value cell — showing "RM 0.00"
+                  // for a not-yet-opened branch is misleading.
+                  const noTargetSet = graphMetric === 'revenue' && (target == null);
+                  const rawPct = useProgress ? (value / (target as number)) * 100 : 0;
+                  const fillPct = noTargetSet
+                    ? 0
+                    : useProgress
+                      ? Math.min(100, rawPct)
+                      : (graphMax > 0 ? (value / graphMax) * 100 : 0);
+                  const overTarget = useProgress && rawPct > 100;
+                  // Value column: when both actual and target are present we
+                  // render them as a 3-cell grid (actual | / | target) so the
+                  // slash sits at the same x across every row. No-target rows
+                  // render an empty cell.
+                  const display: React.ReactNode = noTargetSet
+                    ? ''
+                    : graphMetric === 'revenue'
+                      ? (useProgress
+                          ? (
+                            <>
+                              <span className="renewalGraphActual">{formatRM(value)}</span>
+                              <span className="renewalGraphSep">/</span>
+                              <span className="renewalGraphTarget">{formatRM(target as number)}</span>
+                            </>
+                          )
+                          : formatRM(value))
+                      : `${value} renewal${value === 1 ? '' : 's'}`;
+                  // Rank-based green→yellow gradient — restored from the
+                  // previous design. The progress vs target is conveyed by
+                  // fill width + a numeric % label, not by hue.
+                  const fillColor = isZero
+                    ? 'transparent'
+                    : getBarColor(i, graphRows.length);
+                  // Percentage label position: sits at the right edge of the
+                  // fill so the eye lands on it where the bar stops. Clamp to
+                  // [0, 100] so it stays visible when the bar exceeds target.
+                  const pctLabelLeft = Math.max(0, Math.min(100, fillPct));
                   return (
                     <tr key={row.branch_code} className={isZero ? 'zeroRow' : ''}>
                       <td className="renewalGraphRank">#{i + 1}</td>
@@ -531,16 +700,24 @@ export default function FinanceRenewalByBranchPage() {
                         {row.branch_name || row.branch_code}
                       </td>
                       <td className="renewalGraphBarCell">
-                        <div className="renewalGraphTrack">
+                        <div className={`renewalGraphTrack${useProgress ? ' renewalGraphTrackTarget' : ''}`}>
                           <div
-                            className="renewalGraphFill"
-                            style={{
-                              width: `${widthPct}%`,
-                              background: isZero
-                                ? 'transparent'
-                                : getBarColor(i, graphRows.length),
-                            }}
+                            className={`renewalGraphFill${overTarget ? ' renewalGraphFillOver' : ''}`}
+                            style={{ width: `${fillPct}%`, background: fillColor }}
                           />
+                          {/* Half-line marker at 50% of the target — quick
+                              "before/after centre" visual reference. */}
+                          {useProgress && <div className="renewalGraphHalfMarker" />}
+                          {/* % of target — anchored to where the fill ends
+                              so the number reads in context with the bar. */}
+                          {useProgress && (
+                            <span
+                              className={`renewalGraphPct${overTarget ? ' renewalGraphPctOver' : ''}`}
+                              style={{ left: `${pctLabelLeft}%` }}
+                            >
+                              {Math.round(rawPct)}%
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="renewalGraphValue">{display}</td>

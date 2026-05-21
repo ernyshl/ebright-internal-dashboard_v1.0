@@ -2831,24 +2831,96 @@
   /* width: auto — takes the remaining space in the table layout */
 }
 .renewalGraphTrack {
+  position: relative;
   width: 100%;
   height: 22px;
   background: var(--borderLight);
   border-radius: 4px;
   overflow: hidden;
 }
+/* When the track represents the monthly target, give it a subtle dashed
+   inner border so it reads as "100% of target" rather than "max in chart". */
+.renewalGraphTrack.renewalGraphTrackTarget {
+  background: rgba(128, 128, 128, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.25);
+}
 .renewalGraphFill {
   height: 100%;
   border-radius: 4px;
+  transition: width 0.3s ease;
+}
+/* Branch hit / exceeded its target — add a soft glow so it pops at a glance. */
+.renewalGraphFill.renewalGraphFillOver {
+  box-shadow: 0 0 0 1px rgba(255, 191, 0, 0.65), 0 0 8px rgba(255, 191, 0, 0.45);
+}
+/* Subtle tick at the 50% mark — gives an instant "before/after center"
+   reference, matching the user's mental model of the chart. */
+.renewalGraphHalfMarker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+:root[data-theme="dark"] .renewalGraphHalfMarker {
+  background: rgba(255, 255, 255, 0.22);
+}
+/* "58%" — the percentage of target the branch has hit. Anchored to the
+   right edge of the fill via inline `left: X%` so the number lives next
+   to where the bar stops. translateY centers it vertically inside the
+   22px track; the 4px margin keeps it off the fill itself. */
+.renewalGraphPct {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 0 4px var(--panel);
+}
+.renewalGraphPct.renewalGraphPctOver {
+  color: hsl(35, 90%, 40%);
+}
+:root[data-theme="dark"] .renewalGraphPct.renewalGraphPctOver {
+  color: hsl(45, 95%, 60%);
 }
 .renewalGraphTable td.renewalGraphValue {
-  width: 140px;
+  width: 240px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+/* 3-column grid keeps the " / " separator vertically aligned across every
+   row — actual right-aligned against the slash, target left-aligned. */
+.renewalGraphTable td.renewalGraphValue:has(.renewalGraphSep) {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 6px;
+}
+.renewalGraphActual { text-align: right; }
+.renewalGraphTarget { text-align: left; color: var(--textSecondary); }
+.renewalGraphSep    { color: var(--textSecondary); }
+/* Fallback for cells that don't use the grid layout (count mode / no
+   target): keep the original right-aligned single value. */
+.renewalGraphTable td.renewalGraphValue:not(:has(.renewalGraphSep)) {
+  text-align: right;
+}
+/* Target column in the renewal-by-branch table — slightly muted so the
+   Actual column still reads as the primary number. */
+.renewalBranchTable th.targetCol,
+.renewalBranchTable td.targetCol {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  background: rgba(128, 128, 128, 0.04);
 }
 .renewalGraphTable tr.zeroRow td.renewalGraphValue {
   color: var(--muted);
