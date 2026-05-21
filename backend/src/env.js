@@ -35,6 +35,9 @@ const EnvSchema = z.object({
   // GHL webhook secret (set in GHL webhook URL as ?secret=XXX)
   GHL_WEBHOOK_SECRET: z.string().optional(),
 
+  // New platform leads API key (for digital marketing team)
+  NEW_PLATFORM_API_KEY: z.string().optional(),
+
   // Meta / TikTok ad account IDs
   META_MAIN_FB_ID: z.string().optional(),
   META_TT_ID: z.string().optional(),
