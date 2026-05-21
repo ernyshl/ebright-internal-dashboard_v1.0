@@ -124,28 +124,42 @@ router.post('/webhook', async (req, res) => {
       return res.status(200).json({ status: 'ignored', reason: 'unrecognised stage' });
     }
 
-    // Duplicate check: same email + opportunity_name + stage_key already exists.
-    // NL double-fires: send a Telegram alert and still proceed to insert (kept for
-    // debugging). All other stages: return 'ignored' as before.
+    // Duplicate check — split by stage.
+    // NL: check by (email, pipeline_name) because GHL re-fires often come with a
+    //     different opportunity_name, bypassing the old (email+opp_name+stage) key.
+    // Other stages: keep original (email, opportunity_name, stage_key) check.
     {
-      const { rows: exists } = await pool.query(
-        `SELECT received_at, pipeline_name FROM ghl_stages
-         WHERE email = $1 AND opportunity_name = $2 AND stage_key = $3
-         LIMIT 1`,
-        [email, opportunityName, stageKey]
-      );
-      if (exists.length > 0) {
+      let existsRows;
+      if (stageKey === 'NL') {
+        const result = await pool.query(
+          `SELECT received_at, pipeline_name FROM ghl_stages
+           WHERE email = $1 AND stage_key = 'NL' AND pipeline_name = $2
+           LIMIT 1`,
+          [email, pipelineName]
+        );
+        existsRows = result.rows;
+      } else {
+        const result = await pool.query(
+          `SELECT received_at, pipeline_name FROM ghl_stages
+           WHERE email = $1 AND opportunity_name = $2 AND stage_key = $3
+           LIMIT 1`,
+          [email, opportunityName, stageKey]
+        );
+        existsRows = result.rows;
+      }
+      if (existsRows.length > 0) {
         if (stageKey === 'NL') {
           sendDoubleFireAlert({
             botToken: env.TELEGRAM_BOT_TOKEN,
             chatIds: (env.TELEGRAM_ALERT_CHATS || '').split(',').map(s => s.trim()).filter(Boolean),
-            pipelineName: pipelineName || exists[0].pipeline_name,
+            pipelineName: pipelineName || existsRows[0].pipeline_name,
             email,
             leadName: opportunityName || studentName,
-            firstSeen: exists[0].received_at,
+            firstSeen: existsRows[0].received_at,
             refiredAt: new Date(),
           });
-          // Fall through — let the INSERT/ON CONFLICT UPDATE proceed so the re-fire is recorded.
+          await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'NL double-fire: email already has NL in this pipeline' });
+          return res.status(200).json({ status: 'ignored', reason: 'NL double-fire' });
         } else {
           await writeLog({ action: 'ignored', email, stageRaw: rawStage, stageKey, ignoreReason: 'same email+opportunity_name+stage already exists' });
           return res.status(200).json({ status: 'ignored', reason: 'duplicate (email+opportunity_name+stage)' });
@@ -582,10 +596,11 @@ router.get('/tally', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, n
     const ghlWhere = ghlConditions.length ? `WHERE ${ghlConditions.join(' AND ')}` : '';
 
     const { rows: ghlLeads } = await pool.query(
-      `SELECT email, last_name, phone, pipeline_name, stage_key, lead_source, preferred_day, time_slot,
+      `SELECT DISTINCT ON (email, pipeline_name)
+              email, last_name, phone, pipeline_name, stage_key, lead_source, preferred_day, time_slot,
               (received_at AT TIME ZONE 'Asia/Kuala_Lumpur') AS received_at
        FROM ghl_stages ${ghlWhere}
-       ORDER BY received_at DESC`,
+       ORDER BY email, pipeline_name, received_at ASC`,
       ghlParams,
     );
 
