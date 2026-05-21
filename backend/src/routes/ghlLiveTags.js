@@ -58,35 +58,31 @@ function ghlGet(path, token) {
   });
 }
 
-// Count contacts with a specific tag in a GHL location.
-// NL uses dateAdded (createdAt) filter via startDate/endDate.
-// CT/SU/ENR use a 90-day lookback window for dateAdded, then filter by
-// dateUpdated in [dateFrom, dateTo] (KL time). This catches leads created in
-// the past 90 days that got the tag during the requested period.
-async function countByTag(locationId, token, tag, dateFrom, dateTo, filterByUpdated) {
-  let fetchFrom = dateFrom;
-  let fromTs, toTs;
+// Single-pass fetch: one paginated request per branch covers all 4 tags.
+// Uses a 90-day lookback window so contacts created before the range that
+// received CT/SU/ENR tags within the range are still counted.
+// NL  = created in [dateFrom, dateTo]  AND has "new lead" tag
+// CT/SU/ENR = updated in [dateFrom, dateTo] AND has "ctt"/"sut"/"enr" tag
+async function fetchBranchCounts(branch, dateFrom, dateTo) {
+  const lookback = new Date(dateFrom + 'T00:00:00+08:00');
+  lookback.setDate(lookback.getDate() - 90);
+  const fetchFrom = lookback.toISOString().split('T')[0];
 
-  if (filterByUpdated) {
-    const lookback = new Date(dateFrom + 'T00:00:00+08:00');
-    lookback.setDate(lookback.getDate() - 90);
-    fetchFrom = lookback.toISOString().split('T')[0];
-    fromTs = new Date(dateFrom + 'T00:00:00+08:00').getTime();
-    toTs   = new Date(dateTo   + 'T23:59:59+08:00').getTime();
-  }
+  const nlFromTs  = new Date(dateFrom + 'T00:00:00+08:00').getTime();
+  const nlToTs    = new Date(dateTo   + 'T23:59:59+08:00').getTime();
 
-  let count = 0;
+  let NL = 0, CT = 0, SU = 0, ENR = 0;
   let startAfter = null;
   let startAfterId = null;
 
   while (true) {
-    let path = `/contacts/?locationId=${locationId}&limit=100&startDate=${fetchFrom}&endDate=${dateTo}`;
+    let path = `/contacts/?locationId=${branch.locationId}&limit=100&startDate=${fetchFrom}&endDate=${dateTo}`;
     if (startAfter)   path += `&startAfter=${encodeURIComponent(startAfter)}`;
     if (startAfterId) path += `&startAfterId=${encodeURIComponent(startAfterId)}`;
 
     let body;
     try {
-      const result = await ghlGet(path, token);
+      const result = await ghlGet(path, branch.token);
       body = result.body;
     } catch {
       break;
@@ -95,40 +91,58 @@ async function countByTag(locationId, token, tag, dateFrom, dateTo, filterByUpda
     const contacts = Array.isArray(body.contacts) ? body.contacts : [];
 
     for (const c of contacts) {
-      if (!(c.tags || []).includes(tag)) continue;
-      if (filterByUpdated) {
-        const updatedTs = new Date(c.dateUpdated).getTime();
-        if (updatedTs >= fromTs && updatedTs <= toTs) count++;
-      } else {
-        count++;
-      }
+      const tags       = c.tags || [];
+      const createdTs  = new Date(c.dateAdded).getTime();
+      const updatedTs  = new Date(c.dateUpdated).getTime();
+      const inNlRange  = createdTs >= nlFromTs && createdTs <= nlToTs;
+      const inUpdRange = updatedTs >= nlFromTs && updatedTs <= nlToTs;
+
+      if (inNlRange  && tags.includes('new lead')) NL++;
+      if (inUpdRange && tags.includes('ctt'))      CT++;
+      if (inUpdRange && tags.includes('sut'))      SU++;
+      if (inUpdRange && tags.includes('enr'))      ENR++;
     }
 
     if (!body.meta?.nextPageUrl || contacts.length === 0) break;
-    startAfter    = body.meta.startAfter    || null;
-    startAfterId  = body.meta.startAfterId  || null;
+    startAfter   = body.meta.startAfter   || null;
+    startAfterId = body.meta.startAfterId || null;
   }
 
-  return count;
-}
-
-async function fetchBranchCounts(branch, dateFrom, dateTo) {
-  const NL  = await countByTag(branch.locationId, branch.token, 'new lead', dateFrom, dateTo, false);
-  const CT  = await countByTag(branch.locationId, branch.token, 'ctt',      dateFrom, dateTo, true);
-  const SU  = await countByTag(branch.locationId, branch.token, 'sut',      dateFrom, dateTo, true);
-  const ENR = await countByTag(branch.locationId, branch.token, 'enr',      dateFrom, dateTo, true);
   return { key: branch.key, label: branch.label, region: branch.region, NL, CT, SU, ENR };
 }
 
-// 5-minute in-memory cache
+async function buildData(dateFrom, dateTo) {
+  const results = await Promise.all(
+    BRANCHES.map((b) =>
+      fetchBranchCounts(b, dateFrom, dateTo).catch((err) => {
+        console.error(`[ghl-live-tags] ${b.label} error:`, err.message);
+        return { key: b.key, label: b.label, region: b.region, NL: 0, CT: 0, SU: 0, ENR: 0, error: true };
+      })
+    )
+  );
+  return { branches: results };
+}
+
+// 5-minute in-memory cache with stale-while-revalidate.
+// After the first cold load, every request returns instantly from cache.
+// When the cache entry is older than CACHE_TTL the stale data is still served
+// immediately and a background refresh runs so the *next* request is fresh.
 const cache = new Map();
+const refreshing = new Set();
 const CACHE_TTL = 5 * 60 * 1000;
+
+function bgRefresh(cacheKey, dateFrom, dateTo) {
+  if (refreshing.has(cacheKey)) return;
+  refreshing.add(cacheKey);
+  buildData(dateFrom, dateTo)
+    .then((data) => cache.set(cacheKey, { data, ts: Date.now() }))
+    .catch((err) => console.error('[ghl-live-tags] bg refresh error:', err.message))
+    .finally(() => refreshing.delete(cacheKey));
+}
 
 // ──────────────────────────────────────────────────────────────
 // GET /api/ghl-live-tags/by-branch?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
-// Returns NL/CT/SU/ENR tag counts per branch from GHL API directly.
-// NL = contacts with "new lead" tag, filtered by created date.
-// CT/SU/ENR = contacts with "ctt"/"sut"/"enr" tag, filtered by updated date.
+// NL filtered by created date; CT/SU/ENR filtered by updated date.
 // ──────────────────────────────────────────────────────────────
 router.get('/by-branch', requireAuth, requireRole(ALLOWED_ROLES), async (req, res, next) => {
   try {
@@ -139,22 +153,15 @@ router.get('/by-branch', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
 
     const cacheKey = `${date_from}|${date_to}`;
     const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+
+    if (cached) {
+      if (Date.now() - cached.ts > CACHE_TTL) bgRefresh(cacheKey, date_from, date_to);
       return res.json(cached.data);
     }
 
-    const results = await Promise.all(
-      BRANCHES.map((b) =>
-        fetchBranchCounts(b, date_from, date_to).catch((err) => {
-          console.error(`[ghl-live-tags] ${b.label} error:`, err.message);
-          return { key: b.key, label: b.label, region: b.region, NL: 0, CT: 0, SU: 0, ENR: 0, error: true };
-        })
-      )
-    );
-
-    const data = { branches: results };
+    // Cold cache — wait for full fetch then store and return
+    const data = await buildData(date_from, date_to);
     cache.set(cacheKey, { data, ts: Date.now() });
-
     return res.json(data);
   } catch (err) {
     return next(err);
