@@ -64,6 +64,17 @@ async function getLeadsByDate(offsetDays = 0) {
 async function getLeadsToday()     { return getLeadsByDate(0); }
 async function getLeadsYesterday() { return getLeadsByDate(1); }
 
+async function getTotalWithSiblings(offsetDays = 0) {
+  const { rows } = await pool.query(`
+    SELECT COUNT(*) as count
+    FROM master_leads_powerbi
+    WHERE (submitted_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date
+          = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date - $2::int
+      AND TRIM(clean_branch) = ANY($1::text[])
+  `, [VALID_BRANCHES, offsetDays]);
+  return Number(rows[0]?.count || 0);
+}
+
 async function getSaraLeads(offsetDays = 0) {
   const { rows } = await pool.query(`
     SELECT COUNT(*) as count FROM meta_leads
@@ -83,21 +94,24 @@ async function getSpendBreakdown() {
     process.env.META_ONLINE_ID,
   ].filter(Boolean);
   const TT_ACCOUNT = process.env.META_TT_ID || '';
+  const SARA_ACCOUNT = process.env.META_SARA_ID || '';
   const { rows } = await pool.query(`
     SELECT
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
            AND account_id = ANY($1::text[])
+           AND ($3 = '' OR account_id != $3)
            AND campaign_name NOT ILIKE '%franchise%'
        ), 0) AS meta,
       COALESCE((SELECT SUM(spend) FROM meta_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
            AND account_id = $2
+           AND ($3 = '' OR account_id != $3)
        ), 0) AS tiktok,
       COALESCE((SELECT SUM(spend) FROM google_spend
          WHERE data_date::date = (SELECT MAX(data_date::date) FROM google_spend)
        ), 0) AS google
-  `, [FB_ACCOUNTS, TT_ACCOUNT]);
+  `, [FB_ACCOUNTS, TT_ACCOUNT, SARA_ACCOUNT]);
   const meta = Number(rows[0]?.meta || 0);
   const google = Number(rows[0]?.google || 0);
   const tiktok = Number(rows[0]?.tiktok || 0);
@@ -236,36 +250,12 @@ router.post('/webhook', async (req, res) => {
     }
 
     if (text === '/report' || text === '/today' || text === '/start') {
-      // Serve from cache (written by cron) so numbers always match the last
-      // broadcast report. Falls back to a live query before the first cron of
-      // the day fires.
-      const { rows: cached } = await pool.query(`
-        SELECT * FROM telegram_report_cache
-        WHERE report_date = (NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::date
-      `);
-      if (cached.length > 0) {
-        const c = cached[0];
-        const leads = [
-          { source: 'Meta',                  count: c.meta_count   },
-          { source: 'TikTok',                count: c.tiktok_count },
-          { source: 'Website (Conversion)',  count: c.website_conv },
-          { source: 'Roadshow',              count: c.roadshow     },
-          { source: 'Self Generated Lead',   count: c.sgl          },
-          { source: 'Walk In',               count: c.walkin       },
-          { source: 'Website (Organic)',     count: c.website_org  },
-          { source: 'Others',                count: c.others       },
-        ];
-        const updatedAt = new Date(c.updated_at).toLocaleString('en-MY', {
-          timeZone: 'Asia/Kuala_Lumpur', hour: '2-digit', minute: '2-digit', hour12: false,
-        });
-        const msg = buildReportMessage(leads, Number(c.total_spend), Number(c.sara_leads), {
-          totalWithSiblings: Number(c.total_leads_with_siblings) || null,
-        }) + `\n\n_Data as of ${updatedAt}_`;
-        await sendTelegramMessage(chatId, msg);
-      } else {
-        const [leads, spend, saraLeads] = await Promise.all([getLeadsToday(), getSpendToday(), getSaraLeads(0)]);
-        await sendTelegramMessage(chatId, buildReportMessage(leads, spend, saraLeads));
-      }
+      const [leads, spend, saraLeads, withSiblings] = await Promise.all([
+        getLeadsToday(), getSpendToday(), getSaraLeads(0), getTotalWithSiblings(0),
+      ]);
+      await sendTelegramMessage(chatId, buildReportMessage(leads, spend, saraLeads, {
+        totalWithSiblings: withSiblings,
+      }));
     }
 
     else if (text === '/ytdreport' || text === '/yesterday') {

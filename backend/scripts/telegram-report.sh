@@ -71,6 +71,7 @@ SELECT
   COALESCE((SELECT SUM(spend) FROM meta_spend
      WHERE data_date::date = (SELECT MAX(data_date::date) FROM meta_spend)
        AND account_id IN ('${META_MAIN_FB_ID}','${META_ONLINE_ID}','${META_TT_ID}')
+       AND account_id != '${META_SARA_ID}'
        AND UPPER(campaign_name) NOT LIKE '%FRANCHISE%'
    ), 0)
   +
