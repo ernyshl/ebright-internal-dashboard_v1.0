@@ -155,8 +155,9 @@ router.get('/by-branch', requireAuth, requireRole(ALLOWED_ROLES), async (req, re
     const cached = cache.get(cacheKey);
 
     if (cached) {
-      if (Date.now() - cached.ts > CACHE_TTL) bgRefresh(cacheKey, date_from, date_to);
-      return res.json(cached.data);
+      const stale = Date.now() - cached.ts > CACHE_TTL;
+      if (stale) bgRefresh(cacheKey, date_from, date_to);
+      return res.json({ ...cached.data, isStale: stale });
     }
 
     // Cold cache — wait for full fetch then store and return

@@ -123,6 +123,7 @@ export function GhlTagDashboardPage() {
   });
 
   const branches: BranchRow[] = data?.branches || [];
+  const isStale = data?.isStale === true;
   const fetchedAt = data?.fetchedAt
     ? new Date(data.fetchedAt).toLocaleString('en-MY', {
         timeZone: 'Asia/Kuala_Lumpur',
@@ -147,7 +148,26 @@ export function GhlTagDashboardPage() {
           <h1 className="pageHeaderTitle">GHL Tag Dashboard</h1>
           <p className="headerSubtitle">
             NL (created) · CT / SU / ENR (updated) · {dateLabel} · Source: GHL API live tags
-            {fetchedAt && <span style={{ marginLeft: 8, opacity: 0.6 }}>· Last updated: {fetchedAt}</span>}
+            {fetchedAt && (
+              <span style={{ marginLeft: 8, opacity: 0.6 }}>
+                · Last updated: {fetchedAt}
+                {isStale && (
+                  <span style={{
+                    marginLeft: 8,
+                    padding: '1px 7px',
+                    borderRadius: 10,
+                    fontSize: '0.75em',
+                    fontWeight: 600,
+                    background: '#f59e0b22',
+                    color: '#f59e0b',
+                    border: '1px solid #f59e0b55',
+                    verticalAlign: 'middle',
+                  }}>
+                    stale
+                  </span>
+                )}
+              </span>
+            )}
           </p>
         </div>
       </div>
