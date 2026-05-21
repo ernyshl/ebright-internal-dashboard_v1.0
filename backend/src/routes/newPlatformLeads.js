@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../db');
 const { env } = require('../env');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { pushToGHL } = require('../lib/ghlPush');
 
 const router = express.Router();
 
@@ -124,6 +125,15 @@ router.post('/', requireApiKey, async (req, res, next) => {
         utm_campaign   || null,
       ]
     );
+
+    if (location_key) {
+      pushToGHL(
+        parent_name, parent_email || null, parent_phone || null,
+        location_key,
+        lead_source || platform || 'new_platform',
+        Array.isArray(children) ? children : null,
+      ).catch(err => console.error('[new-platform-leads → GHL] push failed:', err.message));
+    }
 
     return res.status(201).json({ status: 'ok', id: rows[0].id, received_at: rows[0].received_at });
   } catch (err) {
