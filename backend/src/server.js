@@ -11,6 +11,7 @@ const { startFinanceRenewalsRefreshJob } = require('./jobs/refreshFinanceRenewal
 const { startDailySnapshotJob } = require('./jobs/dailySnapshotCron');
 const { startAgeGroupRefreshJob } = require('./jobs/ageGroupRefreshCron');
 const { startPackageExpiryJob } = require('./jobs/packageExpiryCron');
+const { startBranchConflictAlertJob } = require('./jobs/branchConflictAlert');
 
 async function runMigrations() {
   const { students: studentsTbl } = getTableNames();
@@ -97,6 +98,16 @@ async function runMigrations() {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_finance_renewals_branch_date
       ON finance_renewals (branch_code, doc_date)
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS branch_conflict_alert_log (
+      id         BIGSERIAL   PRIMARY KEY,
+      email      TEXT        NOT NULL,
+      new_branch TEXT        NOT NULL,
+      prev_branch TEXT       NOT NULL,
+      alerted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (email, new_branch, prev_branch)
+    )
   `);
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_finance_renewals_doc_date
@@ -219,6 +230,7 @@ async function start() {
   startDailySnapshotJob();
   startAgeGroupRefreshJob();
   startPackageExpiryJob();
+  startBranchConflictAlertJob();
 }
 
 // Don't let a transient DB blip (remote Postgres dropping an idle client, etc.)
