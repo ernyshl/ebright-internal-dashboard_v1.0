@@ -149,7 +149,7 @@ async function ghlRequest(method, path, token, body) {
   });
 }
 
-async function pushToGHL(fullName, email, phone, locationKey, leadSource) {
+async function pushToGHL(fullName, email, phone, locationKey, leadSource, children) {
   const locationConfig = LOCATION_MAPPING[locationKey];
   if (!locationConfig) {
     console.warn(`[Wix Trial → GHL] No location config for key: ${locationKey}`);
@@ -194,18 +194,28 @@ async function pushToGHL(fullName, email, phone, locationKey, leadSource) {
 
   if (!stage) return;
 
-  const uniqueId = Date.now().toString().slice(-4);
-  await ghlRequest('POST', '/opportunities/', token, {
-    locationId,
-    pipelineId:      pipeline.id,
-    pipelineStageId: stage.id,
-    contactId,
-    name:   `${fullName} [#${uniqueId}]`,
-    status: 'open',
-    source: leadSource,
-  });
+  // One opportunity per child. If no children supplied, fall back to one opportunity named after the parent.
+  const slots = (Array.isArray(children) && children.length > 0) ? children : [null];
 
-  console.log(`[Wix Trial → GHL] Contact + opportunity created for ${email} in ${locationKey}`);
+  for (const child of slots) {
+    const childName = (child?.name || child?.childName || '').trim();
+    const uniqueId  = Date.now().toString().slice(-4);
+    const oppName   = childName
+      ? `${fullName} — ${childName} [#${uniqueId}]`
+      : `${fullName} [#${uniqueId}]`;
+
+    await ghlRequest('POST', '/opportunities/', token, {
+      locationId,
+      pipelineId:      pipeline.id,
+      pipelineStageId: stage.id,
+      contactId,
+      name:   oppName,
+      status: 'open',
+      source: leadSource,
+    });
+  }
+
+  console.log(`[Wix Trial → GHL] Contact + ${slots.length} opp(s) created for ${email} in ${locationKey}`);
 }
 
 // ── Webhook handler ────────────────────────────────────────────────────────
@@ -276,7 +286,7 @@ router.post('/webhook', async (req, res) => {
     );
 
     if (locationKey) {
-      pushToGHL(parentName, parentEmail, parentPhone, locationKey, leadSource)
+      pushToGHL(parentName, parentEmail, parentPhone, locationKey, leadSource, children)
         .catch(err => console.error('[Wix Trial → GHL] push failed:', err.message));
     } else {
       console.warn(`[Wix Trial] Could not resolve GHL location key for: ${rawLocationKey}`);
