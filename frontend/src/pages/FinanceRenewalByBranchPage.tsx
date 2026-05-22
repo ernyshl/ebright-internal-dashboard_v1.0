@@ -53,7 +53,6 @@ const BRANCH_TARGETS: Record<string, number | null> = {
   ONL: 8689.5,
   SP: 7598.7,
   DK: 17333.4,
-  TSG: 6244.4,
   PJY: 16759.7,
   SHA: 16947.8,
   SA: 16057.8,
@@ -62,8 +61,9 @@ const BRANCH_TARGETS: Record<string, number | null> = {
   RBY: 6162.1,
   BTHO: 6285.9,
   PU: null,
-  KTG: 2675.8,
-  KW: 5977,
+  KTG: 0,
+  KW: 0,
+  TSG: 0,
 };
 
 // --- Helper Functions ---
@@ -295,15 +295,48 @@ export default function FinanceRenewalByBranchPage() {
     });
   }, [rows, sortBy, sortDir]);
 
-  // Rank rows for the graph view by the active metric, descending. Ties broken
-  // by branch name asc so the ordering is stable for screenshots.
+  // Rank rows for the graph view.
+  //   • Revenue mode: by % of monthly target descending. Zero-target branches
+  //     (target = 0, e.g. TSG/KW/KTG) use a pseudo-% of (actual / maxActual)
+  //     * 100 so they integrate into the ranking by relative scale instead
+  //     of dropping to the bottom — TSG with RM 3,920 lands just below
+  //     Ampang's 48% rather than at #18 with no signal.
+  //     Null-target branches (e.g. PU) ALWAYS rank last regardless of actual.
+  //   • Count mode: by absolute renewal count, descending (no targets).
+  // Ties broken by branch name asc so the order is stable for screenshots.
   const graphRows = useMemo(() => {
-    const key = graphMetric === 'revenue' ? 'grand_total' : 'total_renewals';
+    if (graphMetric === 'count') {
+      return [...rows].sort((a, b) => {
+        const av = Number(a.total_renewals);
+        const bv = Number(b.total_renewals);
+        if (av === bv) return a.branch_name.localeCompare(b.branch_name);
+        return bv - av;
+      });
+    }
+    const maxActual = rows.reduce(
+      (m, r) => Math.max(m, Number(r.grand_total)),
+      0,
+    );
+    const pctOf = (r: RenewalData): number | null => {
+      const target = BRANCH_TARGETS[r.branch_code];
+      if (target == null) return null; // null target — always last
+      const actual = Number(r.grand_total);
+      if (target > 0) return (actual / target) * 100;
+      // target === 0: rank by absolute scale so zero-target branches still
+      // sort visibly against the targeted ones.
+      return maxActual > 0 ? (actual / maxActual) * 100 : 0;
+    };
     return [...rows].sort((a, b) => {
-      const av = Number(a[key]);
-      const bv = Number(b[key]);
-      if (av === bv) return a.branch_name.localeCompare(b.branch_name);
-      return bv - av;
+      const ap = pctOf(a);
+      const bp = pctOf(b);
+      if (ap == null && bp == null) {
+        // Both null-target — tie-break by name (stable).
+        return a.branch_name.localeCompare(b.branch_name);
+      }
+      if (ap == null) return 1;  // a (null) → after b
+      if (bp == null) return -1; // b (null) → after a
+      if (ap === bp) return a.branch_name.localeCompare(b.branch_name);
+      return bp - ap;
     });
   }, [rows, graphMetric]);
 
@@ -666,22 +699,24 @@ export default function FinanceRenewalByBranchPage() {
                       ? Math.min(100, rawPct)
                       : (graphMax > 0 ? (value / graphMax) * 100 : 0);
                   const overTarget = useProgress && rawPct > 100;
-                  // Value column: when both actual and target are present we
-                  // render them as a 3-cell grid (actual | / | target) so the
-                  // slash sits at the same x across every row. No-target rows
-                  // render an empty cell.
+                  // Value column: revenue rows always use the same 3-cell grid
+                  // (actual | / | target) so actuals line up across rows. The
+                  // separator + target are blank for zero-target branches so
+                  // the actual still anchors to the same column position
+                  // instead of floating to the far right. Null-target (PU)
+                  // renders a fully empty cell.
                   const display: React.ReactNode = noTargetSet
                     ? ''
                     : graphMetric === 'revenue'
-                      ? (useProgress
-                          ? (
-                            <>
-                              <span className="renewalGraphActual">{formatRM(value)}</span>
-                              <span className="renewalGraphSep">/</span>
-                              <span className="renewalGraphTarget">{formatRM(target as number)}</span>
-                            </>
-                          )
-                          : formatRM(value))
+                      ? (
+                        <>
+                          <span className="renewalGraphActual">{formatRM(value)}</span>
+                          <span className="renewalGraphSep">{useProgress ? '/' : ''}</span>
+                          <span className="renewalGraphTarget">
+                            {useProgress ? formatRM(target as number) : ''}
+                          </span>
+                        </>
+                      )
                       : `${value} renewal${value === 1 ? '' : 's'}`;
                   // Rank-based green→yellow gradient — restored from the
                   // previous design. The progress vs target is conveyed by
