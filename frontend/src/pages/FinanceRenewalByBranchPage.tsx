@@ -66,6 +66,13 @@ const BRANCH_TARGETS: Record<string, number | null> = {
   TSG: 0,
 };
 
+// Which target-derivation formula each branch uses, shown as an asterisk
+// beside the target value (see the "How it works" legend on the graph view).
+// ** = (total revenue × 0.3) ÷ 6; * = (total revenue × 0.3) ÷ 4.5 (the rest).
+const DOUBLE_ASTERISK_BRANCHES = new Set(['RBY', 'KTG', 'TSG', 'KW']);
+const targetAsterisk = (branchCode: string) =>
+  DOUBLE_ASTERISK_BRANCHES.has(branchCode) ? '**' : '*';
+
 // --- Helper Functions ---
 const formatRM = (val: number) => 
   new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(val);
@@ -111,7 +118,7 @@ export default function FinanceRenewalByBranchPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const graphCaptureRef = useRef<HTMLDivElement | null>(null);
   const [captureToast, setCaptureToast] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'graph'>('graph');
   const [graphMetric, setGraphMetric] = useState<'revenue' | 'count'>('revenue');
 
   const handleSort = (key: SortKey) => {
@@ -713,7 +720,7 @@ export default function FinanceRenewalByBranchPage() {
                           <span className="renewalGraphActual">{formatRM(value)}</span>
                           <span className="renewalGraphSep">{useProgress ? '/' : ''}</span>
                           <span className="renewalGraphTarget">
-                            {useProgress ? formatRM(target as number) : ''}
+                            {useProgress ? `${formatRM(target as number)} ${targetAsterisk(row.branch_code)}` : ''}
                           </span>
                         </>
                       )
@@ -765,6 +772,18 @@ export default function FinanceRenewalByBranchPage() {
         )
       )}
       </div>
+
+      {/* How-it-works note — graph view only. Outside graphCaptureRef so it's
+          excluded from the chart PNG. Explains how each branch's monthly
+          renewal target is derived from total revenue. */}
+      {viewMode === 'graph' && (
+        <div className="card" style={{ marginTop: 16, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
+          <strong>How it works:</strong><br />
+          The monthly renewal target for each branch is derived from its total revenue:<br />
+          <span style={{ fontFamily: 'monospace' }}>*&nbsp;&nbsp;Total revenue × 0.3 = a, then a ÷ 4.5 = target</span><br />
+          <span style={{ fontFamily: 'monospace' }}>** Total revenue × 0.3 = a, then a ÷ 6 = target</span>
+        </div>
+      )}
     </div>
   );
 }
